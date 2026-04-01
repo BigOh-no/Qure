@@ -1,0 +1,142 @@
+/* ================= PAGE BACKGROUND ================= */
+.landing-page {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  color: white;
+
+ 
+  background-image: url("./Clinic.png");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+
+  position: relative;
+}
+
+
+.landing-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  z-index: 0;
+}
+
+/* Ensure content sits above overlay */
+.landing-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ================= HEADER ================= */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 2rem;
+  background-color: rgba(255, 255, 255, 0.9); 
+  border-bottom: 1px solid #f3c9c9;
+}
+
+.header-logo {
+  width: 90px;
+  height: auto;
+}
+
+/* ================= NAV ================= */
+.nav {
+  display: flex;
+  align-items: center;
+}
+
+/* ================= BUTTONS ================= */
+.signin-btn,
+.cta-btn {
+  border: none;
+  border-radius: 999px; 
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+/* Sign In */
+.signin-btn {
+  background-color: #8b0000;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 3px 8px rgba(139, 0, 0, 0.2);
+}
+
+.signin-btn:hover {
+  background-color: #a30000;
+  transform: scale(1.05);
+}
+
+/* CTA */
+.cta-btn {
+  background-color: #ffffff;
+  color: #8b0000;
+  border: 2px solid #8b0000;
+  padding: 0.9rem 1.6rem;
+}
+
+.cta-btn:hover {
+  background-color: #f8dede;
+  transform: scale(1.05);
+}
+
+/* ================= HERO ================= */
+.hero {
+  height: 70vh;
+  display: flex;
+  align-items: center;
+}
+
+.hero-content {
+  padding-left: 60px;
+  max-width: 600px;
+}
+
+.hero-title {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.hero-text {
+  font-size: 1.2rem;
+  margin-bottom: 25px;
+}
+
+/* ================= FEATURES ================= */
+.features {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 3rem 2rem;
+  flex-wrap: wrap;
+}
+
+/* 🔥 make cards readable on background */
+.feature-card {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #5c0000;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  max-width: 260px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.feature-card h3 {
+  margin-top: 0;
+  color: #8b0000;
+}
+
+/* ================= FOOTER ================= */
+.footer {
+  text-align: center;
+  padding: 1rem;
+  background-color: rgba(139, 0, 0, 0.9);
+  color: #ffffff;
+}
