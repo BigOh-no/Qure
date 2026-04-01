@@ -1,4 +1,4 @@
-/* ================= PAGE BACKGROUND ================= */
+
 .landing-page {
   margin: 0;
   min-height: 100vh;
@@ -29,7 +29,7 @@
   z-index: 1;
 }
 
-/* ================= HEADER ================= */
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -44,13 +44,13 @@
   height: auto;
 }
 
-/* ================= NAV ================= */
+
 .nav {
   display: flex;
   align-items: center;
 }
 
-/* ================= BUTTONS ================= */
+
 .signin-btn,
 .cta-btn {
   border: none;
@@ -60,7 +60,7 @@
   transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-/* Sign In */
+
 .signin-btn {
   background-color: #8b0000;
   color: #ffffff;
@@ -73,7 +73,7 @@
   transform: scale(1.05);
 }
 
-/* CTA */
+
 .cta-btn {
   background-color: #ffffff;
   color: #8b0000;
@@ -86,7 +86,7 @@
   transform: scale(1.05);
 }
 
-/* ================= HERO ================= */
+
 .hero {
   height: 70vh;
   display: flex;
@@ -108,7 +108,7 @@
   margin-bottom: 25px;
 }
 
-/* ================= FEATURES ================= */
+
 .features {
   display: flex;
   justify-content: center;
@@ -117,7 +117,7 @@
   flex-wrap: wrap;
 }
 
-/* 🔥 make cards readable on background */
+
 .feature-card {
   background-color: rgba(255, 255, 255, 0.9);
   color: #5c0000;
@@ -133,7 +133,7 @@
   color: #8b0000;
 }
 
-/* ================= FOOTER ================= */
+
 .footer {
   text-align: center;
   padding: 1rem;
