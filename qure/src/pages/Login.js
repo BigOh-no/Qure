@@ -1,13 +1,17 @@
 import React, { useState } from "react";
 import "../styles/Login.css";
 import logo from '../assets/images/TLogo.png';
+import { useNavigate } from 'react-router-dom'; 
+import { login, handleGoogleUser, getUserRole } from '../../api/auth.js';
+import { supabase } from '../lib/supabaseClient.js';  
 
 function Login() {
+    const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = (e) => async () => {
         e.preventDefault();
         setError('');
 
@@ -16,13 +20,21 @@ function Login() {
             return;
         }
 
-        console.log('Logging in with:', email, password);
-        // TODO: Call backend and redirect by role
+        try{
+            const user = await login(email, password);
+            const role = await getUserRole(user.id);
+            if (role === 'admin') navigate('/admin');
+            if (role === 'clinicstaff') navigate ('/clinicstaff');
+            if (role === 'patient') navigate ('/patient');
+            else navigate('/');
+        } catch (err) {
+            console.error(err.message);
+        }
     };
 
     const handleGoogleLogin = () => {
         console.log('Google login triggered');
-        // TODO: Trigger Google OAuth via backend
+        window.location.href = '/api/auth/google-login';
     };
 
     return (
@@ -30,7 +42,7 @@ function Login() {
             {/* LEFT PANEL - Login Form */}
             <section className="login-left" aria-label="Login form section">
                 <header className="login-header">
-                    <figure className="logo-figure">
+                    <figure className="logo-figure" onClick={()=>{navigate('/')}}>
     <img src={logo} alt="Qure logo" className="login-logo" />
 </figure>
                     <h1 className="login-title">Welcome Back</h1>

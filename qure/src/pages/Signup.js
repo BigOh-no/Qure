@@ -1,13 +1,15 @@
-import React from "react"
-import "../styles/Signup.css"
-import logo from "../assets/images/TLogo.png"
+import React from "react";
+import "../styles/Signup.css";
+import logo from "../assets/images/TLogo.png";
+import { useNavigate } from 'react-router-dom'; 
 
 function Signup(){
+    const navigate = useNavigate();
     return(
         <main className = "signup-page">
             <section className = "signup-left" aria-label = "Signup form section">
                 <header className="signup-header">
-                    <figure className="logo-figure">
+                    <figure className="logo-figure" onClick={()=>{navigate('/')}}>
                         <img src = {logo} alt = "Qure logo" className="signup-logo"/>
                     </figure>
                     <h1 className="signup-title">Create your Qure account</h1>
@@ -41,7 +43,7 @@ function Signup(){
                 </form>
                 <footer className = "signup-footer">
                     <p className="login-txt">
-                        Already have an account? <a href="/">Log in</a>
+                        Already have an account? <a href="/login">Log in</a>
                     </p>
                 </footer>
             </section>

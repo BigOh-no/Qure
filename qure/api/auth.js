@@ -1,4 +1,33 @@
-import { supabase } from './supabaseClient';
+import { supabase } from '../src/lib/supabaseClient.js';
+
+export const verifyToken = async (req, res, next) => {
+    try {
+        const authheader = req.headers.authorization;
+        if (!authheader) return res.status(401).json({ error: 'Missing token' });
+        const token = authheader.split(' ')[1];
+        const {data: user, error} = await supabase.auth.getUser(token);
+
+        if (error || !user) return res.status(401).json({ error: 'Invalid token' });
+        
+        req.user = user;
+        next();
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error"});
+    }
+};
+
+export const requireRole = (role) => async (req, res, next) => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', req.user.id)
+        .single();
+    if (error || !role) return res.status(403).json({ error: "Role not found"});
+    if (data.role !== role) return res.status(403).json({ error: "Forbidden"});
+
+    next();
+}
 
 export const signUp = async (email, password, role='patient') => {
     const { data, error } = await supabase.auth.signUp({ email, password });
@@ -14,20 +43,20 @@ export const signUp = async (email, password, role='patient') => {
 };
 
 export const login = async (email, password) => {
-    const { data, error } = await supabase.auth.singInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data.user;
 };
 
-export const loginGoogle = async () => {
+export const getGoogleOAuthUrl = async () => {
     const { data, error } = await supabase.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${window.location.origin}/auth/callback`
+            redirectTo: `${process.env.FRONTEND_URL}/auth/callback`
         }
     });
     if (error) throw error;
-    return data.user;
+    return data.url;
 };
 
 export const handleGoogleUser = async (role='patient') => {

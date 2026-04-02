@@ -128,7 +128,7 @@ body{
     text-decoration: none;
     font-weight: 700;
 }
-.login-txt:hover{
+.login-txt a:hover{
     text-decoration: underline;
 }
 /*RIGHT SIDE OF PGE*/
