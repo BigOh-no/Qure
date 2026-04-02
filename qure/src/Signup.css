@@ -1,0 +1,210 @@
+*{
+    box-sizing: border-box;
+}
+body{
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #ffffff;
+}
+.signup-page{
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+}
+/* rem = 16px */
+/* LEFT SIDE OF PAGE */
+.signup-left{
+    flex: 2;
+    background-color: #ffffff;
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.signup-header{
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.logo-figure{
+    margin: 0 0 0 0;
+}
+.signup-logo{
+    width: 600px;
+    max-width: 100%;
+    height: auto;
+    margin-bottom: -6rem;
+}
+.signup-title{
+    margin: 0;
+    font-size: 2.1rem;
+    color : #8b0000;
+}
+.signup-subtitle{
+    margin-top: 0.8rem;
+    color: #b22222;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+.google-btn{
+    width: 100%;
+    max-width: 300px;
+    padding: 0.95rem;
+    border: 2px solid #b22222;
+    border-radius: 10px;
+    background-color: #ffffff;
+    color: #8b0000;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: 0.3s ease;
+}
+.google-btn:hover{
+    background-color: #fff5f5;
+}
+.divider-line{
+    width: 100%;
+    max-width: 300px;
+    border: none;
+    border-top: 1px solid #e2b5b5;
+    margin: 1rem 0 0 0.5rem 0;
+}
+.divider-txt{
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
+    color: #8b0000;
+    margin: 0 0 1.2rem 0;
+    font-size: 0.95rem;
+}
+.signup-form{
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.signup-input{
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #d9a0a0;
+    border-radius: 10px;
+    font-size: 1rem;
+    outline: none;
+    background-color: #ffffff;
+}
+.signup-input:focus{
+    border-color: #ff4d4d;
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.15);
+}
+.signup-btn{
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #ff4d4d, #8b0000);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+.signup-btn:hover{
+    opacity: 0.92;
+    transform: translateY(-1px);
+}
+.signup-footer{
+    width: 100%;
+    max-width: 300px;
+    margin-top: 1.4rem;
+    text-align: center;
+}
+.login-txt a{
+    color: #ff4d4d;
+    text-decoration: none;
+    font-weight: 700;
+}
+.login-txt:hover{
+    text-decoration: underline;
+}
+/*RIGHT SIDE OF PGE*/
+.signup-right{
+    flex: 3;
+    min-height: 100vh;
+    background: linear-gradient(160deg, #ff4d4d, #8b0000);
+    color: #ffffff;
+    padding: 3rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.right-header{
+    max-width: 420px;
+    width: 100%;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+.right-title{
+    font-size: 2rem;
+    margin: 0 0 1rem 0;
+
+}
+.right-txt{
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 0;
+}
+.info-card{
+    background-color: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 18px;
+    padding: 1.5rem;
+    max-width: 420px;
+    width: 100%;
+    backdrop-filter: blur(4px);
+}
+.feature-list{
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.feature-item{
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    font-weight: 600;
+    margin-bottom: 0.9rem;
+}
+.feature-item.light{
+    color: #ff4d4d;
+}
+.feature-item.dark{
+    color: #8b0000;
+}
+.feature-item:last-child{
+    margin-bottom: 0;
+}
+.signup-right > *{
+    width: 100%;
+    max-width: 500px;
+}
+
+@media (max-width: 900px){
+    .signup-page{
+        flex-direction: column;;
+    }
+    .signup-right{
+        min-height: 300px;
+    }
+    .signup-title{
+        font-size: 1.8rem;
+    }
+    .right-title{
+        font-size: 1.6rem;
+    }
+}
