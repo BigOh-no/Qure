@@ -1,6 +1,6 @@
 import React from "react"
-import "./Signup.css"
-import logo from "./logo.png"
+import "../styles/Signup.css"
+import logo from "../assets/images/TLogo.png"
 
 function Signup(){
     return(

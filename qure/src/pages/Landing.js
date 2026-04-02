@@ -1,7 +1,7 @@
 import React from "react"
-import "./Landing.css";
-import logo from "./TLogo.png";
-import clinic from "./Clinic.png";
+import "../styles/Landing.css";
+import logo from "../assets/images/TLogo.png";
+import clinic from "../assets/images/Clinic.png";
 
 function LandingPage() {
   return (
