@@ -1,6 +1,6 @@
 import React from "react"
 import "./Landing.css";
-import logo from "./logo.png";
+import logo from "./TLogo.png";
 import clinic from "./Clinic.png";
 
 function LandingPage() {
@@ -44,6 +44,11 @@ function LandingPage() {
         <article className="feature-card">
           <h3>Fast</h3>
           <p>Quick and Easy to book appointments.</p>
+        </article>
+
+        <article className="feature-card">
+          <h3>Walk-Ins</h3>
+          <p>Quick and easy way to join the virtual queue.</p>
         </article>
       </section>
 

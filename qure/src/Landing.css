@@ -34,13 +34,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 2rem;
-  background-color: rgba(255, 255, 255, 0.9); 
-  border-bottom: 1px solid #f3c9c9;
+  padding: 0.1rem 2rem;
 }
 
 .header-logo {
-  width: 90px;
+  width: 200px;
   height: auto;
 }
 
@@ -62,27 +60,38 @@
 
 
 .signin-btn {
-  background-color: #8b0000;
+  background-color: rgba(255, 255, 255, 0.15);
   color: #ffffff;
-  padding: 0.5rem 1rem;
+
+  border: 2px solid rgba(255, 255, 255, 0.7); 
+  border-radius: 999px;
+  padding: 0.8rem 1.4rem;
   box-shadow: 0 3px 8px rgba(139, 0, 0, 0.2);
 }
 
 .signin-btn:hover {
-  background-color: #a30000;
+  background-color: rgba(163, 0, 0, 0.5);
   transform: scale(1.05);
 }
 
 
 .cta-btn {
-  background-color: #ffffff;
-  color: #8b0000;
-  border: 2px solid #8b0000;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+
+  border: 2px solid rgba(255, 255, 255, 0.7); 
+  border-radius: 999px;
+
   padding: 0.9rem 1.6rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  backdrop-filter: blur(4px); 
+  transition: transform 0.15s ease, background-color 0.2s ease;
 }
 
 .cta-btn:hover {
-  background-color: #f8dede;
+  background-color: rgba(163, 0, 0, 0.5); /* slightly more visible on hover */
   transform: scale(1.05);
 }
 
@@ -119,13 +128,14 @@
 
 
 .feature-card {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.5);
   color: #5c0000;
   border-radius: 1rem;
   padding: 1.5rem;
   max-width: 260px;
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(6px);
 }
 
 .feature-card h3 {
