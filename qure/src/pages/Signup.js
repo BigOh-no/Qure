@@ -21,7 +21,7 @@ function Signup(){
                 <form className="signup-form">
                     <input
                         type = "email"
-                        placeholder="name@gmail.com"
+                        placeholder="email@gmail.com"
                         className="signup-input"
                     />
                     <input
