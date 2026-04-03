@@ -2,8 +2,10 @@ import React from "react"
 import "../styles/Landing.css";
 import logo from "../assets/images/TLogo.png";
 import clinic from "../assets/images/Clinic.png";
+import { useNavigate } from "react-router-dom";
 
 function LandingPage() {
+  const navigate = useNavigate();
   return (
     <main className="landing-page">
       
@@ -11,8 +13,11 @@ function LandingPage() {
         <img src={logo} alt="Qure logo" className="header-logo" />
 
         <nav className="nav" aria-label="Primary navigation">
-          <button className="signin-btn" type="button">
-            Sign In
+          <button 
+            className="signin-btn" 
+            type="button" 
+            onClick={()=> navigate("/Login")}>
+            Login
           </button>
         </nav>
       </header>
@@ -29,7 +34,10 @@ function LandingPage() {
           <p className="hero-text">
             Beat the queue with Qure.
           </p>
-          <button className="cta-btn" type="button">
+          <button 
+            className="cta-btn" 
+            type="button"
+            onClick={()=>navigate("/Signup")}>
             Get Started
           </button>
         </header>

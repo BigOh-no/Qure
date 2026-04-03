@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "../styles/Login.css";
 import logo from '../assets/images/TLogo.png';
-
+import { Link } from "react-router-dom";
 function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -73,7 +73,7 @@ function Login() {
 
                 <footer className="login-footer">
                     <p className="signup-txt">
-                        Don't have an account? <a href="/signup">Sign up</a>
+                        Don't have an account? <Link to="/Signup">Sign up</Link>
                     </p>
                 </footer>
             </section>

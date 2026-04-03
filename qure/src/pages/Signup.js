@@ -1,7 +1,7 @@
 import React from "react"
 import "../styles/Signup.css"
 import logo from "../assets/images/TLogo.png"
-
+import { Link } from "react-router-dom";
 function Signup(){
     return(
         <main className = "signup-page">
@@ -41,7 +41,7 @@ function Signup(){
                 </form>
                 <footer className = "signup-footer">
                     <p className="login-txt">
-                        Already have an account? <a href="/">Log in</a>
+                        Already have an account? <Link to="/Login">Login</Link>
                     </p>
                 </footer>
             </section>
