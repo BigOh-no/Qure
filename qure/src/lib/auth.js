@@ -50,11 +50,11 @@ export const handleGoogleUser = async (role='patient') => {
     return data.user;
 }
 
-export const getUserRole = async (userId) => {
+export const getUserRole = async (userEmail) => {
     const { data, error } = await supabaseClient
         .from('profiles')
         .select('role')
-        .eq('id', userId)
+        .eq('email', userEmail)
         .single();
     if (error) throw error;
     if (!data?.role) return null;
