@@ -42,9 +42,10 @@ body {
 }
 
 .login-logo {
-    width: 220px; /* perfect balance for layout */
+    width: 6000px; /* perfect balance for layout */
     max-width: 100%;
     height: auto;
+    margin-bottom: -6rem;
 }
 
 .login-title {
