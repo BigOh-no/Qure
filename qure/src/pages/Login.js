@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import "../styles/Login.css";
 import logo from '../assets/images/TLogo.png';
-import { Link } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
 import { login, loginGoogle, handleGoogleUser, getUserRole } from '../lib/auth';
-import { useNavigate } from "react-router-dom";
 
 function Login() {
     const navigate = useNavigate();
@@ -46,25 +45,7 @@ function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      const { user } = await loginGoogle(); // Trigger Google OAuth
-
-      // After Google login, handle user data and insert into profiles if not already present
-      const googleUser = await handleGoogleUser();
-
-      // Get the user's role from their profile
-      const role = await getUserRole(googleUser.email);
-      console.log('Google User role:', role);
-
-      // Redirect user based on role
-      if (role === 'patient') {
-        navigate('/patient');
-      } else if (role === 'admin') {
-        navigate('/admin');
-      } else if (role === 'clinicstaff'){
-        navigate('/staff')
-      }else {
-        navigate('/');  // Default redirect if no role or unknown
-      }
+      await loginGoogle(); // Trigger Google OAuth
     } catch (error) {
       setError(error.message);
     }

@@ -27,7 +27,7 @@ export const loginGoogle = async () => {
         }
     });
     if (error) throw error;
-    return data;
+    return data.user;
 };
 
 export const handleGoogleUser = async (role='patient') => {
@@ -37,8 +37,8 @@ export const handleGoogleUser = async (role='patient') => {
 
     const { data: existingProfile } = await supabaseClient
         .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
+        .select('email')
+        .eq('email', data.user.email)
         .single();
     if (!existingProfile){
         const { error: profileError } = await supabaseClient
