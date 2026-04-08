@@ -2,7 +2,7 @@ import { React, useState } from "react"
 import "../styles/Signup.css"
 import logo from "../assets/images/TLogo.png"
 import { Link, useNavigate } from "react-router-dom";
-import { signUp, getUserRole } from "../lib/auth";
+import { signUp, loginGoogle } from "../lib/auth";
 function Signup(){
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
@@ -38,6 +38,14 @@ function Signup(){
               setError(error.message);
         }
     };
+
+    const handleGoogleLogin = async () => {
+        try {
+          await loginGoogle(); // Trigger Google OAuth
+        } catch (error) {
+          setError(error.message);
+        }
+      };
     return(
         <main className = "signup-page">
             <section className = "signup-left" aria-label = "Signup form section">
@@ -48,7 +56,7 @@ function Signup(){
                     <h1 className="signup-title">Create your Qure account</h1>
                     <p className = "signup-subtitle">Beat the queue with Qure. Sign up to get started</p>
                 </header>
-                <button type="button" className = "google-btn">
+                <button type="button" className = "google-btn" onClick={handleGoogleLogin}>
                     Continue with Google
                 </button>
                 <hr className="divider-line"/>

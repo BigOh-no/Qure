@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "../styles/Login.css";
 import logo from '../assets/images/TLogo.png';
 import { Link,useNavigate } from "react-router-dom";
-import { login, loginGoogle, handleGoogleUser, getUserRole } from '../lib/auth';
+import { login, loginGoogle, getUserRole } from '../lib/auth';
 
 function Login() {
     const navigate = useNavigate();
