@@ -1,29 +1,55 @@
 import React, { useState } from "react";
 import "../styles/Login.css";
 import logo from '../assets/images/TLogo.png';
-import { Link } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
+import { login, loginGoogle, getUserRole } from '../lib/auth';
+
 function Login() {
+    const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        setError('');
+    const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
 
-        if (!email || !password) {
-            setError('Please fill in all fields.');
-            return;
-        }
+    if (!email || !password) {
+      setError('Please fill in all fields.');
+      return;
+    }
 
-        console.log('Logging in with:', email, password);
-        // TODO: Call backend and redirect by role
-    };
+    try {
+      // Call the login function from auth.js
+      const user = await login(email, password);
+      console.log('Logged in user:', user);
 
-    const handleGoogleLogin = () => {
-        console.log('Google login triggered');
-        // TODO: Trigger Google OAuth via backend
-    };
+      // Get the user's role from the profile
+      const role = await getUserRole(user.email);
+      console.log('User role:', role);
+
+      // Redirect user based on role
+      if (role === 'patient') {
+        navigate('/patient');
+      } else if (role === 'admin') {
+        navigate('/admin');
+      } else if (role === 'clinicstaff'){
+        navigate('/staff')
+      }else {
+        navigate('/');  // Default redirect if no role or unknown
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginGoogle(); // Trigger Google OAuth
+    } catch (error) {
+      setError(error.message);
+    }
+  };
 
     return (
         <main className="login-page">
