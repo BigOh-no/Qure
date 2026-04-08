@@ -2,39 +2,38 @@ import { React, useState } from "react"
 import "../styles/Signup.css"
 import logo from "../assets/images/TLogo.png"
 import { Link, useNavigate } from "react-router-dom";
-import { signUp } from "../lib/auth";
+import { signUp, getUserRole } from "../lib/auth";
 function Signup(){
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmpassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
     const handleSignup = async (e) => {
         e.preventDefault();
         setError('');
+        setMessage('');
 
-        if (!email || !password) {
+        if (!email || !password || !confirmpassword) {
             setError('Please fill in all fields.');
             return;
         }
+
+        if (password !== confirmpassword) {
+            setError("Passwords do not match.");
+            return;
+        }
+
         try {
               // Call the signup function from auth.js
             const user = await signUp(email, password);
             console.log('Signed up user:', user);
         
-              // Get the user's role from the profile
-            const role = await getUserRole(user.email);
-            console.log('User role:', role);
-        
-              // Redirect user based on role
-            if (role === 'patient') {
-                navigate('/patient');
-            } else if (role === 'admin') {
-                navigate('/admin');
-            } else if (role === 'clinicstaff'){
-                navigate('/staff')
-            }else {
-                navigate('/');  // Default redirect if no role or unknown
+            if (user){
+                setMessage("Signup Successful! Check your email and click confirm");
             }
+            
         } catch (error) {
               setError(error.message);
         }
@@ -72,12 +71,15 @@ function Signup(){
                     <input
                         type = "password"
                         placeholder="Confirm password"
+                        value = {confirmpassword}
                         className="signup-input"
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                     <button type="submit" className="signup-btn">
                         Continue
                     </button>
-
+                    {error && <p style={{ color: "red" }}>{error}</p>}
+                    {message && <p style={{ color: "green" }}>{message}</p>}
                 </form>
                 <footer className = "signup-footer">
                     <p className="login-txt">

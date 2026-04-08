@@ -1,14 +1,18 @@
 import { supabaseClient } from './supabaseClient';
 
 export const signUp = async (email, password, role='patient') => {
-    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+    const { data, error } = await supabaseClient.auth.signUp({ 
+        email, 
+        password, 
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+    });
     if (error) throw error;
-    if (!data?.user) return null;
+    // if (!data?.user) return null;
 
-    const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .insert([{id: data.user.id, email: data.user.email, role: role}]);
-    if (profileError) throw profileError;
+    // const { error: profileError } = await supabaseClient
+    //     .from('profiles')
+    //     .insert([{id: data.user.id, email: data.user.email, role: role}]);
+    // if (profileError) throw profileError;
     
     return data.user;
 };
@@ -27,7 +31,6 @@ export const loginGoogle = async () => {
         }
     });
     if (error) throw error;
-    return data.user;
 };
 
 export const handleGoogleUser = async (role='patient') => {
@@ -37,8 +40,8 @@ export const handleGoogleUser = async (role='patient') => {
 
     const { data: existingProfile } = await supabaseClient
         .from('profiles')
-        .select('email')
-        .eq('email', data.user.email)
+        .select('id')
+        .eq('id', data.user.id)
         .single();
     if (!existingProfile){
         const { error: profileError } = await supabaseClient
