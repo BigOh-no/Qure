@@ -41,7 +41,7 @@ describe('auth.js', () => {
 
   // signUp tests
   describe('signUp', () => {
-    test('should sign up a user and insert a profile successfully', async () => {
+    test('should sign up a user', async () => {
       // Fake user returned by Supabase auth.signUp
       const mockUser = {
         id: 'user-123',
@@ -56,44 +56,16 @@ describe('auth.js', () => {
         error: null,
       });
 
-      /*
-        Mock the insert() call used for inserting into the profiles table.
-        It succeeds here, so error is null.
-      */
-      const insertMock = jest.fn().mockResolvedValue({
-        error: null,
-      });
-
-      /*
-        Pretend supabaseClient.from('profiles') returns an object
-        with an insert() function.
-      */
-      supabaseClient.from.mockReturnValue({
-        insert: insertMock,
-      });
-
-      // Call the function we are testing
       const result = await signUp('test@example.com', 'password123', 'patient');
 
-      // Check that Supabase auth.signUp was called correctly
       expect(supabaseClient.auth.signUp).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'password123',
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
 
-      // Check that the code targeted the profiles table
-      expect(supabaseClient.from).toHaveBeenCalledWith('profiles');
-
-      // Check that the profile insert had the correct values
-      expect(insertMock).toHaveBeenCalledWith([
-        {
-          id: 'user-123',
-          email: 'test@example.com',
-          role: 'patient',
-        },
-      ]);
-
-      // Check that signUp() returns the created user
       expect(result).toEqual(mockUser);
     });
 
@@ -131,33 +103,7 @@ describe('auth.js', () => {
       expect(result).toBeNull();
     });
 
-    test('should throw an error if profile insert fails', async () => {
-      const mockUser = {
-        id: 'user-123',
-        email: 'test@example.com',
-      };
-
-      const profileError = new Error('Profile insert failed');
-
-      // Signup itself succeeds
-      supabaseClient.auth.signUp.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      // But the insert into profiles fails
-      const insertMock = jest.fn().mockResolvedValue({
-        error: profileError,
-      });
-
-      supabaseClient.from.mockReturnValue({
-        insert: insertMock,
-      });
-
-      await expect(
-        signUp('test@example.com', 'password123', 'patient')
-      ).rejects.toThrow('Profile insert failed');
-    });
+    
   });
 
  
