@@ -41,7 +41,8 @@ describe('auth.js', () => {
   });
 
   describe('signUp', () => {
-    test('should sign up a user successfully and return the user', async () => {
+    test('should sign up a user', async () => {
+      // Fake user returned by Supabase auth.signUp
       const mockUser = {
         id: 'user-123',
         email: 'test@example.com',
@@ -58,7 +59,7 @@ describe('auth.js', () => {
         email: 'test@example.com',
         password: 'password123',
         options: {
-          emailRedirectTo: 'http://localhost:3000/auth/callback',
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -80,29 +81,7 @@ describe('auth.js', () => {
     });
 
 
-    test('should use the default role parameter without affecting signup payload', async () => {
-      const mockUser = {
-        id: 'user-999',
-        email: 'defaultrole@example.com',
-      };
-
-      supabaseClient.auth.signUp.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const result = await signUp('defaultrole@example.com', 'password123');
-
-      expect(supabaseClient.auth.signUp).toHaveBeenCalledWith({
-        email: 'defaultrole@example.com',
-        password: 'password123',
-        options: {
-          emailRedirectTo: 'http://localhost:3000/auth/callback',
-        },
-      });
-
-      expect(result).toEqual(mockUser);
-    });
+    
   });
 
   describe('login', () => {

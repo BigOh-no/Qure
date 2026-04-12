@@ -7,7 +7,7 @@ export const signUp = async (email, password, role='patient') => {
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
     });
     if (error) throw error;
-    // if (!data?.user) return null;
+    if (!data?.user) return null;
 
     // const { error: profileError } = await supabaseClient
     //     .from('profiles')
@@ -31,6 +31,7 @@ export const loginGoogle = async () => {
         }
     });
     if (error) throw error;
+    return data;
 };
 
 export const handleGoogleUser = async (role='patient') => {
@@ -62,4 +63,26 @@ export const getUserRole = async (userEmail) => {
     if (error) throw error;
     if (!data?.role) return null;
     return data.role;
+};
+
+export const ensureUserProfile = async (user, role = 'patient') => {
+  const { data: existingProfile, error } = await supabaseClient
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!existingProfile) {
+    const { error: insertError } = await supabaseClient
+      .from('profiles')
+      .insert([{
+        id: user.id,
+        email: user.email,
+        role
+      }]);
+
+    if (insertError) throw insertError;
+  }
 };
