@@ -46,10 +46,10 @@ To establish the foundational components of the Qure application, including user
 - As an admin, I can log in so that I can access the admin home page.
 
 ## Task Allocation
-- Ammaarah: Frontend for Login Page and Admin Home Page
+- Ammaarah: Frontend for Login Page 
 - Aaliah: Frontend for Sign-up Page and Staff Home Page
 - Vareshan: Frontend for Landing Page and Patient Home Page
-- Vikram: Backend for Login and Sign-up (API, database integration, Google authentication)
+- Vikram: Backend for Login and Sign-up (API, database integration, Google authentication) and Admin Home Page
 - Muhammed: Backend for Login and Sign-up (API, database integration, Google authentication)
 
 ## Definition of Done
