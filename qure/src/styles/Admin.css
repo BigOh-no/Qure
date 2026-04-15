@@ -1,0 +1,176 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #ffffff;
+}
+
+.admin-page {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    width: 240px;
+    background: linear-gradient(160deg, #ff4d4d, #8b0000);
+    color: white;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-nav li {
+    margin: 0.8rem 0;
+}
+
+.sidebar-nav button {
+    width: 100%;
+    padding: 0.7rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: white;
+    text-align: left;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.sidebar-nav button:hover,
+.sidebar-nav .active {
+    background-color: rgba(255,255,255,0.2);
+}
+
+.sidebar-footer {
+    margin-top: 2rem;
+}
+
+.logout-btn {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 8px;
+    background-color: white;
+    color: #8b0000;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background-color: #fff5f5;
+}
+
+.admin-main {
+    flex: 1;
+    padding: 2rem;
+}
+
+.admin-header h1 {
+    margin: 0;
+    color: #8b0000;
+}
+
+.admin-header p {
+    margin-top: 0.5rem;
+    color: #b22222;
+}
+
+.stats-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.stat-card {
+    background-color: #ffffff;
+    border: 1px solid #e2b5b5;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.stat-card h3 {
+    margin: 0;
+    color: #8b0000;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.dashboard-card {
+    background-color: #ffffff;
+    border: 1px solid #e2b5b5;
+    border-radius: 12px;
+    padding: 1.2rem;
+}
+
+.action-list {
+    list-style: none;
+    padding: 0;
+}
+
+.action-list li {
+    margin-bottom: 0.8rem;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff4d4d, #8b0000);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.action-btn:hover {
+    opacity: 0.9;
+}
+
+.activity-list {
+    list-style: none;
+    padding: 0;
+}
+
+.activity-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0d0d0;
+}
+
+@media (max-width: 900px) {
+    .admin-page {
+        flex-direction: column;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
