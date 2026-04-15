@@ -2,13 +2,16 @@ import React, { useState } from "react";
 import "../styles/Login.css";
 import logo from '../assets/images/TLogo.png';
 import { Link,useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
 import { login, loginGoogle, getUserRole } from '../lib/auth';
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false); //password
 
     const handleLogin = async (e) => {
     e.preventDefault();
@@ -66,8 +69,8 @@ function Login() {
                 </header>
 
                 <button type="button" className="google-btn" onClick={handleGoogleLogin}>
-                    Continue with Google
-                </button>
+    <FcGoogle size={20} /> Continue with Google
+</button>
 
                 <hr className="divider-line"/>
                 <p className="divider-txt">Or log in with email</p>
@@ -82,14 +85,18 @@ function Login() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                     />
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        className="login-input"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-
+                    <label className="password-wrapper">
+    <input
+        type={showPassword ? "text" : "password"}
+        placeholder="Password"
+        className="login-input"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+    />
+    <span className="eye-icon" onClick={() => setShowPassword(!showPassword)}>
+        {showPassword ? <FaEyeSlash /> : <FaEye />}
+    </span>
+</label>
                     <p className="forgot-link">
                         <a href="/forgot-password">Forgot password?</a>
                     </p>
