@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { searchClinics } from "../pages/clinicService";
+import ClinicMap from "../pages/ClinicMap.js";
 
 function BookAppointment() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -160,7 +161,14 @@ function BookAppointment() {
       </div>
     ))
   )}
+  
 </div>
+{clinics.length > 0 && (
+  <ClinicMap 
+    clinics={clinics} 
+    selectedClinic={selectedClinic} 
+  />
+)}
 
       {selectedClinic && (
         <div>
