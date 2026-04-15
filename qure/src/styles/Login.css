@@ -270,4 +270,18 @@ body {
     .right-title {
         font-size: 1.6rem;
     }
+    
+}
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.eye-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #8b0000;
 }

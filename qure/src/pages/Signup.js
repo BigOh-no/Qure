@@ -2,13 +2,17 @@ import { React, useState } from "react"
 import "../styles/Signup.css"
 import logo from "../assets/images/TLogo.png"
 import { Link, useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
 import { signUp, loginGoogle } from "../lib/auth";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 function Signup(){
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmpassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [message, setMessage] = useState('');
     const handleSignup = async (e) => {
         e.preventDefault();
@@ -57,8 +61,8 @@ function Signup(){
                     <p className = "signup-subtitle">Beat the queue with Qure. Sign up to get started</p>
                 </header>
                 <button type="button" className = "google-btn" onClick={handleGoogleLogin}>
-                    Continue with Google
-                </button>
+    <FcGoogle size={20} /> Continue with Google
+</button>
                 <hr className="divider-line"/>
                 <p className="divider-txt">Or sign up with email</p>
                 <form className="signup-form" onSubmit={handleSignup}>
@@ -69,20 +73,30 @@ function Signup(){
                         className="signup-input"
                         onChange={(e) => setEmail(e.target.value)}
                     />
-                    <input
-                        type = "password"
-                        placeholder="Create password"
-                        value = {password}
-                        className="signup-input"
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <input
-                        type = "password"
-                        placeholder="Confirm password"
-                        value = {confirmpassword}
-                        className="signup-input"
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
+                    <label className="password-wrapper">
+    <input
+        type={showPassword ? "text" : "password"}
+        placeholder="Create password"
+        value={password}
+        className="signup-input"
+        onChange={(e) => setPassword(e.target.value)}
+    />
+    <span className="eye-icon" onClick={() => setShowPassword(!showPassword)}>
+        {showPassword ? <FaEyeSlash /> : <FaEye />}
+    </span>
+</label>
+<label className="password-wrapper">
+    <input
+        type={showConfirmPassword ? "text" : "password"}
+        placeholder="Confirm password"
+        value={confirmpassword}
+        className="signup-input"
+        onChange={(e) => setConfirmPassword(e.target.value)}
+    />
+    <span className="eye-icon" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+        {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+    </span>
+</label>
                     <button type="submit" className="signup-btn">
                         Continue
                     </button>
