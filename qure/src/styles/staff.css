@@ -1,0 +1,160 @@
+/* FULL LAYOUT */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  background: linear-gradient(180deg, #ff4d4d, #8b0000);
+  color: white;
+  padding: 20px;
+}
+
+.logo {
+  margin-bottom: 30px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-item {
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: left;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.nav-item.active {
+  background: white;
+  color: #8b0000;
+}
+
+.logout {
+  margin-top: 20px;
+  background: rgba(0,0,0,0.2);
+}
+
+/* MAIN AREA */
+.main {
+  flex: 1;
+  padding: 20px;
+}
+
+/* TOP BAR */
+.topbar {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.topbar h1 {
+  margin: 0;
+  color: #8b0000;
+}
+
+/* CARD */
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* HEADER */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+/* TABLE */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  background: #fff5f5;
+  color: #8b0000;
+  padding: 12px;
+}
+
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+/* STATUS */
+.status {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.waiting {
+  background: #ffe5e5;
+  color: #8b0000;
+}
+
+.progress {
+  background: #ffd6d6;
+  color: #b22222;
+}
+
+.done {
+  background: #e9ffe9;
+  color: #1f7a1f;
+}
+
+/* BUTTONS */
+.btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 6px;
+  font-weight: bold;
+}
+
+.start {
+  background: #ff4d4d;
+  color: white;
+}
+
+.complete {
+  background: #8b0000;
+  color: white;
+}
+/* SIDEBAR LOGO */
+.sidebar-logo-figure {
+  margin: 0 0 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-logo {
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+}
