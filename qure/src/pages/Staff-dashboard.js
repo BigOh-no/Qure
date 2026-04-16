@@ -35,11 +35,15 @@ export default function StaffDashboard() {
         </figure>
 
         <nav className="nav">
-          <button className="nav-item active">Dashboard</button>
-          <button className="nav-item">Queue</button>
-          <button className="nav-item">Patients</button>
-          <button className="nav-item logout" onClick={() => navigate("/")}>Logout</button>
-        </nav>
+  <section className="nav-top">
+    <button className="nav-item active">Dashboard</button>
+    <button className="nav-item">Queue</button>
+    <button className="nav-item">Patients</button>
+  </section>
+  <footer className="nav-bottom">
+    <button className="nav-item logout" onClick={() => navigate("/")}>Logout</button>
+  </footer>
+</nav>
       </aside>
 
       {/* MAIN CONTENT */}
