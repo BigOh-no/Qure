@@ -7,6 +7,7 @@ import AdminDashboard from "./pages/Admin-dashboard"
 import PatientDashboard from "./pages/Patient-dashboard"
 import AuthCallback from "./pages/AuthCallback";
 import StaffDashboard from "./pages/Staff-dashboard";
+import resetPasswordPage from "./pages/resetPasswordPage";
 
 function App() {
   return (
@@ -19,6 +20,8 @@ function App() {
         <Route path="/patient" element={<PatientDashboard />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/staff" element={<StaffDashboard />} />
+        <Route path="/reset-password" element={<resetPasswordPage />} />
+        
       </Routes>
     </Router>
   );

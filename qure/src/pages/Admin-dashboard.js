@@ -34,9 +34,7 @@ function AdminDashboard() {
     const formData = new FormData(event.target);
 
     const staffData = {
-      fullName: formData.get("staffFullName"),
       email: formData.get("staffEmail"),
-      role: formData.get("staffRole"),
       clinic: formData.get("staffClinic"),
     };
 
@@ -50,7 +48,6 @@ function AdminDashboard() {
     const formData = new FormData(event.target);
 
     const adminData = {
-      fullName: formData.get("adminFullName"),
       email: formData.get("adminEmail"),
     };
 
@@ -169,17 +166,6 @@ function AdminDashboard() {
                 <h2>Add Staff Member</h2>
               </header>
 
-              <label className="popup-label" htmlFor="staffFullName">
-                Full Name
-              </label>
-              <input
-                className="popup-input"
-                id="staffFullName"
-                name="staffFullName"
-                type="text"
-                required
-              />
-
               <label className="popup-label" htmlFor="staffEmail">
                 Email
               </label>
@@ -190,21 +176,6 @@ function AdminDashboard() {
                 type="email"
                 required
               />
-
-              <label className="popup-label" htmlFor="staffRole">
-                Role
-              </label>
-              <select
-                className="popup-input"
-                id="staffRole"
-                name="staffRole"
-                required
-              >
-                <option value="">Select role</option>
-                <option value="Doctor">Doctor</option>
-                <option value="Nurse">Nurse</option>
-                <option value="Receptionist">Receptionist</option>
-              </select>
 
               <label className="popup-label" htmlFor="staffClinic">
                 Assigned Clinic
@@ -239,17 +210,6 @@ function AdminDashboard() {
               <header className="popup-header">
                 <h2>Add Admin</h2>
               </header>
-
-              <label className="popup-label" htmlFor="adminFullName">
-                Full Name
-              </label>
-              <input
-                className="popup-input"
-                id="adminFullName"
-                name="adminFullName"
-                type="text"
-                required
-              />
 
               <label className="popup-label" htmlFor="adminEmail">
                 Email

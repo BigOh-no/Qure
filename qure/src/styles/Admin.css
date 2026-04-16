@@ -251,6 +251,25 @@ body {
 .save-btn:hover {
     opacity: 0.92;
 }
+.admin-success-message {
+  background-color: #e8f7e8;
+  color: #1f7a1f;
+  border: 1px solid #7bd77b;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-weight: 600;
+}
+
+.admin-error-message {
+  background-color: #fdeaea;
+  color: #b42318;
+  border: 1px solid #f5a3a3;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-weight: 600;
+}
 
 @media (max-width: 900px) {
     .admin-page {

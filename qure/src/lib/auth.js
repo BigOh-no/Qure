@@ -86,3 +86,24 @@ export const ensureUserProfile = async (user, role = 'patient') => {
     if (insertError) throw insertError;
   }
 };
+
+export const createAdmin = async (email) => {
+  const cleanEmail = email.trim().toLowerCase();
+
+  const { data, error } = await supabaseClient.functions.invoke("create-admin", {
+    body: {
+      email: cleanEmail,
+      redirectTo: `${window.location.origin}/reset-password`,
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Function returned an error");
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.error || "Failed to create admin");
+  }
+
+  return data;
+};
