@@ -20,7 +20,10 @@ function App() {
         <Route path="/patient" element={<PatientDashboard />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/staff" element={<StaffDashboard />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/reset-password" element={<resetPasswordPage />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+
         
       </Routes>
     </Router>

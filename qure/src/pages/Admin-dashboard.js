@@ -1,59 +1,85 @@
-import React, { useState } from "react";
-import "../styles/Admin.css";
-import { useNavigate } from "react-router-dom";
-import logo from "../assets/images/TLogo.png"
+import React, { useState } from 'react';
+import '../styles/Admin.css';
+import { useNavigate } from 'react-router-dom';
+import logo from '../assets/images/TLogo.png';
+import { createAdminInvite, logout } from '../lib/auth';
 
 function AdminDashboard() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    navigate("/");
-  };
-
-  const adminName = "Admin";
+  const adminName = 'Admin';
 
   const [showStaffPopup, setShowStaffPopup] = useState(false);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showClinicPopup, setShowClinicPopup] = useState(false);
 
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSavingAdmin, setIsSavingAdmin] = useState(false);
+
   const stats = [
-    { title: "Total Staff", value: 18 },
-    { title: "Total Clinics", value: 5 },
-    { title: "Appointments Today", value: 24 },
-    { title: "Patients Waiting", value: 11 },
+    { title: 'Total Staff', value: 18 },
+    { title: 'Total Clinics', value: 5 },
+    { title: 'Appointments Today', value: 24 },
+    { title: 'Patients Waiting', value: 11 },
   ];
 
   const recentActivity = [
-    "Dr Smith added to Hillbrow Clinic",
-    "New admin created",
-    "Clinic hours updated",
+    'Dr Smith added to Hillbrow Clinic',
+    'New admin created',
+    'Clinic hours updated',
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error.message);
+      navigate('/');
+    }
+  };
 
   const handleStaffSubmit = (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
 
     const staffData = {
-      email: formData.get("staffEmail"),
-      clinic: formData.get("staffClinic"),
+      email: formData.get('staffEmail'),
+      clinic: formData.get('staffClinic'),
     };
 
-    console.log("Staff data:", staffData);
+    console.log('Staff data:', staffData);
     event.target.reset();
     setShowStaffPopup(false);
   };
 
-  const handleAdminSubmit = (event) => {
+  const handleAdminSubmit = async (event) => {
     event.preventDefault();
+
     const formData = new FormData(event.target);
+    const email = formData.get("adminEmail")?.toString().trim().toLowerCase();
 
-    const adminData = {
-      email: formData.get("adminEmail"),
-    };
+    setSuccessMessage("");
+    setErrorMessage("");
+    setIsSavingAdmin(true);
 
-    console.log("Admin data:", adminData);
-    event.target.reset();
-    setShowAdminPopup(false);
+    try {
+      await createAdminInvite(email);
+
+      setSuccessMessage(
+        `Tell ${email} to check their inbox to reset their password.`
+      );
+
+      event.target.reset();
+      setShowAdminPopup(false);
+    } catch (error) {
+      console.error("Admin invite failed:", error);
+      setErrorMessage(error.message || "Failed to add admin.");
+      // keep popup open on error
+    } finally {
+      setIsSavingAdmin(false);
+    }
   };
 
   const handleClinicSubmit = (event) => {
@@ -61,13 +87,13 @@ function AdminDashboard() {
     const formData = new FormData(event.target);
 
     const clinicData = {
-      clinicName: formData.get("clinicName"),
-      location: formData.get("clinicLocation"),
-      operatingHours: formData.get("clinicHours"),
-      contactNumber: formData.get("clinicContact"),
+      clinicName: formData.get('clinicName'),
+      location: formData.get('clinicLocation'),
+      operatingHours: formData.get('clinicHours'),
+      contactNumber: formData.get('clinicContact'),
     };
 
-    console.log("Clinic data:", clinicData);
+    console.log('Clinic data:', clinicData);
     event.target.reset();
     setShowClinicPopup(false);
   };
@@ -76,7 +102,7 @@ function AdminDashboard() {
     <main className="admin-page">
       <aside className="admin-sidebar">
         <header className="sidebar-header">
-          <img src={logo} alt="Qure logo" className="sidebar-logo"/>
+          <img src={logo} alt="Qure logo" className="sidebar-logo" />
         </header>
 
         <nav className="sidebar-nav">
@@ -100,6 +126,14 @@ function AdminDashboard() {
           <h1>Admin Dashboard</h1>
           <p>Welcome back, {adminName}</p>
         </header>
+
+        {successMessage && (
+          <p className="admin-success-message">{successMessage}</p>
+        )}
+
+        {errorMessage && (
+          <p className="admin-error-message">{errorMessage}</p>
+        )}
 
         <section className="stats-section">
           {stats.map((stat, index) => (
@@ -141,7 +175,7 @@ function AdminDashboard() {
                   className="action-btn"
                   onClick={() => setShowClinicPopup(true)}
                 >
-                  Add Clinic
+                  Edit Clinic
                 </button>
               </li>
             </ul>
@@ -227,11 +261,16 @@ function AdminDashboard() {
                   type="button"
                   className="cancel-btn"
                   onClick={() => setShowAdminPopup(false)}
+                  disabled={isSavingAdmin}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="save-btn">
-                  Save Admin
+                <button
+                  type="submit"
+                  className="save-btn"
+                  disabled={isSavingAdmin}
+                >
+                  {isSavingAdmin ? "Saving..." : "Save Admin"}
                 </button>
               </footer>
             </form>

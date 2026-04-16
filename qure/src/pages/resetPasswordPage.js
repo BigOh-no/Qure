@@ -1,106 +1,114 @@
-import { useEffect, useState } from "react";
-import { supabaseClient } from "../lib/supabaseClient";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { updatePassword } from '../lib/auth';
+import '../styles/Admin.css';
 
-function ResetPasswordPage() {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
+function ResetPassword() {
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data, error } = await supabaseClient.auth.getSession();
-
-        if (error) throw error;
-
-        if (!data?.session) {
-          setMessage("This reset link is invalid or expired.");
-          return;
-        }
-
-        setReady(true);
-      } catch (error) {
-        setMessage(error.message || "Could not verify reset link.");
-      }
-    };
-
-    checkSession();
-  }, []);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setSuccessMessage('');
+    setErrorMessage('');
 
-    if (password.length < 8) {
-      setMessage("Password must be at least 8 characters long.");
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setMessage("Passwords do not match.");
+      setErrorMessage('Passwords do not match.');
       return;
     }
 
     try {
-      setLoading(true);
-      setMessage("");
+      setIsSaving(true);
+      await updatePassword(password);
+      setSuccessMessage('Password updated successfully. You can now continue.');
+      setPassword('');
+      setConfirmPassword('');
 
-      const { error } = await supabaseClient.auth.updateUser({ password });
-
-      if (error) throw error;
-
-      setMessage("Password updated successfully. You can now log in.");
-      setPassword("");
-      setConfirmPassword("");
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
     } catch (error) {
-      setMessage(error.message || "Failed to update password.");
+      setErrorMessage(error.message || 'Failed to update password.');
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
   return (
-    <main style={{ maxWidth: "420px", margin: "60px auto", padding: "1rem" }}>
-      <h1>Set your password</h1>
+    <main className="admin-page">
+      <section
+        className="admin-main"
+        style={{
+          maxWidth: '500px',
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <article className="dashboard-card" style={{ width: '100%' }}>
+          <header className="admin-header">
+            <h1>Set New Password</h1>
+            <p>Enter your new password below.</p>
+          </header>
 
-      {message && <p>{message}</p>}
+          {successMessage && (
+            <div className="admin-success-message">{successMessage}</div>
+          )}
 
-      {!ready ? (
-        <p>Checking your reset link...</p>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "1rem" }}>
-            <label htmlFor="password">New password</label>
+          {errorMessage && (
+            <div className="admin-error-message">{errorMessage}</div>
+          )}
+
+          <form className="popup-form" onSubmit={handleSubmit}>
+            <label className="popup-label" htmlFor="password">
+              New Password
+            </label>
             <input
+              className="popup-input"
               id="password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required
-              style={{ width: "100%", padding: "0.6rem", marginTop: "0.3rem" }}
             />
-          </div>
 
-          <div style={{ marginBottom: "1rem" }}>
-            <label htmlFor="confirmPassword">Confirm password</label>
+            <label className="popup-label" htmlFor="confirmPassword">
+              Confirm Password
+            </label>
             <input
+              className="popup-input"
               id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               required
-              style={{ width: "100%", padding: "0.6rem", marginTop: "0.3rem" }}
             />
-          </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Saving..." : "Set password"}
-          </button>
-        </form>
-      )}
+            <footer className="popup-footer">
+              <button
+                type="submit"
+                className="save-btn"
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Update Password'}
+              </button>
+            </footer>
+          </form>
+        </article>
+      </section>
     </main>
   );
 }
 
-export default ResetPasswordPage;
+export default ResetPassword;
