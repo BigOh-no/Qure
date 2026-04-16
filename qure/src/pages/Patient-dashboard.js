@@ -1,8 +1,25 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import {React, useEffect, useRef} from "react";
+import { useNavigate} from "react-router-dom";
+import "../styles/Patient.css";
+import logo from "../assets/images/TLogo.png";
 
 function PatientDashboard() {
   const navigate = useNavigate();
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        menuRef.current.removeAttribute("open");
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
 
   const upcomingAppointments = [
     {
@@ -22,58 +39,110 @@ function PatientDashboard() {
   };
 
   return (
-    <div>
-      <h1>Patient Dashboard</h1>
+    <main className="patient-dashboard">
+      <header className="dashboard-top">
+  
+  
+  <img src={logo} alt="Qure logo" className="dashboard-logo" />
 
-      <div>
-        <button onClick={() => navigate("/patient/book")}>
+  
+  <h1 className="dashboard-title">Hi, USERNAME</h1>
+
+ 
+  <aside className="dashboard-menu">
+    <details className="menu-dropdown" ref={menuRef}>
+      <summary className="menu-summary" aria-label="Open menu">
+        <span className="menu-line"></span>
+        <span className="menu-line"></span>
+        <span className="menu-line"></span>
+      </summary>
+
+      <nav className="menu-panel">
+        <button className="menu-item" type="button">
+          Edit Profile
+        </button>
+
+        <button className="menu-item" type="button">
+          View Clinics
+        </button>
+
+        <button
+          className="menu-item logout-btn"
+          type="button"
+          onClick={() => navigate("/")}
+        >
+          Logout
+        </button>
+      </nav>
+    </details>
+  </aside>
+
+</header>
+
+      <nav className="dashboard-actions">
+        <button
+          className="action-btn"
+          onClick={() => navigate("/patient/book")}
+        >
           Book Appointment
         </button>
 
-        <button onClick={() => navigate("/patient/queue")}>
+        <button
+          className="action-btn"
+          onClick={() => navigate("/patient/queue")}
+        >
           Join Queue
         </button>
 
-        <button onClick={() => navigate("/patient/appointments")}>
+        <button
+          className="action-btn"
+          onClick={() => navigate("/patient/appointments")}
+        >
           View All Appointments
         </button>
-      </div>
+      </nav>
 
-      <hr />
+      <hr className="section-divider" />
 
-      <h2>Upcoming Appointments *fake data</h2>
+      <section className="appointments-section">
+        <h2 className="section-title">Upcoming Appointments</h2>
 
-      {upcomingAppointments.length === 0 ? (
-        <p>No upcoming appointments</p>
-      ) : (
-        upcomingAppointments.map((appt) => (
-          <div key={appt.id}>
-            <p><strong>Clinic:</strong> {appt.clinic}</p>
-            <p><strong>Date:</strong> {appt.date}</p>
-            <p><strong>Time:</strong> {appt.time}</p>
-            <p><strong>Status:</strong> {appt.status}</p>
+        {upcomingAppointments.length === 0 ? (
+          <p className="empty-state">No upcoming appointments</p>
+        ) : (
+          <section className="appointments-list">
+            {upcomingAppointments.map((appt) => (
+              <article className="appointment-card" key={appt.id}>
+                <p><strong>Clinic:</strong> {appt.clinic}</p>
+                <p><strong>Date:</strong> {appt.date}</p>
+                <p><strong>Time:</strong> {appt.time}</p>
+                <p><strong>Status:</strong> {appt.status}</p>
 
-            <button>Reschedule</button>
-            <button>Cancel</button>
+                <footer className="card-actions">
+                  <button className="secondary-btn">Reschedule</button>
+                  <button className="secondary-btn">Cancel</button>
+                </footer>
+              </article>
+            ))}
+          </section>
+        )}
+      </section>
 
-            <hr />
-          </div>
-        ))
-      )}
+      <section className="queue-section">
+        <h2 className="section-title">Current Queue</h2>
 
-      <h2>Current Queue</h2>
-
-      {!activeQueue ? (
-        <p>You are not in a queue</p>
-      ) : (
-        <div>
-          <p><strong>Clinic:</strong> {activeQueue.clinic}</p>
-          <p><strong>Queue Number:</strong> {activeQueue.queueNumber}</p>
-          <p><strong>Status:</strong> {activeQueue.status}</p>
-          <p><strong>Estimated Wait:</strong> {activeQueue.estimatedWait}</p>
-        </div>
-      )}
-    </div>
+        {!activeQueue ? (
+          <p className="empty-state">You are not in a queue</p>
+        ) : (
+          <article className="queue-card">
+            <p><strong>Clinic:</strong> {activeQueue.clinic}</p>
+            <p><strong>Queue Number:</strong> {activeQueue.queueNumber}</p>
+            <p><strong>Status:</strong> {activeQueue.status}</p>
+            <p><strong>Estimated Wait:</strong> {activeQueue.estimatedWait}</p>
+          </article>
+        )}
+      </section>
+    </main>
   );
 }
 
