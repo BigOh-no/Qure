@@ -2,7 +2,6 @@ name: Run Tests
 
 on:
   push:
-  pull_request:
 
 jobs:
   test:
@@ -30,6 +29,15 @@ jobs:
         run: npm test -- --coverage --watchAll=false
         env:
           CI: true
+
+      - name: Add coverage summary to GitHub Actions
+        run: |
+          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('coverage/coverage-summary.json','utf8')).total; console.log('| Metric | Percent | Covered/Total |'); console.log('|---|---:|---:|'); for (const k of ['lines','statements','functions','branches']) { const v=s[k]; console.log(\`| ${k} | ${v.pct}% | ${v.covered}/${v.total} |\`); }" >> $GITHUB_STEP_SUMMARY
+          else
+            echo 'coverage-summary.json not found.' >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
