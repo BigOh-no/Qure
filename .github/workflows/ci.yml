@@ -31,8 +31,10 @@ jobs:
         env:
           CI: true
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          name: coverage-report
-          path: qure/coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: BigOh-no/Qure
+          files: ./qure/coverage/lcov.info
+          fail_ci_if_error: true
