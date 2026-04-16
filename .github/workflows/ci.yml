@@ -31,21 +31,13 @@ jobs:
           CI: true
 
       - name: Add coverage summary to GitHub Actions
+        shell: bash
         run: |
-          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Coverage Summary" >> "$GITHUB_STEP_SUMMARY"
           if [ -f coverage/coverage-summary.json ]; then
-            node <<'EOF' >> $GITHUB_STEP_SUMMARY
-            const fs = require('fs');
-            const s = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8')).total;
-            console.log('| Metric | Percent | Covered/Total |');
-            console.log('|---|---:|---:|');
-            ['lines', 'statements', 'functions', 'branches'].forEach((k) => {
-              const v = s[k];
-              console.log('| ' + k + ' | ' + v.pct + '% | ' + v.covered + '/' + v.total + ' |');
-            });
-            EOF
+            node -e 'const fs=require("fs"); const s=JSON.parse(fs.readFileSync("coverage/coverage-summary.json","utf8")).total; console.log("| Metric | Percent | Covered/Total |"); console.log("|---|---:|---:|"); ["lines","statements","functions","branches"].forEach(k => { const v=s[k]; console.log("| " + k + " | " + v.pct + "% | " + v.covered + "/" + v.total + " |"); });' >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "coverage-summary.json not found." >> $GITHUB_STEP_SUMMARY
+            echo "coverage-summary.json not found." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload coverage reports to Codecov
