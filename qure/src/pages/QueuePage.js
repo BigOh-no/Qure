@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { searchClinics } from "../pages/clinicService";
+import { useNavigate } from "react-router-dom";
+import "../styles/Queue.css";
 
 function QueuePage() {
+  const navigate = useNavigate();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [admin1, setAdmin1] = useState("");
   const [facilityType, setFacilityType] = useState("");
@@ -26,14 +30,14 @@ function QueuePage() {
   ];
 
   const facilityTypes = [
-  "District Hospital",
-  "Clinic",
-  "Satellite Clinic",
-  "Community health centre",
-  "regional hospital",
-  "Provincial Tertiary Hospital",
-  "National Central Hospital",
-];
+    "District Hospital",
+    "Clinic",
+    "Satellite Clinic",
+    "Community Health Centre",
+    "Regional Hospital",
+    "Provincial Tertiary Hospital",
+    "National Central Hospital",
+  ];
 
   useEffect(() => {
     const runSearch = async () => {
@@ -80,93 +84,169 @@ function QueuePage() {
   };
 
   return (
-    <div>
-      <h1>Join Queue</h1>
+    <main className="queue-page">
+      <header className="queue-header">
 
-      <div>
-        <div>
-          <label>Search Clinic Name: </label>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Type clinic name"
-          />
-        </div>
+  
+      <section className="header-top">
+      <h1 className="queue-title">Join Queue</h1>
 
-        <div>
-          <label>Province: </label>
-          <select value={admin1} onChange={(e) => setAdmin1(e.target.value)}>
-            <option value="">Select Province</option>
-            {provinces.map((province) => (
-              <option key={province} value={province}>
-                {province}
-              </option>
-            ))}
-          </select>
-        </div>
+        <button
+          className="back-btn"
+          onClick={() => navigate("/patient")}
+        >
+          ← Back
+          </button>
+        </section>
 
-        <div>
-          <label>Facility Type: </label>
-          <select
-            value={facilityType}
-            onChange={(e) => setFacilityType(e.target.value)}
-          >
-            <option value="">Select Facility Type</option>
-            {facilityTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+ 
+        <p className="queue-subtitle">
+            Search for a clinic, select one, and join the queue.
+        </p>
 
-      <hr />
+      </header>
 
-      {loading && <p>Searching clinics...</p>}
-      {errorMessage && <p>{errorMessage}</p>}
+      <section className="search-section" aria-labelledby="search-heading">
+        <h2 id="search-heading" className="section-title">
+          Find a Clinic
+        </h2>
 
-<h2>Search Results</h2>
+        <form
+          className="search-form"
+          onSubmit={(event) => event.preventDefault()}
+        >
+          <section className="form-field">
+            <label htmlFor="clinic-search">Search Clinic Name</label>
+            <input
+              id="clinic-search"
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Type clinic name"
+            />
+          </section>
 
-<div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid #ccc", padding: "10px" }}>
-  {clinics.length === 0 ? (
-    <p>No clinics found.</p>
-  ) : (
-    clinics.map((clinic) => (
-      <div key={clinic.id}>
-        <p><strong>Name:</strong> {clinic.facility_name}</p>
-        <p><strong>Province:</strong> {clinic.admin1}</p>
-        <p><strong>Type:</strong> {clinic.facility_type}</p>
-        <button onClick={() => handleSelectClinic(clinic)}>
-          Select Clinic
-        </button>
-        <hr />
-      </div>
-    ))
-  )}
-</div>
+          <section className="form-field">
+            <label htmlFor="province-select">Province</label>
+            <select
+              id="province-select"
+              value={admin1}
+              onChange={(event) => setAdmin1(event.target.value)}
+            >
+              <option value="">Select Province</option>
+              {provinces.map((province) => (
+                <option key={province} value={province}>
+                  {province}
+                </option>
+              ))}
+            </select>
+          </section>
+
+          <section className="form-field">
+            <label htmlFor="facility-type-select">Facility Type</label>
+            <select
+              id="facility-type-select"
+              value={facilityType}
+              onChange={(event) => setFacilityType(event.target.value)}
+            >
+              <option value="">Select Facility Type</option>
+              {facilityTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </section>
+        </form>
+      </section>
+
+      <hr className="section-divider" />
+
+      <section className="results-section" aria-labelledby="results-heading">
+        <h2 id="results-heading" className="section-title">
+          Search Results
+        </h2>
+
+        {loading && <p className="status-message">Searching clinics...</p>}
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+
+        <section className="results-list" aria-label="Clinic search results">
+          {clinics.length === 0 ? (
+            <p className="empty-state">No clinics found.</p>
+          ) : (
+            clinics.map((clinic) => (
+              <article className="clinic-card" key={clinic.id}>
+                <p>
+                  <strong>Name:</strong> {clinic.facility_name}
+                </p>
+                <p>
+                  <strong>Province:</strong> {clinic.admin1}
+                </p>
+                <p>
+                  <strong>Type:</strong> {clinic.facility_type}
+                </p>
+
+                <button
+                  className="primary-btn"
+                  type="button"
+                  onClick={() => handleSelectClinic(clinic)}
+                >
+                  Select Clinic
+                </button>
+              </article>
+            ))
+          )}
+        </section>
+      </section>
 
       {selectedClinic && (
-        <div>
-          <h2>Selected Clinic</h2>
-          <p><strong>Name:</strong> {selectedClinic.facility_name}</p>
-          <p><strong>Province:</strong> {selectedClinic.admin1}</p>
-          <p><strong>Type:</strong> {selectedClinic.facility_type}</p>
+        <section
+          className="selected-clinic-section"
+          aria-labelledby="selected-clinic-heading"
+        >
+          <h2 id="selected-clinic-heading" className="section-title">
+            Selected Clinic
+          </h2>
 
-          {!joined ? (
-            <button onClick={handleJoinQueue}>Join Queue</button>
-          ) : (
-            <div>
-              <p>Joined queue at {selectedClinic.facility_name}</p>
-              <p>Queue Number: 7</p>
-              <p>Status: Waiting</p>
-              <p>Estimated Wait: 45 mins</p>
-            </div>
-          )}
-        </div>
+          <article className="selected-clinic-card">
+            <p>
+              <strong>Name:</strong> {selectedClinic.facility_name}
+            </p>
+            <p>
+              <strong>Province:</strong> {selectedClinic.admin1}
+            </p>
+            <p>
+              <strong>Type:</strong> {selectedClinic.facility_type}
+            </p>
+
+            {!joined ? (
+              <button
+                className="primary-btn join-btn"
+                type="button"
+                onClick={handleJoinQueue}
+              >
+                Join Queue
+              </button>
+            ) : (
+              <section className="queue-status" aria-label="Queue status">
+                <p>
+                  <strong>Clinic:</strong> {selectedClinic.facility_name}
+                </p>
+                <p>
+                  <strong>Queue Number:</strong> 7
+                </p>
+                <p>
+                  <strong>Status:</strong> Waiting
+                </p>
+                <p>
+                  <strong>Estimated Wait:</strong> 45 mins
+                </p>
+              </section>
+            )}
+          </article>
+        </section>
       )}
-    </div>
+    </main>
   );
 }
 
