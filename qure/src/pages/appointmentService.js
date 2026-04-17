@@ -1,5 +1,20 @@
 import { supabaseClient } from "../lib/supabaseClient";
 
+export function generateHourlySlots() {
+  return [
+    "08:00",
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+  ];
+}
+
 export async function getBookedSlots(clinicId, appointmentDate) {
   const { data, error } = await supabaseClient
     .from("appointments")
@@ -91,5 +106,87 @@ export async function getPatientAppointments() {
     throw error;
   }
 
-  return data || [];
+  const now = new Date();
+
+  const futureAppointments = (data || []).filter((appt) => {
+    if (!appt.appointment_date || !appt.appointment_time) {
+      return false;
+    }
+
+    const appointmentDateTime = new Date(
+      `${appt.appointment_date}T${appt.appointment_time}`
+    );
+
+    return appointmentDateTime >= now && appt.status !== "cancelled";
+  });
+
+  return futureAppointments;
+}
+
+export async function cancelAppointment(appointmentId) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseClient.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("You must be logged in to cancel an appointment.");
+  }
+
+  const { data, error } = await supabaseClient
+    .from("appointments")
+    .update({ status: "cancelled" })
+    .eq("id", appointmentId)
+    .eq("patient_user_id", user.id)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function rescheduleAppointment({
+  appointmentId,
+  clinicId,
+  appointmentDate,
+  appointmentTime,
+}) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseClient.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("You must be logged in to reschedule an appointment.");
+  }
+
+  const { data, error } = await supabaseClient
+    .from("appointments")
+    .update({
+      appointment_date: appointmentDate,
+      appointment_time: appointmentTime,
+      status: "booked",
+      clinic_id: clinicId,
+    })
+    .eq("id", appointmentId)
+    .eq("patient_user_id", user.id)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }
