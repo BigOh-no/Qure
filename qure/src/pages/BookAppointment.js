@@ -7,9 +7,8 @@ import "../styles/Appointment.css";
 import { useNavigate } from "react-router-dom";
 
 function BookAppointment() {
-
   const navigate = useNavigate();
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [admin1, setAdmin1] = useState("");
   const [facilityType, setFacilityType] = useState("");
@@ -18,11 +17,16 @@ function BookAppointment() {
   const [selectedClinic, setSelectedClinic] = useState(null);
 
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [bookedSlots, setBookedSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [slotStatusMap, setSlotStatusMap] = useState({});
 
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const provinces = [
     "Eastern Cape",
@@ -77,70 +81,136 @@ function BookAppointment() {
   }, [searchTerm, admin1, facilityType]);
 
   useEffect(() => {
-    const loadBookedSlots = async () => {
+    const loadAvailableSlots = async () => {
       if (!selectedClinic || !date) {
-        setBookedSlots([]);
+        setAvailableSlots([]);
+        setSlotStatusMap({});
+        setSelectedSlot("");
         return;
       }
 
       try {
-        const slots = await getBookedSlots(selectedClinic.id, date);
-        setBookedSlots(slots);
+        setLoadingSlots(true);
+        setErrorMessage("");
+        setAvailableSlots([]);
+        setSlotStatusMap({});
+        setSelectedSlot("");
+
+        const today = new Date().toISOString().split("T")[0];
+
+        if (date < today) {
+          setErrorMessage("Please choose today or a future date.");
+          return;
+        }
+
+        const bookedSlots = await getBookedSlots(selectedClinic.id, date);
+        const allSlots = generateHourlySlots();
+        const now = new Date();
+
+        const statusMap = {};
+
+        allSlots.forEach((slot) => {
+          const slotDateTime = new Date(`${date}T${slot}`);
+
+          if (slotDateTime < now) {
+            statusMap[slot] = "past";
+          } else if (bookedSlots.includes(slot)) {
+            statusMap[slot] = "booked";
+          } else {
+            statusMap[slot] = "available";
+          }
+        });
+
+        setAvailableSlots(allSlots);
+        setSlotStatusMap(statusMap);
       } catch (error) {
         console.error(error);
         setErrorMessage("Failed to load appointment slots.");
+      } finally {
+        setLoadingSlots(false);
       }
     };
 
-    loadBookedSlots();
+    loadAvailableSlots();
   }, [selectedClinic, date]);
 
   const handleSelectClinic = (clinic) => {
     setSelectedClinic(clinic);
     setDate("");
-    setTime("");
-    setBookedSlots([]);
+    setSelectedSlot("");
+    setAvailableSlots([]);
+    setSlotStatusMap({});
     setErrorMessage("");
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSlotSelect = (slot) => {
+    const status = slotStatusMap[slot];
 
-    if (!selectedClinic) {
-      alert("Please select a clinic first.");
+    if (status === "booked" || status === "past") {
       return;
     }
 
-    if (!date || !time) {
-      alert("Please select a date and time.");
+    setSelectedSlot(slot);
+    setErrorMessage("");
+  };
+
+  const handleConfirmBooking = async (event) => {
+    event.preventDefault();
+
+    if (!selectedClinic) {
+      setErrorMessage("Please select a clinic first.");
+      return;
+    }
+
+    if (!date) {
+      setErrorMessage("Please select a date.");
+      return;
+    }
+
+    if (!selectedSlot) {
+      setErrorMessage("Please choose a time slot.");
+      return;
+    }
+
+    const slotStatus = slotStatusMap[selectedSlot];
+
+    if (slotStatus === "booked" || slotStatus === "past") {
+      setErrorMessage("Please choose a valid available time slot.");
       return;
     }
 
     try {
       setLoading(true);
+      setErrorMessage("");
 
       await createAppointment({
         clinicId: selectedClinic.id,
         appointmentDate: date,
-        appointmentTime: time,
+        appointmentTime: selectedSlot,
       });
 
-      alert(
-        `Appointment booked at ${selectedClinic.facility_name} for ${date} at ${time}`
+      setSuccessMessage(
+        `Appointment booked successfully for ${date} at ${selectedSlot}.`
       );
-
-      navigate("/patient");
+      setShowSuccessPopup(true);
     } catch (error) {
       console.error(error);
 
       if (error.code === "23505") {
-        alert("That slot has already been booked. Please choose another one.");
+        setErrorMessage(
+          "That slot has already been booked. Please choose another one."
+        );
       } else {
-        alert(error.message || "Failed to book appointment.");
+        setErrorMessage(error.message || "Failed to book appointment.");
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const closeSuccessPopup = () => {
+    setShowSuccessPopup(false);
+    navigate("/patient");
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -296,7 +366,7 @@ function BookAppointment() {
               <strong>Type:</strong> {selectedClinic.facility_type}
             </p>
 
-            <form className="booking-form" onSubmit={handleSubmit}>
+            <form className="booking-form" onSubmit={handleConfirmBooking}>
               <section className="form-field">
                 <label htmlFor="appointment-date">Date</label>
                 <input
@@ -306,41 +376,83 @@ function BookAppointment() {
                   value={date}
                   onChange={(event) => {
                     setDate(event.target.value);
-                    setTime("");
+                    setSelectedSlot("");
+                    setErrorMessage("");
                   }}
                 />
               </section>
 
               {date && (
                 <section className="form-field">
-                  <label>Available Time Slots</label>
-                  <section className="slot-grid">
-                    {generateHourlySlots().map((slot) => {
-                      const isBooked = bookedSlots.includes(slot);
-                      const isSelected = time === slot;
+                  <label>Choose a time slot</label>
 
-                      return (
-                        <button
-                          key={slot}
-                          type="button"
-                          className={`slot-btn ${isSelected ? "selected" : ""}`}
-                          disabled={isBooked}
-                          onClick={() => setTime(slot)}
-                        >
-                          {slot}
-                        </button>
-                      );
-                    })}
-                  </section>
+                  {loadingSlots ? (
+                    <p className="modal-info">Loading slots...</p>
+                  ) : availableSlots.length > 0 ? (
+                    <div className="slot-grid">
+                      {availableSlots.map((slot) => {
+                        const status = slotStatusMap[slot];
+                        const isSelected = selectedSlot === slot;
+                        const isDisabled =
+                          status === "booked" || status === "past";
+
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            className={`slot-btn ${
+                              status === "booked" ? "slot-btn-booked" : ""
+                            } ${status === "past" ? "slot-btn-past" : ""} ${
+                              isSelected ? "slot-btn-active" : ""
+                            }`}
+                            onClick={() => handleSlotSelect(slot)}
+                            disabled={isDisabled}
+                          >
+                            {slot}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="modal-info">No slots found for this date.</p>
+                  )}
                 </section>
               )}
 
-              <button className="primary-btn confirm-btn" type="submit">
-                Confirm Booking
+              <button
+                className="action-btn"
+                type="submit"
+                disabled={
+                  loading ||
+                  !selectedSlot ||
+                  slotStatusMap[selectedSlot] === "booked" ||
+                  slotStatusMap[selectedSlot] === "past"
+                }
+              >
+                {loading ? "Saving..." : "Confirm"}
               </button>
             </form>
           </article>
         </section>
+      )}
+
+      {showSuccessPopup && (
+        <div className="modal-overlay" onClick={closeSuccessPopup}>
+          <div
+            className="success-popup"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="success-popup-title">Success</h3>
+            <p className="success-popup-text">{successMessage}</p>
+            <button
+              type="button"
+              className="action-btn"
+              onClick={closeSuccessPopup}
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );

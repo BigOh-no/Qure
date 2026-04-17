@@ -11,7 +11,6 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-
   padding: 1rem 0;
   margin-bottom: 1.5rem;
 }
@@ -114,15 +113,6 @@
   padding: 0.7rem;
   border-radius: 0.5rem;
   cursor: pointer;
-}
-
-.menu-item {
-  background-color: #fff5f5;
-  border: 1px solid #f0caca;
-  padding: 0.7rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-
   transition: transform 0.15s ease, background-color 0.2s ease;
 }
 
@@ -158,6 +148,14 @@
 .action-btn:hover {
   background-color: rgba(139, 0, 0, 0.95);
   transform: scale(1.03);
+}
+
+/* 🔴 DISABLED STATE (important for booking button) */
+.action-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .section-divider {
@@ -239,6 +237,12 @@
   transform: scale(1.03);
 }
 
+.secondary-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .empty-state {
   background-color: #ffffff;
   border-radius: 1rem;
@@ -247,43 +251,69 @@
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
 }
 
-@media (max-width: 768px) {
-  .patient-dashboard {
-    padding: 1.2rem;
-  }
+/* ========================= */
+/* 🔥 SLOT SYSTEM (UPDATED)  */
+/* ========================= */
 
-  .dashboard-title {
-    font-size: 1.7rem;
-  }
-
-  .dashboard-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-btn {
-    width: 100%;
-  }
-
-  .card-actions {
-    flex-direction: column;
-  }
-
-  .secondary-btn {
-    width: 100%;
-  }
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
-.secondary-btn:disabled {
+
+.slot-btn {
+  border: 1px solid #cfcfcf;
+  background: #ffffff;
+  color: #333;
+  padding: 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+/* hover only if clickable */
+.slot-btn:hover:not(:disabled) {
+  border-color: #8b0000;
+  transform: translateY(-1px);
+}
+
+/* 🔴 BOOKED */
+.slot-btn-booked {
+  background: #2c2c2c;
+  color: #ffffff;
+  border-color: #2c2c2c;
   opacity: 0.7;
   cursor: not-allowed;
-  transform: none;
 }
 
-.secondary-btn:disabled {
-  opacity: 0.7;
+/* ⚫ PAST */
+.slot-btn-past {
+  background: #6b6b6b;
+  color: #ffffff;
+  border-color: #6b6b6b;
+  opacity: 0.65;
   cursor: not-allowed;
-  transform: none;
 }
+
+/* 🟢 SELECTED */
+.slot-btn-active {
+  background: #8b0000;
+  color: #ffffff;
+  border-color: #8b0000;
+}
+
+/* current (reschedule only but safe to keep) */
+.slot-btn-current {
+  background: #fff4f4;
+  color: #8b0000;
+  border: 1px solid #d88;
+}
+
+/* ========================= */
+/* MODALS */
+/* ========================= */
 
 .modal-overlay {
   position: fixed;
@@ -336,59 +366,6 @@
   margin-bottom: 1rem;
 }
 
-.modal-slots-section {
-  margin-top: 0.5rem;
-}
-
-.slot-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-
-.slot-btn {
-  border: 1px solid #cfcfcf;
-  background: #ffffff;
-  color: #333;
-  padding: 0.75rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: 0.2s ease;
-}
-
-.slot-btn:hover:not(:disabled) {
-  border-color: #8b0000;
-  transform: translateY(-1px);
-}
-
-.slot-btn-booked {
-  background: #f1f1f1;
-  color: #999999;
-  border-color: #dddddd;
-  cursor: not-allowed;
-}
-
-.slot-btn-past {
-  background: #f8f8f8;
-  color: #bbbbbb;
-  border-color: #e4e4e4;
-  cursor: not-allowed;
-}
-
-.slot-btn-current {
-  background: #fff4f4;
-  color: #8b0000;
-  border: 1px solid #d88;
-}
-
-.slot-btn.slot-btn-active {
-  background: #8b0000;
-  color: #ffffff;
-  border-color: #8b0000;
-}
-
 .modal-info {
   color: #666;
   margin-top: 0.5rem;
@@ -437,5 +414,36 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* ========================= */
+/* MOBILE */
+/* ========================= */
+
+@media (max-width: 768px) {
+  .patient-dashboard {
+    padding: 1.2rem;
+  }
+
+  .dashboard-title {
+    font-size: 1.7rem;
+  }
+
+  .dashboard-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
+
+  .card-actions {
+    flex-direction: column;
+  }
+
+  .secondary-btn {
+    width: 100%;
   }
 }
