@@ -53,3 +53,43 @@ export async function createAppointment({
 
   return data;
 }
+
+export async function getPatientAppointments() {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseClient.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("You must be logged in to view appointments.");
+  }
+
+  const { data, error } = await supabaseClient
+    .from("appointments")
+    .select(`
+      id,
+      appointment_date,
+      appointment_time,
+      status,
+      clinic_id,
+      clinics (
+        id,
+        facility_name,
+        admin1,
+        facility_type
+      )
+    `)
+    .eq("patient_user_id", user.id)
+    .order("appointment_date", { ascending: true })
+    .order("appointment_time", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}

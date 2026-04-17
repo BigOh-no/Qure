@@ -16,8 +16,6 @@
   margin-bottom: 1.5rem;
 }
 
-
-
 .dashboard-logo {
   width: 100px;
   height: auto;
@@ -82,7 +80,6 @@
   border-radius: 999px;
 }
 
-
 .menu-panel {
   position: absolute;
   top: 55px;
@@ -98,14 +95,12 @@
   flex-direction: column;
   gap: 0.5rem;
 
-  
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
 
   transition: all 0.25s ease;
 }
-
 
 .menu-dropdown[open] .menu-panel {
   opacity: 1;
@@ -120,7 +115,6 @@
   border-radius: 0.5rem;
   cursor: pointer;
 }
-
 
 .menu-item {
   background-color: #fff5f5;
@@ -143,6 +137,7 @@
   color: #a30000;
   font-weight: bold;
 }
+
 .action-btn,
 .secondary-btn {
   border: none;
@@ -184,8 +179,24 @@
 }
 
 .appointments-list {
+  max-height: 420px;
+  overflow-y: auto;
   display: grid;
   gap: 1rem;
+  padding-right: 0.3rem;
+}
+
+.appointments-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.appointments-list::-webkit-scrollbar-thumb {
+  background-color: #c9a3a3;
+  border-radius: 999px;
+}
+
+.appointments-list::-webkit-scrollbar-track {
+  background-color: #f3eeee;
 }
 
 .appointment-card,
