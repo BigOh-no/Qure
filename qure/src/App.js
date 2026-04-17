@@ -18,11 +18,9 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/patient" element={<PatientDashboard />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/staff" element={<StaffDashboard />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/admin" element={<AdminDashboard />} />
 
         
       </Routes>

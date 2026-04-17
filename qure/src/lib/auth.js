@@ -65,26 +65,33 @@ export const getUserRole = async (userEmail) => {
     return data.role;
 };
 
-export const ensureUserProfile = async (user, role = 'patient') => {
+export const ensureUserProfile = async (user) => {
   const { data: existingProfile, error } = await supabaseClient
     .from('profiles')
-    .select('id')
+    .select('id, role')
     .eq('id', user.id)
     .maybeSingle();
 
   if (error) throw error;
 
   if (!existingProfile) {
+    const roleFromMetadata =
+      user?.user_metadata?.role ||
+      user?.app_metadata?.role ||
+      'patient';
+
     const { error: insertError } = await supabaseClient
       .from('profiles')
       .insert([{
         id: user.id,
         email: user.email,
-        role
+        role: roleFromMetadata,
       }]);
 
     if (insertError) throw insertError;
   }
+
+  return existingProfile;
 };
 
 export const createAdminInvite = async (email) => {

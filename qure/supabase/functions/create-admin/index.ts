@@ -85,8 +85,7 @@ serve(async (req) => {
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const redirectTo =
-      `${window.location.origin}/auth/callback`;
+    const redirectTo = "https://purple-coast-06bb98010.6.azurestaticapps.net/reset-password";
 
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(email, {
@@ -101,11 +100,39 @@ serve(async (req) => {
       );
     }
 
+    const invitedUserId = inviteData?.user?.id;
+
+    if (!invitedUserId) {
+      return new Response(
+        JSON.stringify({ error: "Invite succeeded but no invited user ID was returned" }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    const { error: profileInsertError } = await adminClient
+      .from("profiles")
+      .upsert([
+        {
+          id: invitedUserId,
+          email,
+          role: "admin",
+        },
+      ]);
+
+    if (profileInsertError) {
+      return new Response(
+        JSON.stringify({
+          error: `Admin invited, but failed to create profile: ${profileInsertError.message}`,
+        }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         message: "Admin invite sent successfully",
-        invitedUserId: inviteData?.user?.id ?? null,
+        invitedUserId,
       }),
       { status: 200, headers: corsHeaders }
     );

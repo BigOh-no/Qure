@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { updatePassword } from '../lib/auth';
+import { updatePassword, ensureUserProfile, getUserRole } from '../lib/auth';
+import { supabaseClient } from '../lib/supabaseClient';
 import '../styles/Admin.css';
 
 function ResetPassword() {
@@ -11,6 +12,54 @@ function ResetPassword() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      // Give Supabase a chance to read tokens from the URL fragment
+      const {
+        data: { session },
+        error,
+      } = await supabaseClient.auth.getSession();
+
+      if (!mounted) return;
+
+      if (error) {
+        setErrorMessage('Could not verify invite session.');
+        return;
+      }
+
+      if (session?.user) {
+        setReady(true);
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      if (
+        event === 'PASSWORD_RECOVERY' ||
+        event === 'SIGNED_IN' ||
+        event === 'INITIAL_SESSION'
+      ) {
+        if (session?.user) {
+          setErrorMessage('');
+          setReady(true);
+        }
+      }
+    });
+
+    init();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -29,14 +78,33 @@ function ResetPassword() {
 
     try {
       setIsSaving(true);
+
       await updatePassword(password);
-      setSuccessMessage('Password updated successfully. You can now continue.');
-      setPassword('');
-      setConfirmPassword('');
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseClient.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error('Could not load user after password update.');
+      }
+
+      await ensureUserProfile(user);
+
+      const role = await getUserRole(user.id);
+
+      setSuccessMessage('Password updated successfully.');
 
       setTimeout(() => {
-        navigate('/login');
-      }, 1500);
+        if (role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else if (role === 'staff') {
+          navigate('/staff', { replace: true });
+        } else {
+          navigate('/patient', { replace: true });
+        }
+      }, 1200);
     } catch (error) {
       setErrorMessage(error.message || 'Failed to update password.');
     } finally {
@@ -70,41 +138,45 @@ function ResetPassword() {
             <div className="admin-error-message">{errorMessage}</div>
           )}
 
-          <form className="popup-form" onSubmit={handleSubmit}>
-            <label className="popup-label" htmlFor="password">
-              New Password
-            </label>
-            <input
-              className="popup-input"
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
+          {!ready && !errorMessage ? (
+            <p>Verifying your invite link...</p>
+          ) : ready ? (
+            <form className="popup-form" onSubmit={handleSubmit}>
+              <label className="popup-label" htmlFor="password">
+                New Password
+              </label>
+              <input
+                className="popup-input"
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
 
-            <label className="popup-label" htmlFor="confirmPassword">
-              Confirm Password
-            </label>
-            <input
-              className="popup-input"
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-            />
+              <label className="popup-label" htmlFor="confirmPassword">
+                Confirm Password
+              </label>
+              <input
+                className="popup-input"
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                required
+              />
 
-            <footer className="popup-footer">
-              <button
-                type="submit"
-                className="save-btn"
-                disabled={isSaving}
-              >
-                {isSaving ? 'Saving...' : 'Update Password'}
-              </button>
-            </footer>
-          </form>
+              <footer className="popup-footer">
+                <button
+                  type="submit"
+                  className="save-btn"
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Update Password'}
+                </button>
+              </footer>
+            </form>
+          ) : null}
         </article>
       </section>
     </main>
