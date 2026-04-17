@@ -86,7 +86,7 @@ serve(async (req) => {
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const redirectTo =
-      "https://purple-coast-06bb98010.6.azurestaticapps.net/auth/callback";
+      `${window.location.origin}/auth/callback`;
 
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(email, {
