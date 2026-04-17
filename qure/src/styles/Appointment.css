@@ -206,3 +206,50 @@
     width: 100%;
   }
 }
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.slot-btn {
+  padding: 0.75rem;
+  border: 1px solid #e1c5c5;
+  border-radius: 10px;
+  background-color: #ffffff;
+  color: #7a0000;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.slot-btn:hover:not(:disabled) {
+  background-color: #fff5f5;
+  transform: scale(1.02);
+}
+
+.slot-btn.selected {
+  border: 2px solid #a30000;
+  background-color: #fdeaea;
+  color: #5c0000;
+  font-weight: 700;
+}
+
+.slot-btn:disabled {
+  background-color: #f2f2f2;
+  color: #999999;
+  border: 1px solid #dddddd;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.booking-form {
+  align-items: start;
+}
+
+.booking-form .form-field {
+  min-width: 0;
+}

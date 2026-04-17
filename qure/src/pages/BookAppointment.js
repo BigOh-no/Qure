@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { searchClinics } from "../pages/clinicService";
+import { getBookedSlots, createAppointment } from "../pages/appointmentService";
+import { generateHourlySlots } from "../pages/slotUtils";
 import ClinicMap from "../pages/ClinicMap.js";
 import "../styles/Appointment.css";
+import { useNavigate } from "react-router-dom";
 
 function BookAppointment() {
+
+  const navigate = useNavigate();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [admin1, setAdmin1] = useState("");
   const [facilityType, setFacilityType] = useState("");
@@ -13,6 +19,7 @@ function BookAppointment() {
 
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [bookedSlots, setBookedSlots] = useState([]);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,11 +76,34 @@ function BookAppointment() {
     runSearch();
   }, [searchTerm, admin1, facilityType]);
 
+  useEffect(() => {
+    const loadBookedSlots = async () => {
+      if (!selectedClinic || !date) {
+        setBookedSlots([]);
+        return;
+      }
+
+      try {
+        const slots = await getBookedSlots(selectedClinic.id, date);
+        setBookedSlots(slots);
+      } catch (error) {
+        console.error(error);
+        setErrorMessage("Failed to load appointment slots.");
+      }
+    };
+
+    loadBookedSlots();
+  }, [selectedClinic, date]);
+
   const handleSelectClinic = (clinic) => {
     setSelectedClinic(clinic);
+    setDate("");
+    setTime("");
+    setBookedSlots([]);
+    setErrorMessage("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!selectedClinic) {
@@ -86,14 +116,34 @@ function BookAppointment() {
       return;
     }
 
-    console.log("Booking details:", {
-      clinic: selectedClinic,
-      date,
-      time,
-    });
+    try {
+      setLoading(true);
 
-    alert(`Appointment booked at ${selectedClinic.facility_name}`);
+      await createAppointment({
+        clinicId: selectedClinic.id,
+        appointmentDate: date,
+        appointmentTime: time,
+      });
+
+      alert(
+        `Appointment booked at ${selectedClinic.facility_name} for ${date} at ${time}`
+      );
+
+      navigate("/patient");
+    } catch (error) {
+      console.error(error);
+
+      if (error.code === "23505") {
+        alert("That slot has already been booked. Please choose another one.");
+      } else {
+        alert(error.message || "Failed to book appointment.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <main className="book-appointment-page">
@@ -212,7 +262,9 @@ function BookAppointment() {
 
             <section className="map-wrapper">
               {clinics.length === 0 ? (
-                <p className="empty-state">Map will appear once clinics are found.</p>
+                <p className="empty-state">
+                  Map will appear once clinics are found.
+                </p>
               ) : (
                 <ClinicMap
                   clinics={clinics}
@@ -250,20 +302,38 @@ function BookAppointment() {
                 <input
                   id="appointment-date"
                   type="date"
+                  min={today}
                   value={date}
-                  onChange={(event) => setDate(event.target.value)}
+                  onChange={(event) => {
+                    setDate(event.target.value);
+                    setTime("");
+                  }}
                 />
               </section>
 
-              <section className="form-field">
-                <label htmlFor="appointment-time">Time</label>
-                <input
-                  id="appointment-time"
-                  type="time"
-                  value={time}
-                  onChange={(event) => setTime(event.target.value)}
-                />
-              </section>
+              {date && (
+                <section className="form-field">
+                  <label>Available Time Slots</label>
+                  <section className="slot-grid">
+                    {generateHourlySlots().map((slot) => {
+                      const isBooked = bookedSlots.includes(slot);
+                      const isSelected = time === slot;
+
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          className={`slot-btn ${isSelected ? "selected" : ""}`}
+                          disabled={isBooked}
+                          onClick={() => setTime(slot)}
+                        >
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </section>
+                </section>
+              )}
 
               <button className="primary-btn confirm-btn" type="submit">
                 Confirm Booking
