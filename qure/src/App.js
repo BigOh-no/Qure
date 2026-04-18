@@ -29,7 +29,6 @@ function App() {
         <Route path="/patient/queue" element={<QueuePage />} />
         <Route path="/patient/appointments" element={<AppointmentsPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/admin/auth/callback" element={<AdminAuth />} />
         <Route path="/staff/auth/callback" element={<StaffAuth />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
