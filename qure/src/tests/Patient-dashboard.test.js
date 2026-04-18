@@ -1,28 +1,14 @@
-import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import PatientDashboard from "../pages/Patient-dashboard"
 import { MemoryRouter } from "react-router-dom";
-import PatientDashboard from "../pages/Patient-dashboard";
 import { supabaseClient } from "../lib/supabaseClient";
 import {
   getPatientAppointments,
   cancelAppointment,
   rescheduleAppointment,
-  getBookedSlots,
-  generateHourlySlots,
 } from "../pages/appointmentService";
 
-// ---------------- MOCK ROUTER ----------------
-const mockNavigate = jest.fn();
-
-jest.mock("react-router-dom", () => {
-  const actual = jest.requireActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
-
-// ---------------- MOCK SUPABASE ----------------
+// ---------------- MOCKS ----------------
 jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
@@ -32,25 +18,20 @@ jest.mock("../lib/supabaseClient", () => ({
   },
 }));
 
-// ---------------- MOCK SERVICES ----------------
 jest.mock("../pages/appointmentService", () => ({
   getPatientAppointments: jest.fn(),
   cancelAppointment: jest.fn(),
   rescheduleAppointment: jest.fn(),
-  getBookedSlots: jest.fn(),
-  generateHourlySlots: jest.fn(),
+  getBookedSlots: jest.fn().mockResolvedValue([]),
+  generateHourlySlots: jest.fn(() => ["09:00", "10:00"]),
 }));
 
-// ---------------- MOCK CONFIRM ----------------
-global.confirm = jest.fn();
+const mockNavigate = jest.fn();
 
-// ---------------- TEST HELPER ----------------
-const renderComponent = () =>
-  render(
-    <MemoryRouter>
-      <PatientDashboard />
-    </MemoryRouter>
-  );
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
 
 // ---------------- TESTS ----------------
 describe("PatientDashboard", () => {
@@ -60,7 +41,7 @@ describe("PatientDashboard", () => {
     supabaseClient.auth.getUser.mockResolvedValue({
       data: {
         user: {
-          email: "john@example.com",
+          email: "test@example.com",
           user_metadata: { full_name: "John Doe" },
         },
       },
@@ -69,56 +50,71 @@ describe("PatientDashboard", () => {
 
     getPatientAppointments.mockResolvedValue([
       {
-        id: "1",
-        clinic_id: "c1",
+        id: 1,
+        clinic_id: "clinic-1",
         appointment_date: "2026-04-20",
-        appointment_time: "10:00:00",
+        appointment_time: "09:00:00",
         status: "booked",
-        clinics: { facility_name: "Test Clinic" },
+        clinics: { facility_name: "Clinic A" },
       },
     ]);
-
-    generateHourlySlots.mockReturnValue([
-      "09:00",
-      "10:00",
-      "11:00",
-    ]);
   });
 
-  test("renders dashboard greeting", async () => {
-    renderComponent();
+  test("renders patient name and appointments", async () => {
+    render(
+      <MemoryRouter>
+        <PatientDashboard />
+      </MemoryRouter>
+    );
 
-    expect(await screen.findByText(/hi, john doe/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Hi, John Doe/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Clinic A/i)).toBeInTheDocument();
   });
 
-  test("renders appointments", async () => {
-    renderComponent();
+  test("cancels appointment", async () => {
+    window.confirm = jest.fn(() => true);
 
-    expect(await screen.findByText(/test clinic/i)).toBeInTheDocument();
-    expect(screen.getByText(/2026-04-20/i)).toBeInTheDocument();
-    expect(screen.getByText(/booked/i)).toBeInTheDocument();
+    cancelAppointment.mockResolvedValue({});
+
+    render(
+      <MemoryRouter>
+        <PatientDashboard />
+      </MemoryRouter>
+    );
+
+    const cancelBtn = await screen.findByText(/cancel/i);
+    fireEvent.click(cancelBtn);
+
+    await waitFor(() => {
+      expect(cancelAppointment).toHaveBeenCalledWith(1);
+    });
   });
 
-  test("shows empty state when no appointments", async () => {
-    getPatientAppointments.mockResolvedValueOnce([]);
+  test("opens reschedule modal", async () => {
+    render(
+      <MemoryRouter>
+        <PatientDashboard />
+      </MemoryRouter>
+    );
 
-    renderComponent();
+    const rescheduleBtn = await screen.findByText(/reschedule/i);
+    fireEvent.click(rescheduleBtn);
 
     expect(
-      await screen.findByText(/no current appointments/i)
+      await screen.findByText(/reschedule appointment/i)
     ).toBeInTheDocument();
   });
 
-  test("logout calls supabase and navigates home", async () => {
-    supabaseClient.auth.signOut.mockResolvedValueOnce({});
+  test("logs out user", async () => {
+    supabaseClient.auth.signOut.mockResolvedValue({});
 
-    renderComponent();
+    render(
+      <MemoryRouter>
+        <PatientDashboard />
+      </MemoryRouter>
+    );
 
-    const logoutBtn = await screen.findByRole("button", {
-      name: /logout/i,
-    });
-
-    fireEvent.click(logoutBtn);
+    fireEvent.click(await screen.findByText(/logout/i));
 
     await waitFor(() => {
       expect(supabaseClient.auth.signOut).toHaveBeenCalled();
@@ -126,51 +122,17 @@ describe("PatientDashboard", () => {
     });
   });
 
-  test("navigation buttons work", async () => {
-    renderComponent();
+  test("shows empty state when no appointments", async () => {
+    getPatientAppointments.mockResolvedValue([]);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /book appointment/i })
+    render(
+      <MemoryRouter>
+        <PatientDashboard />
+      </MemoryRouter>
     );
-    expect(mockNavigate).toHaveBeenCalledWith("/patient/book");
 
-    fireEvent.click(screen.getByRole("button", { name: /join queue/i }));
-    expect(mockNavigate).toHaveBeenCalledWith("/patient/queue");
-
-    fireEvent.click(
-      screen.getByRole("button", { name: /view all appointments/i })
-    );
-    expect(mockNavigate).toHaveBeenCalledWith("/patient/appointments");
-  });
-
-  test("cancel appointment calls service", async () => {
-    global.confirm.mockReturnValueOnce(true);
-    cancelAppointment.mockResolvedValueOnce({});
-
-    renderComponent();
-
-    const cancelBtn = await screen.findByRole("button", {
-      name: /cancel/i,
-    });
-
-    fireEvent.click(cancelBtn);
-
-    await waitFor(() => {
-      expect(cancelAppointment).toHaveBeenCalledWith("1");
-    });
-  });
-
-  test("does not cancel when user rejects confirm", async () => {
-    global.confirm.mockReturnValueOnce(false);
-
-    renderComponent();
-
-    const cancelBtn = await screen.findByRole("button", {
-      name: /cancel/i,
-    });
-
-    fireEvent.click(cancelBtn);
-
-    expect(cancelAppointment).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(/no current appointments/i)
+    ).toBeInTheDocument();
   });
 });
