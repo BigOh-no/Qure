@@ -34,25 +34,15 @@ export const loginGoogle = async () => {
     return data;
 };
 
-export const handleGoogleUser = async (role='patient') => {
-    const { data, error } = await supabaseClient.auth.getUser();
-    if (error) throw error;
-    if (!data?.user) return null;
+export const handleGoogleUser = async () => {
+  const { data, error } = await supabaseClient.auth.getUser();
+  if (error) throw error;
+  if (!data?.user) return null;
 
-    const { data: existingProfile } = await supabaseClient
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
-    if (!existingProfile){
-        const { error: profileError } = await supabaseClient
-            .from('profiles')
-            .insert([{id: data.user.id, email: data.user.email, role: role}]);
-        if (profileError) throw profileError;
-    }
-    
-    return data.user;
-}
+  await ensureUserProfile(data.user);
+
+  return data.user;
+};
 
 export const getUserRole = async (userEmail) => {
     const { data, error } = await supabaseClient
