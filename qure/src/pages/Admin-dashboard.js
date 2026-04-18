@@ -79,11 +79,12 @@ function AdminDashboard() {
           searchTerm: staffClinicSearch,
           admin1: staffProvince,
           facilityType: staffFacilityType,
+          limit: 50,
         });
 
         setStaffClinicResults(results);
       } catch (error) {
-        console.error(error);
+        console.error("Clinic search failed:", error);
         setStaffClinicError("Failed to search clinics.");
       } finally {
         setStaffClinicLoading(false);
@@ -125,11 +126,14 @@ function AdminDashboard() {
 
     const staffData = {
       email: formData.get("staffEmail"),
-      clinic: selectedStaffClinic.facility_name,
       clinicId: selectedStaffClinic.id,
+      clinicName: selectedStaffClinic.facility_name,
+      province: selectedStaffClinic.admin1,
+      facilityType: selectedStaffClinic.facility_type,
     };
 
     console.log("Staff data:", staffData);
+
     event.target.reset();
     resetStaffPopup();
   };
@@ -363,7 +367,9 @@ function AdminDashboard() {
                       <article
                         key={clinic.id}
                         className={`popup-clinic-card ${
-                          selectedStaffClinic?.id === clinic.id ? "popup-clinic-card-selected" : ""
+                          selectedStaffClinic?.id === clinic.id
+                            ? "popup-clinic-card-selected"
+                            : ""
                         }`}
                       >
                         <section className="popup-clinic-info">
