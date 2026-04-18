@@ -54,15 +54,16 @@ export const handleGoogleUser = async (role='patient') => {
     return data.user;
 }
 
-export const getUserRole = async (userEmail) => {
-    const { data, error } = await supabaseClient
-        .from('profiles')
-        .select('role')
-        .eq('email', userEmail)
-        .single();
-    if (error) throw error;
-    if (!data?.role) return null;
-    return data.role;
+export const getUserRole = async (userId) => {
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle(); // safer than .single()
+
+  if (error) throw error;
+
+  return data?.role ?? null;
 };
 
 export const ensureUserProfile = async (user) => {
