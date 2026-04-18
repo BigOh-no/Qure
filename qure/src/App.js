@@ -11,17 +11,9 @@ import StaffDashboard from "./pages/Staff-dashboard";
 import BookAppointment from "./pages/BookAppointment";
 import QueuePage from "./pages/QueuePage";
 import AppointmentsPage from "./pages/AppointmentsPage";
-
-delete L.Icon.Default.prototype._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import ResetPasswordPage from "./pages/resetPasswordPage";
+import StaffAuth from "./pages/staffAuth";
+import AdminAuth from "./pages/adminAuth";
 
 function App() {
   return (
@@ -32,11 +24,16 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/patient" element={<PatientDashboard />} />
+        <Route path="/staff" element={<StaffDashboard />} />
         <Route path="/patient/book" element={<BookAppointment />} />
         <Route path="/patient/queue" element={<QueuePage />} />
         <Route path="/patient/appointments" element={<AppointmentsPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/staff" element={<StaffDashboard />} />
+        <Route path="/admin/auth/callback" element={<AdminAuth />} />
+        <Route path="/staff/auth/callback" element={<StaffAuth />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        
       </Routes>
     </Router>
   );
