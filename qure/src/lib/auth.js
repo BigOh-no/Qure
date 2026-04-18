@@ -54,14 +54,31 @@ export const handleGoogleUser = async (role='patient') => {
     return data.user;
 }
 
-export const getUserRole = async (userId) => {
-  const { data, error } = await supabaseClient
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .maybeSingle(); // safer than .single()
+export const getUserRole = async (identifier) => {
+  if (!identifier) {
+    return null;
+  }
 
-  if (error) throw error;
+  let query = supabaseClient
+    .from("profiles")
+    .select("role");
+
+  // crude uuid check
+  const looksLikeUuid =
+    typeof identifier === "string" &&
+    /^[0-9a-fA-F-]{36}$/.test(identifier);
+
+  if (looksLikeUuid) {
+    query = query.eq("id", identifier);
+  } else {
+    query = query.eq("email", String(identifier).trim().toLowerCase());
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    throw error;
+  }
 
   return data?.role ?? null;
 };
