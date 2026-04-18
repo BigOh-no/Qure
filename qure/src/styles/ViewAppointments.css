@@ -1,0 +1,132 @@
+.appointments-page {
+  min-height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  background-color: #f8f8f8;
+  color: #5c0000;
+}
+
+.appointments-header {
+  margin-bottom: 2rem;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.appointments-title {
+  margin: 0;
+  font-size: 2rem;
+  color: #5c0000;
+}
+
+.appointments-subtitle {
+  margin-top: 0.4rem;
+  color: #666666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.back-btn {
+  border: none;
+  background-color: transparent;
+  color: #a30000;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: rgba(163, 0, 0, 0.08);
+  transform: scale(1.05);
+}
+
+.section-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.35rem;
+  color: #7a0000;
+}
+
+.appointments-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.appointment-card {
+  background-color: #ffffff;
+  border-left: 5px solid #a30000;
+  border-radius: 1rem;
+  padding: 1.2rem 1.3rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.appointment-card p {
+  margin: 0.45rem 0;
+  color: #444444;
+  line-height: 1.4;
+}
+
+.appointment-card strong {
+  color: #7a0000;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.secondary-btn {
+  background-color: #fff5f5;
+  color: #8b0000;
+  border: 1px solid #f0caca;
+  border-radius: 10px;
+  padding: 0.75rem 1.1rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.secondary-btn:hover {
+  background-color: #ffe7e7;
+  transform: scale(1.03);
+}
+
+.empty-state {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  padding: 1rem 1.2rem;
+  color: #666666;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 768px) {
+  .appointments-page {
+    padding: 1.2rem;
+  }
+
+  .appointments-title {
+    font-size: 1.7rem;
+  }
+
+  .header-top {
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .card-actions {
+    flex-direction: column;
+  }
+
+  .secondary-btn {
+    width: 100%;
+  }
+}

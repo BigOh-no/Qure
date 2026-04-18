@@ -1,0 +1,344 @@
+.book-appointment-page {
+  min-height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  background-color: #f8f8f8;
+  color: #5c0000;
+}
+
+.booking-header {
+  margin-bottom: 2rem;
+}
+
+.booking-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  color: #5c0000;
+}
+
+.booking-subtitle {
+  margin: 0;
+  color: #666666;
+  line-height: 1.5;
+}
+
+.section-title {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.35rem;
+  color: #7a0000;
+}
+
+.subsection-title {
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+  font-size: 1.1rem;
+  color: #7a0000;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid #e7caca;
+  margin: 2rem 0;
+}
+
+.search-section,
+.results-section,
+.selected-clinic-section {
+  margin-bottom: 2rem;
+}
+
+.search-form,
+.booking-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.booking-form {
+  align-items: start;
+}
+
+.booking-form .form-field {
+  min-width: 0;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.form-field label {
+  font-weight: 700;
+  color: #7a0000;
+}
+
+.form-field input,
+.form-field select {
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #e1c5c5;
+  border-radius: 10px;
+  background-color: #ffffff;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: #a30000;
+  box-shadow: 0 0 0 3px rgba(163, 0, 0, 0.1);
+}
+
+.status-message,
+.error-message,
+.empty-state,
+.modal-info {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+.error-message,
+.modal-error {
+  color: #a30000;
+  font-weight: 600;
+}
+
+.results-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.results-list-panel,
+.map-section {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.results-list {
+  max-height: 500px;
+  overflow-y: auto;
+  display: grid;
+  gap: 1rem;
+  padding-right: 0.25rem;
+}
+
+.results-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.results-list::-webkit-scrollbar-thumb {
+  background-color: #c9a3a3;
+  border-radius: 999px;
+}
+
+.results-list::-webkit-scrollbar-track {
+  background-color: #f3eeee;
+}
+
+.clinic-card,
+.selected-clinic-card {
+  background-color: #ffffff;
+  border-left: 5px solid #a30000;
+  border-radius: 1rem;
+  padding: 1.2rem 1.3rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.clinic-card p,
+.selected-clinic-card p {
+  margin: 0.45rem 0;
+  color: #444444;
+  line-height: 1.4;
+}
+
+.clinic-card strong,
+.selected-clinic-card strong {
+  color: #7a0000;
+}
+
+.map-section {
+  margin-top: 0;
+}
+
+.map-wrapper {
+  height: 500px;
+  overflow: hidden;
+  border-radius: 0.8rem;
+}
+
+.map-wrapper > * {
+  width: 100%;
+  height: 100%;
+}
+
+.primary-btn,
+.action-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 0.8rem 1.3rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  background-color: rgba(163, 0, 0, 0.92);
+  color: #ffffff;
+  transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-btn:hover,
+.action-btn:hover {
+  background-color: rgba(139, 0, 0, 0.95);
+  transform: scale(1.03);
+}
+
+.primary-btn:disabled,
+.action-btn:disabled {
+  background-color: #cccccc;
+  color: #ffffff;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.confirm-btn {
+  align-self: start;
+  margin-top: 0.5rem;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.slot-btn {
+  border: 1px solid #cfcfcf;
+  background: #ffffff;
+  color: #333333;
+  padding: 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.slot-btn:hover:not(:disabled) {
+  border-color: #8b0000;
+  transform: translateY(-1px);
+}
+
+.slot-btn-booked {
+  background: #2c2c2c;
+  color: #ffffff;
+  border-color: #2c2c2c;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.slot-btn-past {
+  background: #6b6b6b;
+  color: #ffffff;
+  border-color: #6b6b6b;
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.slot-btn-current {
+  background: #fff4f4;
+  color: #8b0000;
+  border: 1px solid #d88;
+}
+
+.slot-btn-active {
+  background: #8b0000;
+  color: #ffffff;
+  border-color: #8b0000;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.success-popup {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+  text-align: center;
+  animation: fadeInModal 0.2s ease;
+}
+
+.success-popup-title {
+  margin: 0 0 0.5rem;
+  color: #8b0000;
+  font-size: 1.3rem;
+}
+
+.success-popup-text {
+  margin-bottom: 1.25rem;
+  color: #444444;
+  line-height: 1.5;
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .book-appointment-page {
+    padding: 1.2rem;
+  }
+
+  .booking-title {
+    font-size: 1.7rem;
+  }
+
+  .search-form,
+  .booking-form {
+    grid-template-columns: 1fr;
+  }
+
+  .results-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .map-wrapper {
+    height: 320px;
+  }
+
+  .primary-btn,
+  .action-btn {
+    width: 100%;
+  }
+
+  .slot-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

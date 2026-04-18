@@ -2,7 +2,6 @@ name: Run Tests
 
 on:
   push:
-  pull_request:
 
 jobs:
   test:
@@ -20,9 +19,32 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: qure/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test -- --watchAll=false
+      - name: Run tests with coverage
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test -- --coverage --watchAll=false 2>&1 | tee test-output.txt
+        env:
+          CI: true
+
+      - name: Add terminal coverage output to GitHub Actions summary
+        shell: bash
+        run: |
+          echo "## Coverage Output" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          sed -n '/File[[:space:]]*| % Stmts/,$p' test-output.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: BigOh-no/Qure
+          files: ./qure/coverage/lcov.info
+          fail_ci_if_error: true
