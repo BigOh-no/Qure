@@ -3,6 +3,7 @@ import "../styles/Admin.css";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/images/TLogo.png";
 import { createAdminInvite, logout } from "../lib/auth";
+import { createClinicStaffInvite } from "../lib/adminService";
 import { searchClinics } from "../pages/clinicService";
 
 function AdminDashboard() {
@@ -115,28 +116,42 @@ function AdminDashboard() {
     }
   };
 
-  const handleStaffSubmit = (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.target);
+  const [isSavingStaff, setIsSavingStaff] = useState(false);
 
-    if (!selectedStaffClinic) {
-      alert("Please select a clinic first.");
-      return;
-    }
+const handleStaffSubmit = async (event) => {
+  event.preventDefault();
+  const formData = new FormData(event.target);
 
-    const staffData = {
-      email: formData.get("staffEmail"),
+  if (!selectedStaffClinic) {
+    alert("Please select a clinic first.");
+    return;
+  }
+
+  const email = formData.get("staffEmail")?.toString().trim().toLowerCase();
+
+  setSuccessMessage("");
+  setErrorMessage("");
+  setIsSavingStaff(true);
+
+  try {
+    const result = await createClinicStaffInvite({
+      email,
       clinicId: selectedStaffClinic.id,
-      clinicName: selectedStaffClinic.facility_name,
-      province: selectedStaffClinic.admin1,
-      facilityType: selectedStaffClinic.facility_type,
-    };
+    });
 
-    console.log("Staff data:", staffData);
+    setSuccessMessage(
+      `Invite sent to ${result.email}. Tell them to check their inbox and set a password.`
+    );
 
     event.target.reset();
     resetStaffPopup();
-  };
+  } catch (error) {
+    console.error("Staff invite failed:", error);
+    setErrorMessage(error.message || "Failed to add staff member.");
+  } finally {
+    setIsSavingStaff(false);
+  }
+};
 
   const handleAdminSubmit = async (event) => {
     event.preventDefault();
@@ -405,9 +420,9 @@ function AdminDashboard() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="save-btn">
-                  Save Staff
-                </button>
+                <button type="submit" className="save-btn" disabled={isSavingStaff}>
+                  {isSavingStaff ? "Saving..." : "Save Staff"}
+              </button>
               </footer>
             </form>
           </dialog>

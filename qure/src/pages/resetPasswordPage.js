@@ -99,7 +99,7 @@ function ResetPassword() {
       setTimeout(() => {
         if (role === 'admin') {
           navigate('/admin', { replace: true });
-        } else if (role === 'staff') {
+        } else if (role === 'clinicstaff') {
           navigate('/staff', { replace: true });
         } else {
           navigate('/patient', { replace: true });
