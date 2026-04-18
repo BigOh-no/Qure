@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import '../styles/Admin.css';
-import { useNavigate } from 'react-router-dom';
-import logo from '../assets/images/TLogo.png';
-import { createAdminInvite, logout } from '../lib/auth';
+import React, { useEffect, useState } from "react";
+import "../styles/Admin.css";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/images/TLogo.png";
+import { createAdminInvite, logout } from "../lib/auth";
+import { searchClinics } from "../pages/clinicService";
 
 function AdminDashboard() {
   const navigate = useNavigate();
 
-  const adminName = 'Admin';
+  const adminName = "Admin";
 
   const [showStaffPopup, setShowStaffPopup] = useState(false);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
@@ -17,26 +18,99 @@ function AdminDashboard() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSavingAdmin, setIsSavingAdmin] = useState(false);
 
+  const [staffClinicSearch, setStaffClinicSearch] = useState("");
+  const [staffProvince, setStaffProvince] = useState("");
+  const [staffFacilityType, setStaffFacilityType] = useState("");
+  const [staffClinicResults, setStaffClinicResults] = useState([]);
+  const [selectedStaffClinic, setSelectedStaffClinic] = useState(null);
+  const [staffClinicLoading, setStaffClinicLoading] = useState(false);
+  const [staffClinicError, setStaffClinicError] = useState("");
+
+  const provinces = [
+    "Eastern Cape",
+    "Free State",
+    "Gauteng",
+    "KwaZulu-Natal",
+    "Limpopo",
+    "Mpumalanga",
+    "North West",
+    "Northern Cape",
+    "Western Cape",
+  ];
+
+  const facilityTypes = [
+    "District Hospital",
+    "Clinic",
+    "Satellite Clinic",
+    "Community Health Centre",
+    "Regional Hospital",
+    "Provincial Tertiary Hospital",
+    "National Central Hospital",
+  ];
+
   const stats = [
-    { title: 'Total Staff', value: 18 },
-    { title: 'Total Clinics', value: 5 },
-    { title: 'Appointments Today', value: 24 },
-    { title: 'Patients Waiting', value: 11 },
+    { title: "Total Staff", value: 18 },
+    { title: "Total Clinics", value: 5 },
+    { title: "Appointments Today", value: 24 },
+    { title: "Patients Waiting", value: 11 },
   ];
 
   const recentActivity = [
-    'Dr Smith added to Hillbrow Clinic',
-    'New admin created',
-    'Clinic hours updated',
+    "Dr Smith added to Hillbrow Clinic",
+    "New admin created",
+    "Clinic hours updated",
   ];
+
+  useEffect(() => {
+    const runStaffClinicSearch = async () => {
+      if (!showStaffPopup) return;
+
+      setStaffClinicError("");
+
+      if (!staffClinicSearch.trim() && !staffProvince && !staffFacilityType) {
+        setStaffClinicResults([]);
+        return;
+      }
+
+      setStaffClinicLoading(true);
+
+      try {
+        const results = await searchClinics({
+          searchTerm: staffClinicSearch,
+          admin1: staffProvince,
+          facilityType: staffFacilityType,
+        });
+
+        setStaffClinicResults(results);
+      } catch (error) {
+        console.error(error);
+        setStaffClinicError("Failed to search clinics.");
+      } finally {
+        setStaffClinicLoading(false);
+      }
+    };
+
+    runStaffClinicSearch();
+  }, [showStaffPopup, staffClinicSearch, staffProvince, staffFacilityType]);
+
+  const resetStaffPopup = () => {
+    setShowStaffPopup(false);
+    setStaffClinicSearch("");
+    setStaffProvince("");
+    setStaffFacilityType("");
+    setStaffClinicResults([]);
+    setSelectedStaffClinic(null);
+    setStaffClinicError("");
+    setStaffClinicLoading(false);
+  };
 
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/');
+      navigate("/");
     } catch (error) {
-      console.error('Logout failed:', error.message);
-      navigate('/');
+      console.error("Logout failed:", error.message);
+      navigate("/");
     }
   };
 
@@ -44,14 +118,20 @@ function AdminDashboard() {
     event.preventDefault();
     const formData = new FormData(event.target);
 
+    if (!selectedStaffClinic) {
+      alert("Please select a clinic first.");
+      return;
+    }
+
     const staffData = {
-      email: formData.get('staffEmail'),
-      clinic: formData.get('staffClinic'),
+      email: formData.get("staffEmail"),
+      clinic: selectedStaffClinic.facility_name,
+      clinicId: selectedStaffClinic.id,
     };
 
-    console.log('Staff data:', staffData);
+    console.log("Staff data:", staffData);
     event.target.reset();
-    setShowStaffPopup(false);
+    resetStaffPopup();
   };
 
   const handleAdminSubmit = async (event) => {
@@ -76,7 +156,6 @@ function AdminDashboard() {
     } catch (error) {
       console.error("Admin invite failed:", error);
       setErrorMessage(error.message || "Failed to add admin.");
-      // keep popup open on error
     } finally {
       setIsSavingAdmin(false);
     }
@@ -87,13 +166,13 @@ function AdminDashboard() {
     const formData = new FormData(event.target);
 
     const clinicData = {
-      clinicName: formData.get('clinicName'),
-      location: formData.get('clinicLocation'),
-      operatingHours: formData.get('clinicHours'),
-      contactNumber: formData.get('clinicContact'),
+      clinicName: formData.get("clinicName"),
+      location: formData.get("clinicLocation"),
+      operatingHours: formData.get("clinicHours"),
+      contactNumber: formData.get("clinicContact"),
     };
 
-    console.log('Clinic data:', clinicData);
+    console.log("Clinic data:", clinicData);
     event.target.reset();
     setShowClinicPopup(false);
   };
@@ -194,7 +273,7 @@ function AdminDashboard() {
         </section>
 
         {showStaffPopup && (
-          <dialog className="popup-dialog" open>
+          <dialog className="popup-dialog popup-dialog-wide" open>
             <form className="popup-form" onSubmit={handleStaffSubmit}>
               <header className="popup-header">
                 <h2>Add Staff Member</h2>
@@ -211,22 +290,112 @@ function AdminDashboard() {
                 required
               />
 
-              <label className="popup-label" htmlFor="staffClinic">
-                Assigned Clinic
-              </label>
-              <input
-                className="popup-input"
-                id="staffClinic"
-                name="staffClinic"
-                type="text"
-                required
-              />
+              <section className="clinic-search-section">
+                <h3 className="popup-subheading">Assign Clinic</h3>
+
+                <section className="clinic-search-grid">
+                  <section className="popup-field-group">
+                    <label className="popup-label" htmlFor="staffClinicSearch">
+                      Search Clinic Name
+                    </label>
+                    <input
+                      className="popup-input"
+                      id="staffClinicSearch"
+                      type="text"
+                      value={staffClinicSearch}
+                      onChange={(event) => setStaffClinicSearch(event.target.value)}
+                      placeholder="Type clinic name"
+                    />
+                  </section>
+
+                  <section className="popup-field-group">
+                    <label className="popup-label" htmlFor="staffProvince">
+                      Province
+                    </label>
+                    <select
+                      className="popup-input"
+                      id="staffProvince"
+                      value={staffProvince}
+                      onChange={(event) => setStaffProvince(event.target.value)}
+                    >
+                      <option value="">Select Province</option>
+                      {provinces.map((province) => (
+                        <option key={province} value={province}>
+                          {province}
+                        </option>
+                      ))}
+                    </select>
+                  </section>
+
+                  <section className="popup-field-group">
+                    <label className="popup-label" htmlFor="staffFacilityType">
+                      Facility Type
+                    </label>
+                    <select
+                      className="popup-input"
+                      id="staffFacilityType"
+                      value={staffFacilityType}
+                      onChange={(event) => setStaffFacilityType(event.target.value)}
+                    >
+                      <option value="">Select Facility Type</option>
+                      {facilityTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </section>
+                </section>
+
+                {staffClinicLoading && (
+                  <p className="popup-status-message">Searching clinics...</p>
+                )}
+
+                {staffClinicError && (
+                  <p className="popup-error-message">{staffClinicError}</p>
+                )}
+
+                <section className="popup-results-box" aria-label="Clinic search results">
+                  {staffClinicResults.length === 0 ? (
+                    <p className="popup-empty-message">No clinics found.</p>
+                  ) : (
+                    staffClinicResults.map((clinic) => (
+                      <article
+                        key={clinic.id}
+                        className={`popup-clinic-card ${
+                          selectedStaffClinic?.id === clinic.id ? "popup-clinic-card-selected" : ""
+                        }`}
+                      >
+                        <section className="popup-clinic-info">
+                          <p><strong>Name:</strong> {clinic.facility_name}</p>
+                          <p><strong>Province:</strong> {clinic.admin1}</p>
+                          <p><strong>Type:</strong> {clinic.facility_type}</p>
+                        </section>
+
+                        <button
+                          type="button"
+                          className="popup-select-btn"
+                          onClick={() => setSelectedStaffClinic(clinic)}
+                        >
+                          {selectedStaffClinic?.id === clinic.id ? "Selected" : "Select"}
+                        </button>
+                      </article>
+                    ))
+                  )}
+                </section>
+
+                {selectedStaffClinic && (
+                  <p className="selected-clinic-note">
+                    Selected clinic: <strong>{selectedStaffClinic.facility_name}</strong>
+                  </p>
+                )}
+              </section>
 
               <footer className="popup-footer">
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={() => setShowStaffPopup(false)}
+                  onClick={resetStaffPopup}
                 >
                   Cancel
                 </button>
