@@ -134,35 +134,37 @@ serve(async (req) => {
     }
 
     const redirectTo =
-      "https://purple-coast-06bb98010.6.azurestaticapps.net/reset-password";
+      "https://purple-coast-06bb98010.6.azurestaticapps.net/staff/auth/callback";
 
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(email, {
         redirectTo,
         data: {
           role: "clinicstaff",
+          invite_kind: "staff",
         },
       });
 
     if (inviteError) {
-  const message = inviteError.message?.toLowerCase() || "";
+      const message = inviteError.message?.toLowerCase() || "";
 
-  if (message.includes("rate limit")) {
-    return new Response(
-      JSON.stringify({
-        error: "Too many invite emails were sent recently. Please wait a few minutes and try again.",
-      }),
-      { status: 429, headers: corsHeaders }
-    );
-  }
+      if (message.includes("rate limit")) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Too many invite emails were sent recently. Please wait a few minutes and try again.",
+          }),
+          { status: 429, headers: corsHeaders }
+        );
+      }
 
-  return new Response(
-    JSON.stringify({
-      error: `INVITE_ERROR: ${inviteError.message}`,
-    }),
-    { status: 400, headers: corsHeaders }
-  );
-}
+      return new Response(
+        JSON.stringify({
+          error: `INVITE_ERROR: ${inviteError.message}`,
+        }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
 
     const invitedUser = inviteData.user;
 
