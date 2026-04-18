@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import '../styles/Admin.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/images/TLogo.png';
 import { createAdminInvite, logout } from '../lib/auth';
+import { supabaseClient } from '../lib/supabaseClient';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -17,18 +18,61 @@ function AdminDashboard() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSavingAdmin, setIsSavingAdmin] = useState(false);
 
-  const stats = [
-    { title: 'Total Staff', value: 18 },
-    { title: 'Total Clinics', value: 5 },
-    { title: 'Appointments Today', value: 24 },
-    { title: 'Patients Waiting', value: 11 },
-  ];
-
+  const[staffCount, setStaffCount] = useState(0);
+  const[clinicCount, setClinicCount] = useState(0);
+  const[isLoadingStats, setIsLoadingStats] = useState(true);
+  
   const recentActivity = [
     'Dr Smith added to Hillbrow Clinic',
     'New admin created',
     'Clinic hours updated',
   ];
+
+  useEffect(()=> {
+    fetchDashboardCounts();
+  },[]);
+
+  const fetchDashboardCounts = async () => {
+    setIsLoadingStats(true);
+    setErrorMessage("");
+  
+    try{
+      const {count: totalStaff, error: staffError} = await supabaseClient
+        .from("profiles")
+        .select("*", { count: "exact", head: true})
+        .eq("role", "clinicstaff");
+      
+      if (staffError){
+        throw staffError;
+      }
+      const {count: totalClinics, error: clinicsError} = await supabaseClient
+        .from("clinics")
+        .select("*", { count: "exact", head: true});
+
+      if (clinicsError){
+        throw clinicsError;
+      }
+
+      setStaffCount(totalStaff || 0);
+      setClinicCount(totalClinics ||0);
+    } catch(error){
+      console.error("Failed to load dashboard counts:", error);
+      setErrorMessage("Failed to load dashboard statistics");
+    }finally{
+      setIsLoadingStats(false);
+    }
+  };
+
+
+
+  const stats = [
+    { title: 'Total Staff', value: isLoadingStats ? '...': staffCount },
+    { title: 'Total Clinics', value: isLoadingStats ? '...': clinicCount },
+    { title: 'Appointments Today', value: 24 },
+    { title: 'Patients Waiting', value: 11 },
+  ];
+
+  
 
   const handleLogout = async () => {
     try {
