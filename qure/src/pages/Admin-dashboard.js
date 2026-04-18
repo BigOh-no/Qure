@@ -21,6 +21,16 @@ function AdminDashboard() {
   const[staffCount, setStaffCount] = useState(0);
   const[clinicCount, setClinicCount] = useState(0);
   const[isLoadingStats, setIsLoadingStats] = useState(true);
+
+  const[appointmentsToday, setAppointmentsToday] = useState(0);
+
+  function getTodayDateString(){
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2,"0");
+    return `${year}-${month}-${day}`;
+  }
   
   const recentActivity = [
     'Dr Smith added to Hillbrow Clinic',
@@ -53,8 +63,21 @@ function AdminDashboard() {
         throw clinicsError;
       }
 
+      const today = getTodayDateString();
+
+      const {count: totalAppointmentsToday, error: appointmentsError} = await supabaseClient
+        .from("appointments")
+        .select("*", {count: "exact", head: true})
+        .eq("appointment_date", today)
+        .eq("status", "booked");
+
+      if (appointmentsError){
+        throw appointmentsError;
+      }
+
       setStaffCount(totalStaff || 0);
       setClinicCount(totalClinics ||0);
+      setAppointmentsToday(totalAppointmentsToday ||0);
     } catch(error){
       console.error("Failed to load dashboard counts:", error);
       setErrorMessage("Failed to load dashboard statistics");
@@ -68,7 +91,7 @@ function AdminDashboard() {
   const stats = [
     { title: 'Total Staff', value: isLoadingStats ? '...': staffCount },
     { title: 'Total Clinics', value: isLoadingStats ? '...': clinicCount },
-    { title: 'Appointments Today', value: 24 },
+    { title: 'Appointments Today', value: isLoadingStats ? '...': appointmentsToday },
     { title: 'Patients Waiting', value: 11 },
   ];
 
