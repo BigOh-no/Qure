@@ -48,9 +48,8 @@ function AdminDashboard() {
   
     try{
       const {count: totalStaff, error: staffError} = await supabaseClient
-        .from("profiles")
+        .from("clinicStaff")
         .select("*", { count: "exact", head: true})
-        .eq("role", "clinicstaff");
       
       if (staffError){
         throw staffError;
