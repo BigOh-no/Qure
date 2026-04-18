@@ -8,7 +8,8 @@ import PatientDashboard from "./pages/Patient-dashboard"
 import AuthCallback from "./pages/AuthCallback";
 import StaffDashboard from "./pages/Staff-dashboard";
 import ResetPasswordPage from "./pages/resetPasswordPage";
-import StaffPassword from "./lib/adminAuth";
+import StaffAuth from "./pages/staffAuth";
+import AdminAuth from "./pages/adminAuth";
 
 function App() {
   return (
@@ -21,7 +22,8 @@ function App() {
         <Route path="/patient" element={<PatientDashboard />} />
         <Route path="/staff" element={<StaffDashboard />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/staff/auth/callback" element={<StaffPassword />} />
+        <Route path="/admin/auth/callback" element={<AdminAuth />} />
+        <Route path="/staff/auth/callback" element={<StaffAuth />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         

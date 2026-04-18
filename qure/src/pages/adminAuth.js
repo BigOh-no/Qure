@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabaseClient } from "../lib/supabaseClient";
 
-function AuthCallback() {
+function AdminAuth() {
   const navigate = useNavigate();
   const [message, setMessage] = useState("Verifying your invite link...");
 
@@ -12,7 +12,6 @@ function AuthCallback() {
         const params = new URLSearchParams(window.location.search);
         const tokenHash = params.get("token_hash");
         const type = params.get("type");
-        const redirectTo = params.get("redirect_to");
 
         if (!tokenHash || !type) {
           setMessage("Invalid invite link.");
@@ -29,10 +28,7 @@ function AuthCallback() {
           return;
         }
 
-        navigate("/reset-password", {
-          replace: true,
-          state: { redirectTo: redirectTo || null },
-        });
+        navigate("/reset-password", { replace: true });
       } catch (error) {
         setMessage(error.message || "Something went wrong.");
       }
@@ -42,11 +38,33 @@ function AuthCallback() {
   }, [navigate]);
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
-      <h1>Qure</h1>
-      <p>{message}</p>
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "2rem",
+        fontFamily: "Arial, sans-serif",
+        backgroundColor: "#f8f8f8",
+      }}
+    >
+      <section
+        style={{
+          backgroundColor: "#ffffff",
+          padding: "2rem",
+          borderRadius: "16px",
+          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+          maxWidth: "500px",
+          width: "100%",
+          textAlign: "center",
+        }}
+      >
+        <h1 style={{ color: "#8b0000", marginTop: 0 }}>Qure Admin Access</h1>
+        <p style={{ color: "#555555", marginBottom: 0 }}>{message}</p>
+      </section>
     </main>
   );
 }
 
-export default AuthCallback;
+export default AdminAuth;

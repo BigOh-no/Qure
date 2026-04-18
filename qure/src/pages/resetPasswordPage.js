@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { updatePassword, ensureUserProfile, getUserRole } from '../lib/auth';
-import { supabaseClient } from '../lib/supabaseClient';
-import '../styles/Admin.css';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { updatePassword, ensureUserProfile, getUserRole } from "../lib/auth";
+import { supabaseClient } from "../lib/supabaseClient";
+import "../styles/Admin.css";
 
-function ResetPassword() {
+function ResetPasswordPage() {
   const navigate = useNavigate();
 
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -18,7 +18,6 @@ function ResetPassword() {
     let mounted = true;
 
     const init = async () => {
-      // Give Supabase a chance to read tokens from the URL fragment
       const {
         data: { session },
         error,
@@ -27,12 +26,14 @@ function ResetPassword() {
       if (!mounted) return;
 
       if (error) {
-        setErrorMessage('Could not verify invite session.');
+        setErrorMessage("Could not verify invite session.");
         return;
       }
 
       if (session?.user) {
         setReady(true);
+      } else {
+        setErrorMessage("Your invite session is missing or expired.");
       }
     };
 
@@ -42,12 +43,13 @@ function ResetPassword() {
       if (!mounted) return;
 
       if (
-        event === 'PASSWORD_RECOVERY' ||
-        event === 'SIGNED_IN' ||
-        event === 'INITIAL_SESSION'
+        event === "PASSWORD_RECOVERY" ||
+        event === "SIGNED_IN" ||
+        event === "INITIAL_SESSION" ||
+        event === "USER_UPDATED"
       ) {
         if (session?.user) {
-          setErrorMessage('');
+          setErrorMessage("");
           setReady(true);
         }
       }
@@ -63,16 +65,16 @@ function ResetPassword() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setSuccessMessage('');
-    setErrorMessage('');
+    setSuccessMessage("");
+    setErrorMessage("");
 
     if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
+      setErrorMessage("Password must be at least 6 characters long.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+      setErrorMessage("Passwords do not match.");
       return;
     }
 
@@ -87,26 +89,26 @@ function ResetPassword() {
       } = await supabaseClient.auth.getUser();
 
       if (userError || !user) {
-        throw new Error('Could not load user after password update.');
+        throw new Error("Could not load user after password update.");
       }
 
       await ensureUserProfile(user);
 
       const role = await getUserRole(user.id);
 
-      setSuccessMessage('Password updated successfully.');
+      setSuccessMessage("Password updated successfully.");
 
       setTimeout(() => {
-        if (role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else if (role === 'clinicstaff') {
-          navigate('/staff', { replace: true });
+        if (role === "admin") {
+          navigate("/admin", { replace: true });
+        } else if (role === "clinicstaff") {
+          navigate("/staff", { replace: true });
         } else {
-          navigate('/patient', { replace: true });
+          navigate("/patient", { replace: true });
         }
       }, 1200);
     } catch (error) {
-      setErrorMessage(error.message || 'Failed to update password.');
+      setErrorMessage(error.message || "Failed to update password.");
     } finally {
       setIsSaving(false);
     }
@@ -117,25 +119,25 @@ function ResetPassword() {
       <section
         className="admin-main"
         style={{
-          maxWidth: '500px',
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          minHeight: '100vh',
+          maxWidth: "500px",
+          margin: "0 auto",
+          display: "flex",
+          alignItems: "center",
+          minHeight: "100vh",
         }}
       >
-        <article className="dashboard-card" style={{ width: '100%' }}>
+        <article className="dashboard-card" style={{ width: "100%" }}>
           <header className="admin-header">
             <h1>Set New Password</h1>
             <p>Enter your new password below.</p>
           </header>
 
           {successMessage && (
-            <div className="admin-success-message">{successMessage}</div>
+            <p className="admin-success-message">{successMessage}</p>
           )}
 
           {errorMessage && (
-            <div className="admin-error-message">{errorMessage}</div>
+            <p className="admin-error-message">{errorMessage}</p>
           )}
 
           {!ready && !errorMessage ? (
@@ -172,7 +174,7 @@ function ResetPassword() {
                   className="save-btn"
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : 'Update Password'}
+                  {isSaving ? "Saving..." : "Update Password"}
                 </button>
               </footer>
             </form>
@@ -183,4 +185,4 @@ function ResetPassword() {
   );
 }
 
-export default ResetPassword;
+export default ResetPasswordPage;

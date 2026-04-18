@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json",
 };
@@ -13,10 +14,18 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: corsHeaders }
+    );
+  }
+
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const SUPABASE_SERVICE_ROLE_KEY =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
@@ -43,11 +52,16 @@ serve(async (req) => {
       );
     }
 
+    // Verify the caller from their JWT
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: {
         headers: {
           Authorization: authHeader,
         },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     });
 
@@ -71,7 +85,9 @@ serve(async (req) => {
 
     if (profileError) {
       return new Response(
-        JSON.stringify({ error: `Could not read caller profile: ${profileError.message}` }),
+        JSON.stringify({
+          error: `Could not read caller profile: ${profileError.message}`,
+        }),
         { status: 403, headers: corsHeaders }
       );
     }
@@ -83,19 +99,42 @@ serve(async (req) => {
       );
     }
 
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // Privileged client
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
 
-    const redirectTo = "https://purple-coast-06bb98010.6.azurestaticapps.net/reset-password";
+    // IMPORTANT: use callback route, not reset-password directly
+    const redirectTo =
+      "https://purple-coast-06bb98010.6.azurestaticapps.net/admin/auth/callback";
 
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(email, {
         redirectTo,
-        data: { role: "admin" },
+        data: {
+          role: "admin",
+          invite_kind: "admin",
+        },
       });
 
     if (inviteError) {
+      const message = inviteError.message?.toLowerCase() || "";
+
+      if (message.includes("rate limit")) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Too many invite emails were sent recently. Please wait a few minutes and try again.",
+          }),
+          { status: 429, headers: corsHeaders }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ error: `Invite failed: ${inviteError.message}` }),
+        JSON.stringify({ error: `INVITE_ERROR: ${inviteError.message}` }),
         { status: 400, headers: corsHeaders }
       );
     }
@@ -104,25 +143,30 @@ serve(async (req) => {
 
     if (!invitedUserId) {
       return new Response(
-        JSON.stringify({ error: "Invite succeeded but no invited user ID was returned" }),
+        JSON.stringify({
+          error: "Invite succeeded but no invited user ID was returned",
+        }),
         { status: 500, headers: corsHeaders }
       );
     }
 
     const { error: profileInsertError } = await adminClient
       .from("profiles")
-      .upsert([
-        {
-          id: invitedUserId,
-          email,
-          role: "admin",
-        },
-      ]);
+      .upsert(
+        [
+          {
+            id: invitedUserId,
+            email,
+            role: "admin",
+          },
+        ],
+        { onConflict: "id" }
+      );
 
     if (profileInsertError) {
       return new Response(
         JSON.stringify({
-          error: `Admin invited, but failed to create profile: ${profileInsertError.message}`,
+          error: `PROFILE_UPSERT_ERROR: ${profileInsertError.message}`,
         }),
         { status: 500, headers: corsHeaders }
       );
@@ -139,7 +183,10 @@ serve(async (req) => {
   } catch (error) {
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unexpected function error",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected function error",
       }),
       { status: 500, headers: corsHeaders }
     );
