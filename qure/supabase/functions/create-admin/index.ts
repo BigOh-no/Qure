@@ -52,6 +52,7 @@ serve(async (req) => {
       );
     }
 
+    // Verify caller using their JWT
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: {
         headers: {
@@ -76,11 +77,12 @@ serve(async (req) => {
       );
     }
 
+    // Check caller is admin
     const { data: callerProfile, error: profileError } = await userClient
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       return new Response(
@@ -91,13 +93,14 @@ serve(async (req) => {
       );
     }
 
-    if (callerProfile?.role !== "admin") {
+    if (!callerProfile || callerProfile.role !== "admin") {
       return new Response(
         JSON.stringify({ error: "Only admins can add new admins" }),
         { status: 403, headers: corsHeaders }
       );
     }
 
+    // Privileged client
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         persistSession: false,
@@ -105,8 +108,9 @@ serve(async (req) => {
       },
     });
 
+    // Shared callback route
     const redirectTo =
-      "https://purple-coast-06bb98010.6.azurestaticapps.net/admin/auth/callback";
+      "https://purple-coast-06bb98010.6.azurestaticapps.net/staff/auth/callback";
 
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(email, {
@@ -147,7 +151,8 @@ serve(async (req) => {
       );
     }
 
-    const { error: profileInsertError } = await adminClient
+    // Ensure admin profile exists
+    const { error: profileUpsertError } = await adminClient
       .from("profiles")
       .upsert(
         {
@@ -158,10 +163,10 @@ serve(async (req) => {
         { onConflict: "id" }
       );
 
-    if (profileInsertError) {
+    if (profileUpsertError) {
       return new Response(
         JSON.stringify({
-          error: `PROFILE_UPSERT_ERROR: ${profileInsertError.message}`,
+          error: `PROFILE_UPSERT_ERROR: ${profileUpsertError.message}`,
         }),
         { status: 500, headers: corsHeaders }
       );

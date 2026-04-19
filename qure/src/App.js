@@ -13,7 +13,7 @@ import QueuePage from "./pages/QueuePage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import ResetPasswordPage from "./pages/resetPasswordPage";
 import StaffAuth from "./pages/staffAuth";
-import AdminAuth from "./pages/adminAuth";
+i
 
 function App() {
   return (
@@ -29,7 +29,6 @@ function App() {
         <Route path="/patient/queue" element={<QueuePage />} />
         <Route path="/patient/appointments" element={<AppointmentsPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/admin/auth/callback" element={<AdminAuth />} />
         <Route path="/staff/auth/callback" element={<StaffAuth />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
