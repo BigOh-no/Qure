@@ -13,7 +13,7 @@ import {
 
 import { supabaseClient } from "../lib/supabaseClient";
 
-// 🔧 Full Supabase mock
+//  Full Supabase mock
 jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
@@ -169,37 +169,37 @@ describe("auth.js", () => {
 
   // ---------------- GET USER ROLE ----------------
   describe("getUserRole", () => {
-    test("returns role", async () => {
-      supabaseClient.from.mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: jest.fn().mockResolvedValue({
-              data: { role: "admin" },
-              error: null,
-            }),
+  test("returns role", async () => {
+    supabaseClient.from.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: jest.fn().mockResolvedValue({
+            data: { role: "admin" },
+            error: null,
           }),
         }),
-      });
-
-      const result = await getUserRole("a@test.com");
-      expect(result).toBe("admin");
+      }),
     });
 
-    test("throws on error", async () => {
-      supabaseClient.from.mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error: new Error("fail"),
-            }),
-          }),
-        }),
-      });
-
-      await expect(getUserRole("x")).rejects.toThrow("fail");
-    });
+    const result = await getUserRole("a@test.com");
+    expect(result).toBe("admin");
   });
+
+  test("throws on error", async () => {
+    supabaseClient.from.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: jest.fn().mockResolvedValue({
+            data: null,
+            error: new Error("fail"),
+          }),
+        }),
+      }),
+    });
+
+    await expect(getUserRole("x")).rejects.toThrow("fail");
+  });
+});
 
   // ---------------- ENSURE PROFILE ----------------
   describe("ensureUserProfile", () => {
