@@ -32,6 +32,49 @@ function AdminDashboard() {
   const[clinicCount, setClinicCount] = useState(0);
   const[isLoadingStats, setIsLoadingStats] = useState(true);
 
+  const [staffList, setStaffList] = useState([]);
+  const [clinicList, setClinicList] = useState([]);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [clinicSearch, setClinicSearch] = useState('');
+  const [showStaffList, setShowStaffList] = useState(false);
+  const [showClinicList, setShowClinicList] = useState(false);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [loadingClinics, setLoadingClinics] = useState(false);
+
+  const fetchStaff = async () => {
+  setLoadingStaff(true);
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('email, role')
+      .eq('role', 'clinicstaff');
+    if (error) throw error;
+    setStaffList(data);
+    setShowStaffList(true);
+  } catch (error) {
+    console.error('Error fetching staff:', error.message);
+  } finally {
+    setLoadingStaff(false);
+  }
+};
+
+const fetchClinics = async () => {
+  setLoadingClinics(true);
+  try {
+    const { data, error } = await supabaseClient
+      .from('clinics')
+      .select('facility_name, admin1, facility_type')
+      .limit(50);
+    if (error) throw error;
+    setClinicList(data);
+    setShowClinicList(true);
+  } catch (error) {
+    console.error('Error fetching clinics:', error.message);
+  } finally {
+    setLoadingClinics(false);
+  }
+};
+
   const[appointmentsToday, setAppointmentsToday] = useState(0);
 
   function getTodayDateString(){
@@ -267,8 +310,8 @@ const handleStaffSubmit = async (event) => {
 
         <nav className="sidebar-nav">
           <ul>
-            <li><button type="button">Staff</button></li>
-            <li><button type="button">Clinics</button></li>
+            <li><button type="button" onClick={() => { setShowStaffList(true); setStaffList([]); setStaffSearch(''); }}>Staff</button></li>
+            <li><button type="button" onClick={() => { setShowClinicList(true); setClinicList([]); setClinicSearch(''); }}>Clinics</button></li>
             <li><button type="button">Analytics</button></li>
             <li><button type="button">Profile</button></li>
           </ul>
@@ -529,6 +572,8 @@ const handleStaffSubmit = async (event) => {
           </dialog>
         )}
 
+               
+
         {showClinicPopup && (
           <dialog className="popup-dialog" open>
             <form className="popup-form" onSubmit={handleClinicSubmit}>
@@ -596,6 +641,112 @@ const handleStaffSubmit = async (event) => {
             </form>
           </dialog>
         )}
+
+        {showStaffList && (
+  <dialog className="popup-dialog" open>
+    <form className="popup-form">
+      <header className="popup-header">
+        <h2>Staff Members</h2>
+      </header>
+      <input
+        className="popup-input"
+        type="text"
+        placeholder="Search staff..."
+        value={staffSearch}
+       onChange={async (e) => {
+    const value = e.target.value;
+    setStaffSearch(value);
+    if (value.length > 1) {
+      setLoadingStaff(true);
+      const { data } = await supabaseClient
+        .from('profiles')
+        .select('email, role')
+        .eq('role', 'clinicstaff')
+        .ilike('email', `%${value}%`)
+        .limit(20);
+      setStaffList(data || []);
+      setLoadingStaff(false);
+    } else {
+      setStaffList([]);
+    }
+  }}
+      />
+      {loadingStaff ? (
+        <p>Loading...</p>
+      ) : (
+        <ul className="activity-list">
+          {staffList
+            .filter((s) => s.email.toLowerCase().includes(staffSearch.toLowerCase()))
+            .map((staff, index) => (
+              <li key={index}>{staff.email}</li>
+            ))}
+        </ul>
+      )}
+      <footer className="popup-footer">
+        <button
+          type="button"
+          className="cancel-btn"
+          onClick={() => setShowStaffList(false)}
+        >
+          Close
+        </button>
+      </footer>
+    </form>
+  </dialog>
+)}
+
+{showClinicList && (
+  <dialog className="popup-dialog" open>
+    <form className="popup-form">
+      <header className="popup-header">
+        <h2>Clinics</h2>
+      </header>
+      <input
+        className="popup-input"
+        type="text"
+        placeholder="Search clinics..."
+        value={clinicSearch}
+       onChange={async (e) => {
+    const value = e.target.value;
+    setClinicSearch(value);
+    if (value.length > 1) {
+      setLoadingClinics(true);
+      const { data } = await supabaseClient
+        .from('clinics')
+        .select('facility_name, admin1, facility_type')
+        .ilike('facility_name', `%${value}%`)
+        .limit(20);
+      setClinicList(data || []);
+      setLoadingClinics(false);
+    } else {
+      setClinicList([]);
+    }
+  }}
+      />
+      {loadingClinics ? (
+        <p>Loading...</p>
+      ) : (
+        <ul className="activity-list">
+          {clinicList
+            .filter((c) => c.facility_name?.toLowerCase().includes(clinicSearch.toLowerCase()))
+            .map((clinic, index) => (
+              <li key={index}>{clinic.facility_name} — {clinic.admin1} — {clinic.facility_type}</li>
+            ))}
+        </ul>
+      )}
+      <footer className="popup-footer">
+        <button
+          type="button"
+          className="cancel-btn"
+          onClick={() => setShowClinicList(false)}
+        >
+          Close
+        </button>
+      </footer>
+      </form>
+      </dialog>
+    )}
+
       </section>
     </main>
   );
