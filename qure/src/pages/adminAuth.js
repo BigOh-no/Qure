@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabaseClient } from "../lib/supabaseClient";
+import { ensureUserProfile } from "../lib/auth";
 
 function AdminAuth() {
   const navigate = useNavigate();
@@ -18,15 +19,27 @@ function AdminAuth() {
           return;
         }
 
-        const { error } = await supabaseClient.auth.verifyOtp({
+        const { error: verifyError } = await supabaseClient.auth.verifyOtp({
           token_hash: tokenHash,
           type,
         });
 
-        if (error) {
-          setMessage(error.message || "Could not verify invite link.");
+        if (verifyError) {
+          setMessage(verifyError.message || "Could not verify invite link.");
           return;
         }
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabaseClient.auth.getUser();
+
+        if (userError || !user) {
+          setMessage("Could not load invited user after verification.");
+          return;
+        }
+
+        await ensureUserProfile(user);
 
         navigate("/reset-password", { replace: true });
       } catch (error) {

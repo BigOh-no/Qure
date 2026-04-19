@@ -52,7 +52,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify the caller from their JWT
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: {
         headers: {
@@ -99,7 +98,6 @@ serve(async (req) => {
       );
     }
 
-    // Privileged client
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         persistSession: false,
@@ -107,7 +105,6 @@ serve(async (req) => {
       },
     });
 
-    // IMPORTANT: use callback route, not reset-password directly
     const redirectTo =
       "https://purple-coast-06bb98010.6.azurestaticapps.net/admin/auth/callback";
 
@@ -153,13 +150,11 @@ serve(async (req) => {
     const { error: profileInsertError } = await adminClient
       .from("profiles")
       .upsert(
-        [
-          {
-            id: invitedUserId,
-            email,
-            role: "admin",
-          },
-        ],
+        {
+          id: invitedUserId,
+          email,
+          role: "admin",
+        },
         { onConflict: "id" }
       );
 
