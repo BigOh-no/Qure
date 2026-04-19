@@ -33,9 +33,8 @@
 
 .dashboard-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.9rem;
-  margin-bottom: 1.5rem;
+  justify-content: center;
+  gap: 1rem;
 }
 
 .dashboard-menu {
@@ -143,6 +142,9 @@
   background-color: rgba(163, 0, 0, 0.92);
   color: #ffffff;
   box-shadow: 0 4px 10px rgba(163, 0, 0, 0.15);
+  flex: 1;
+  max-width: 250px;
+  text-align: center;
 }
 
 .action-btn:hover {
@@ -150,7 +152,7 @@
   transform: scale(1.03);
 }
 
-/* 🔴 DISABLED STATE (important for booking button) */
+/* DISABLED STATE (important for booking button) */
 .action-btn:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
