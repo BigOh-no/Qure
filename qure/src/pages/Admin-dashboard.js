@@ -305,7 +305,7 @@ const handleStaffSubmit = async (event) => {
     <main className="admin-page">
       <aside className="admin-sidebar">
         <header className="sidebar-header">
-          <img src={logo} alt="Qure logo" className="sidebar-logo" />
+          <img src={logo} alt="Qure logo" className="sidebar-logo1" />
         </header>
 
         <nav className="sidebar-nav">
@@ -353,11 +353,11 @@ const handleStaffSubmit = async (event) => {
               <h2>Quick Actions</h2>
             </header>
 
-            <ul className="action-list">
+            <ul className="action-list1">
               <li>
                 <button
                   type="button"
-                  className="action-btn"
+                  className="action-btn1"
                   onClick={() => setShowStaffPopup(true)}
                 >
                   Add Staff Member
@@ -366,7 +366,7 @@ const handleStaffSubmit = async (event) => {
               <li>
                 <button
                   type="button"
-                  className="action-btn"
+                  className="action-btn1"
                   onClick={() => setShowAdminPopup(true)}
                 >
                   Add Admin
@@ -375,7 +375,7 @@ const handleStaffSubmit = async (event) => {
               <li>
                 <button
                   type="button"
-                  className="action-btn"
+                  className="action-btn1"
                   onClick={() => setShowClinicPopup(true)}
                 >
                   Edit Clinic
