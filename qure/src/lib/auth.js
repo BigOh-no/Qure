@@ -63,7 +63,6 @@ export const getUserRole = async (identifier) => {
     .from("profiles")
     .select("role");
 
-  // crude uuid check
   const looksLikeUuid =
     typeof identifier === "string" &&
     /^[0-9a-fA-F-]{36}$/.test(identifier);
@@ -76,40 +75,35 @@ export const getUserRole = async (identifier) => {
 
   const { data, error } = await query.maybeSingle();
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   return data?.role ?? null;
 };
 
 export const ensureUserProfile = async (user) => {
-  const { data: existingProfile, error } = await supabaseClient
-    .from('profiles')
-    .select('id, role')
-    .eq('id', user.id)
+  const roleFromMetadata =
+    user?.user_metadata?.role ||
+    user?.app_metadata?.role ||
+    "patient";
+
+  const email = user?.email?.trim().toLowerCase();
+
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        email,
+        role: roleFromMetadata,
+      },
+      { onConflict: "id" }
+    )
+    .select()
     .maybeSingle();
 
   if (error) throw error;
 
-  if (!existingProfile) {
-    const roleFromMetadata =
-      user?.user_metadata?.role ||
-      user?.app_metadata?.role ||
-      'patient';
-
-    const { error: insertError } = await supabaseClient
-      .from('profiles')
-      .insert([{
-        id: user.id,
-        email: user.email,
-        role: roleFromMetadata,
-      }]);
-
-    if (insertError) throw insertError;
-  }
-
-  return existingProfile;
+  return data;
 };
 
 export const createAdminInvite = async (email) => {

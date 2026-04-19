@@ -10,6 +10,9 @@ function AdminAuth() {
   useEffect(() => {
     const run = async () => {
       try {
+        // Important during testing: remove any old local session first
+        await supabaseClient.auth.signOut();
+
         const params = new URLSearchParams(window.location.search);
         const tokenHash = params.get("token_hash");
         const type = params.get("type");
@@ -35,7 +38,7 @@ function AdminAuth() {
         } = await supabaseClient.auth.getUser();
 
         if (userError || !user) {
-          setMessage("Could not load invited user after verification.");
+          setMessage("Could not load invited admin user.");
           return;
         }
 
