@@ -71,14 +71,14 @@ body {
   padding: 0.8rem;
   border: none;
   border-radius: 8px;
-  background-color: white;
-  color: #8b0000;
+  background-color: white !important;
+  color: #8b0000 !important;
   font-weight: bold;
   cursor: pointer;
 }
 
 .logout-btn:hover {
-  background-color: #ece3e3;
+  background-color: #ece3e3 !important;
 }
 
 .admin-main {

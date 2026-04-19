@@ -5,6 +5,7 @@ import logo from "../assets/images/TLogo.png";
 import { createAdminInvite, logout } from "../lib/auth";
 import { createClinicStaffInvite } from "../lib/adminService";
 import { searchClinics } from "../pages/clinicService";
+import { supabaseClient } from '../lib/supabaseClient';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -26,6 +27,67 @@ function AdminDashboard() {
   const [selectedStaffClinic, setSelectedStaffClinic] = useState(null);
   const [staffClinicLoading, setStaffClinicLoading] = useState(false);
   const [staffClinicError, setStaffClinicError] = useState("");
+  
+  const[staffCount, setStaffCount] = useState(0);
+  const[clinicCount, setClinicCount] = useState(0);
+  const[isLoadingStats, setIsLoadingStats] = useState(true);
+
+  const[appointmentsToday, setAppointmentsToday] = useState(0);
+
+  function getTodayDateString(){
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2,"0");
+    return `${year}-${month}-${day}`;
+  }
+
+  useEffect(()=> {
+    fetchDashboardCounts();
+  },[]);
+
+  const fetchDashboardCounts = async () => {
+    setIsLoadingStats(true);
+    setErrorMessage("");
+  
+    try{
+      const {count: totalStaff, error: staffError} = await supabaseClient
+        .from("clinicStaff")
+        .select("*", { count: "exact", head: true})
+      
+      if (staffError){
+        throw staffError;
+      }
+      const {count: totalClinics, error: clinicsError} = await supabaseClient
+        .from("clinics")
+        .select("*", { count: "exact", head: true});
+
+      if (clinicsError){
+        throw clinicsError;
+      }
+
+      const today = getTodayDateString();
+
+      const {count: totalAppointmentsToday, error: appointmentsError} = await supabaseClient
+        .from("appointments")
+        .select("*", {count: "exact", head: true})
+        .eq("appointment_date", today)
+        .eq("status", "booked");
+
+      if (appointmentsError){
+        throw appointmentsError;
+      }
+
+      setStaffCount(totalStaff || 0);
+      setClinicCount(totalClinics ||0);
+      setAppointmentsToday(totalAppointmentsToday ||0);
+    } catch(error){
+      console.error("Failed to load dashboard counts:", error);
+      setErrorMessage("Failed to load dashboard statistics");
+    }finally{
+      setIsLoadingStats(false);
+    }
+  };
 
   const provinces = [
     "Eastern Cape",
@@ -50,10 +112,10 @@ function AdminDashboard() {
   ];
 
   const stats = [
-    { title: "Total Staff", value: 18 },
-    { title: "Total Clinics", value: 5 },
-    { title: "Appointments Today", value: 24 },
-    { title: "Patients Waiting", value: 11 },
+    { title: 'Total Staff', value: isLoadingStats ? '...': staffCount },
+    { title: 'Total Clinics', value: isLoadingStats ? '...': clinicCount },
+    { title: 'Appointments Today', value: isLoadingStats ? '...': appointmentsToday },
+    { title: 'Patients Waiting', value: 11 },
   ];
 
   const recentActivity = [
