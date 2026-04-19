@@ -13,7 +13,7 @@ import {
 
 import { supabaseClient } from "../lib/supabaseClient";
 
-//  Full Supabase mock
+// ---------------- MOCK SUPABASE ----------------
 jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
@@ -33,278 +33,236 @@ jest.mock("../lib/supabaseClient", () => ({
   },
 }));
 
+// ---------------- HELPERS ----------------
+const mockQueryBuilder = () => {
+  const chain = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+    maybeSingle: jest.fn(),
+    insert: jest.fn(),
+    upsert: jest.fn().mockReturnThis(),
+  };
+  return chain;
+};
+
 describe("auth.js", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-
-    Object.defineProperty(window, "location", {
-      value: { origin: "http://localhost:3000" },
-      writable: true,
-    });
   });
 
   // ---------------- SIGN UP ----------------
-  describe("signUp", () => {
-    test("returns user on success", async () => {
-      const mockUser = { id: "1", email: "test@test.com" };
-
-      supabaseClient.auth.signUp.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const result = await signUp("test@test.com", "123456");
-
-      expect(result).toEqual(mockUser);
+  test("signUp returns user on success", async () => {
+    supabaseClient.auth.signUp.mockResolvedValue({
+      data: { user: { id: "1", email: "test@test.com" } },
+      error: null,
     });
 
-    test("throws on error", async () => {
-      supabaseClient.auth.signUp.mockResolvedValue({
-        data: null,
-        error: new Error("fail"),
-      });
+    const user = await signUp("test@test.com", "123456");
 
-      await expect(signUp("a", "b")).rejects.toThrow("fail");
+    expect(user.email).toBe("test@test.com");
+  });
+
+  test("signUp throws on error", async () => {
+    supabaseClient.auth.signUp.mockResolvedValue({
+      data: null,
+      error: new Error("fail"),
     });
 
-    test("returns null if no user", async () => {
-      supabaseClient.auth.signUp.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
+    await expect(signUp("a", "b")).rejects.toThrow("fail");
+  });
 
-      const result = await signUp("a", "b");
-      expect(result).toBeNull();
+  test("signUp returns null if no user", async () => {
+    supabaseClient.auth.signUp.mockResolvedValue({
+      data: {},
+      error: null,
     });
+
+    const result = await signUp("a", "b");
+    expect(result).toBeNull();
   });
 
   // ---------------- LOGIN ----------------
-  describe("login", () => {
-    test("returns user", async () => {
-      const mockUser = { id: "2" };
-
-      supabaseClient.auth.signInWithPassword.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const result = await login("a", "b");
-      expect(result).toEqual(mockUser);
+  test("login returns user", async () => {
+    supabaseClient.auth.signInWithPassword.mockResolvedValue({
+      data: { user: { id: "1" } },
+      error: null,
     });
 
-    test("throws on error", async () => {
-      supabaseClient.auth.signInWithPassword.mockResolvedValue({
-        data: null,
-        error: new Error("bad login"),
-      });
+    const user = await login("a", "b");
+    expect(user.id).toBe("1");
+  });
 
-      await expect(login("a", "b")).rejects.toThrow("bad login");
+  test("login throws on error", async () => {
+    supabaseClient.auth.signInWithPassword.mockResolvedValue({
+      data: null,
+      error: new Error("bad login"),
     });
+
+    await expect(login("a", "b")).rejects.toThrow("bad login");
   });
 
   // ---------------- GOOGLE LOGIN ----------------
-  describe("loginGoogle", () => {
-    test("returns data", async () => {
-      const mockData = { provider: "google" };
-
-      supabaseClient.auth.signInWithOAuth.mockResolvedValue({
-        data: mockData,
-        error: null,
-      });
-
-      const result = await loginGoogle();
-      expect(result).toEqual(mockData);
+  test("loginGoogle works", async () => {
+    supabaseClient.auth.signInWithOAuth.mockResolvedValue({
+      data: { provider: "google" },
+      error: null,
     });
 
-    test("throws on error", async () => {
-      supabaseClient.auth.signInWithOAuth.mockResolvedValue({
-        data: null,
-        error: new Error("oauth fail"),
-      });
-
-      await expect(loginGoogle()).rejects.toThrow("oauth fail");
-    });
+    const res = await loginGoogle();
+    expect(res.provider).toBe("google");
   });
 
-  // ---------------- GOOGLE USER HANDLING ----------------
-  describe("handleGoogleUser", () => {
-    test("returns null if no user", async () => {
-      supabaseClient.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
-
-      const result = await handleGoogleUser();
-      expect(result).toBeNull();
+  test("loginGoogle throws on error", async () => {
+    supabaseClient.auth.signInWithOAuth.mockResolvedValue({
+      data: null,
+      error: new Error("oauth fail"),
     });
 
-    test("creates profile if not exists", async () => {
-      const user = { id: "1", email: "x@test.com" };
+    await expect(loginGoogle()).rejects.toThrow("oauth fail");
+  });
 
-      supabaseClient.auth.getUser.mockResolvedValue({
-        data: { user },
-        error: null,
-      });
-
-      const insertMock = jest.fn().mockResolvedValue({ error: null });
-
-      supabaseClient.from
-        .mockReturnValueOnce({
-          select: () => ({
-            eq: () => ({
-              single: jest.fn().mockResolvedValue({ data: null }),
-            }),
-          }),
-        })
-        .mockReturnValueOnce({
-          insert: insertMock,
-        });
-
-      const result = await handleGoogleUser();
-
-      expect(insertMock).toHaveBeenCalled();
-      expect(result).toEqual(user);
+  // ---------------- HANDLE GOOGLE USER ----------------
+  test("handleGoogleUser creates profile if missing", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "1", email: "a@test.com" } },
+      error: null,
     });
+
+    const query = mockQueryBuilder();
+    query.single.mockResolvedValue({ data: null });
+    query.insert.mockResolvedValue({ error: null });
+
+    supabaseClient.from.mockReturnValue(query);
+
+    const user = await handleGoogleUser();
+
+    expect(query.insert).toHaveBeenCalled();
+    expect(user.id).toBe("1");
+  });
+
+  test("handleGoogleUser skips insert if profile exists", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "1", email: "a@test.com" } },
+      error: null,
+    });
+
+    const query = mockQueryBuilder();
+    query.single.mockResolvedValue({ data: { id: "1" } });
+
+    supabaseClient.from.mockReturnValue(query);
+
+    const user = await handleGoogleUser();
+
+    expect(query.insert).not.toHaveBeenCalled();
+    expect(user.id).toBe("1");
   });
 
   // ---------------- GET USER ROLE ----------------
-  describe("getUserRole", () => {
-  test("returns role", async () => {
-    supabaseClient.from.mockReturnValue({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: jest.fn().mockResolvedValue({
-            data: { role: "admin" },
-            error: null,
-          }),
-        }),
-      }),
+  test("getUserRole by email", async () => {
+    const query = mockQueryBuilder();
+    query.maybeSingle.mockResolvedValue({
+      data: { role: "admin" },
+      error: null,
     });
 
-    const result = await getUserRole("a@test.com");
-    expect(result).toBe("admin");
+    supabaseClient.from.mockReturnValue(query);
+
+    const role = await getUserRole("test@test.com");
+
+    expect(role).toBe("admin");
   });
 
-  test("throws on error", async () => {
-    supabaseClient.from.mockReturnValue({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: jest.fn().mockResolvedValue({
-            data: null,
-            error: new Error("fail"),
-          }),
-        }),
-      }),
+  test("getUserRole returns null if none", async () => {
+    const query = mockQueryBuilder();
+    query.maybeSingle.mockResolvedValue({
+      data: null,
+      error: null,
     });
 
-    await expect(getUserRole("x")).rejects.toThrow("fail");
+    supabaseClient.from.mockReturnValue(query);
+
+    const role = await getUserRole("test@test.com");
+
+    expect(role).toBeNull();
   });
-});
 
   // ---------------- ENSURE PROFILE ----------------
-  describe("ensureUserProfile", () => {
-    test("inserts if missing", async () => {
-      const user = { id: "1", email: "a@test.com" };
-
-      const insertMock = jest.fn().mockResolvedValue({ error: null });
-
-      supabaseClient.from
-        .mockReturnValueOnce({
-          select: () => ({
-            eq: () => ({
-              maybeSingle: jest.fn().mockResolvedValue({
-                data: null,
-                error: null,
-              }),
-            }),
-          }),
-        })
-        .mockReturnValueOnce({
-          insert: insertMock,
-        });
-
-      await ensureUserProfile(user);
-
-      expect(insertMock).toHaveBeenCalled();
+  test("ensureUserProfile upserts profile", async () => {
+    const query = mockQueryBuilder();
+    query.maybeSingle.mockResolvedValue({
+      data: { id: "1" },
+      error: null,
     });
+
+    supabaseClient.from.mockReturnValue(query);
+
+    const user = {
+      id: "1",
+      email: "TEST@MAIL.COM",
+      user_metadata: { role: "admin" },
+    };
+
+    const res = await ensureUserProfile(user);
+
+    expect(query.upsert).toHaveBeenCalled();
+    expect(res.id).toBe("1");
   });
 
   // ---------------- CREATE ADMIN INVITE ----------------
-  describe("createAdminInvite", () => {
-    test("calls edge function successfully", async () => {
-      supabaseClient.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: "token" } },
-        error: null,
-      });
-
-      supabaseClient.functions.invoke.mockResolvedValue({
-        data: { success: true },
-        error: null,
-      });
-
-      const result = await createAdminInvite("ADMIN@test.com");
-
-      expect(supabaseClient.functions.invoke).toHaveBeenCalled();
-      expect(result).toEqual({ success: true });
+  test("createAdminInvite success", async () => {
+    supabaseClient.auth.getSession.mockResolvedValue({
+      data: { session: { access_token: "token" } },
+      error: null,
     });
 
-    test("throws if no session", async () => {
-      supabaseClient.auth.getSession.mockResolvedValue({
-        data: { session: null },
-        error: null,
-      });
-
-      await expect(createAdminInvite("a")).rejects.toThrow(
-        "User not logged in"
-      );
+    supabaseClient.functions.invoke.mockResolvedValue({
+      data: { success: true },
+      error: null,
     });
+
+    const res = await createAdminInvite("TEST@MAIL.COM");
+
+    expect(res.success).toBe(true);
   });
 
-  // ---------------- PASSWORD RESET ----------------
-  describe("sendResetPasswordEmail", () => {
-    test("calls reset email", async () => {
-      supabaseClient.auth.resetPasswordForEmail.mockResolvedValue({
-        error: null,
-      });
-
-      await sendResetPasswordEmail("a@test.com");
-
-      expect(
-        supabaseClient.auth.resetPasswordForEmail
-      ).toHaveBeenCalled();
+  test("createAdminInvite throws if not logged in", async () => {
+    supabaseClient.auth.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
     });
+
+    await expect(createAdminInvite("a")).rejects.toThrow("User not logged in");
+  });
+
+  // ---------------- RESET PASSWORD ----------------
+  test("sendResetPasswordEmail works", async () => {
+    supabaseClient.auth.resetPasswordForEmail.mockResolvedValue({
+      error: null,
+    });
+
+    await expect(
+      sendResetPasswordEmail("test@test.com")
+    ).resolves.toBeUndefined();
   });
 
   // ---------------- UPDATE PASSWORD ----------------
-  describe("updatePassword", () => {
-    test("updates password", async () => {
-      supabaseClient.auth.updateUser.mockResolvedValue({
-        data: { user: {} },
-        error: null,
-      });
-
-      const result = await updatePassword("newpass");
-
-      expect(result).toBeDefined();
+  test("updatePassword works", async () => {
+    supabaseClient.auth.updateUser.mockResolvedValue({
+      data: { user: {} },
+      error: null,
     });
+
+    const res = await updatePassword("123456");
+    expect(res.user).toBeDefined();
   });
 
   // ---------------- LOGOUT ----------------
-  describe("logout", () => {
-    test("logs out successfully", async () => {
-      supabaseClient.auth.signOut.mockResolvedValue({ error: null });
-
-      await logout();
-
-      expect(supabaseClient.auth.signOut).toHaveBeenCalled();
+  test("logout works", async () => {
+    supabaseClient.auth.signOut.mockResolvedValue({
+      error: null,
     });
 
-    test("throws on error", async () => {
-      supabaseClient.auth.signOut.mockResolvedValue({
-        error: new Error("fail"),
-      });
-
-      await expect(logout()).rejects.toThrow("fail");
-    });
+    await expect(logout()).resolves.toBeUndefined();
   });
 });

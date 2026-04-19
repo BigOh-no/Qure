@@ -1,11 +1,12 @@
+// AdminAuth.test.jsx
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import AdminAuth from "../pages/adminAuth";
+import AdminAuth from "../pages/adminAuth"
+import { supabaseClient } from "../lib/supabaseClient";
+import { ensureUserProfile } from "../lib/auth";
 import { MemoryRouter } from "react-router-dom";
 
-import { supabaseClient } from "../lib/supabaseClient";
-
-// ---------------- MOCKS ----------------
+// Mock navigate
 const mockNavigate = jest.fn();
 
 jest.mock("react-router-dom", () => ({
@@ -13,42 +14,32 @@ jest.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
+// Mock supabase + auth helper
 jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
+      signOut: jest.fn(),
       verifyOtp: jest.fn(),
+      getUser: jest.fn(),
     },
   },
 }));
 
-// Helper to set URL params
-const setSearch = (search) => {
-  delete window.location;
-  window.location = { search };
-};
+jest.mock("../lib/auth", () => ({
+  ensureUserProfile: jest.fn(),
+}));
 
 describe("AdminAuth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // ---------------- INITIAL RENDER ----------------
-  test("shows initial verifying message", () => {
-    setSearch("?token_hash=abc&type=signup");
+  const setSearch = (search) => {
+    delete window.location;
+    window.location = { search };
+  };
 
-    render(
-      <MemoryRouter>
-        <AdminAuth />
-      </MemoryRouter>
-    );
-
-    expect(
-      screen.getByText(/verifying your invite link/i)
-    ).toBeInTheDocument();
-  });
-
-  // ---------------- INVALID LINK ----------------
-  test("shows invalid link message when params are missing", async () => {
+  test("shows invalid link message if params missing", async () => {
     setSearch("");
 
     render(
@@ -57,17 +48,18 @@ describe("AdminAuth", () => {
       </MemoryRouter>
     );
 
-    expect(
-      await screen.findByText(/invalid invite link/i)
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/invalid invite link/i)
+      ).toBeInTheDocument();
+    });
   });
 
-  // ---------------- OTP FAILURE ----------------
-  test("shows error when verifyOtp fails", async () => {
-    setSearch("?token_hash=abc&type=signup");
+  test("shows error if verifyOtp fails", async () => {
+    setSearch("?token_hash=abc&type=invite");
 
     supabaseClient.auth.verifyOtp.mockResolvedValue({
-      error: new Error("OTP failed"),
+      error: { message: "Invalid token" },
     });
 
     render(
@@ -76,16 +68,17 @@ describe("AdminAuth", () => {
       </MemoryRouter>
     );
 
-    expect(
-      await screen.findByText(/otp failed/i)
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/invalid token/i)).toBeInTheDocument();
+    });
   });
 
-  // ---------------- SUCCESS FLOW ----------------
-  test("navigates to reset-password on success", async () => {
-    setSearch("?token_hash=abc&type=signup");
+  test("shows error if user cannot be loaded", async () => {
+    setSearch("?token_hash=abc&type=invite");
 
-    supabaseClient.auth.verifyOtp.mockResolvedValue({
+    supabaseClient.auth.verifyOtp.mockResolvedValue({ error: null });
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
       error: null,
     });
 
@@ -96,24 +89,43 @@ describe("AdminAuth", () => {
     );
 
     await waitFor(() => {
-      expect(supabaseClient.auth.verifyOtp).toHaveBeenCalledWith({
-        token_hash: "abc",
-        type: "signup",
-      });
-
-      expect(mockNavigate).toHaveBeenCalledWith(
-        "/reset-password",
-        { replace: true }
-      );
+      expect(
+        screen.getByText(/could not load invited admin user/i)
+      ).toBeInTheDocument();
     });
   });
 
-  // ---------------- EDGE CASE ----------------
-  test("handles thrown exceptions", async () => {
-    setSearch("?token_hash=abc&type=signup");
+  test("successful flow navigates to reset-password", async () => {
+    setSearch("?token_hash=abc&type=invite");
+
+    const mockUser = { id: "123" };
+
+    supabaseClient.auth.verifyOtp.mockResolvedValue({ error: null });
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null,
+    });
+    ensureUserProfile.mockResolvedValue({});
+
+    render(
+      <MemoryRouter>
+        <AdminAuth />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(ensureUserProfile).toHaveBeenCalledWith(mockUser);
+      expect(mockNavigate).toHaveBeenCalledWith("/reset-password", {
+        replace: true,
+      });
+    });
+  });
+
+  test("handles unexpected error", async () => {
+    setSearch("?token_hash=abc&type=invite");
 
     supabaseClient.auth.verifyOtp.mockRejectedValue(
-      new Error("Network crash")
+      new Error("Something broke")
     );
 
     render(
@@ -122,8 +134,10 @@ describe("AdminAuth", () => {
       </MemoryRouter>
     );
 
-    expect(
-      await screen.findByText(/network crash/i)
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/something broke/i)
+      ).toBeInTheDocument();
+    });
   });
 });

@@ -4,6 +4,7 @@ import StaffPassword from "../pages/staffAuth";
 import { MemoryRouter } from "react-router-dom";
 
 import { supabaseClient } from "../lib/supabaseClient";
+import { ensureUserProfile } from "../lib/auth";
 
 // ---------------- MOCK NAVIGATION ----------------
 const mockNavigate = jest.fn();
@@ -17,9 +18,16 @@ jest.mock("react-router-dom", () => ({
 jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
+      signOut: jest.fn(),
       verifyOtp: jest.fn(),
+      getUser: jest.fn(),
     },
   },
+}));
+
+// ---------------- MOCK PROFILE ----------------
+jest.mock("../lib/auth", () => ({
+  ensureUserProfile: jest.fn(),
 }));
 
 // ---------------- HELPER: set URL ----------------
@@ -31,11 +39,25 @@ const setSearch = (search) => {
 describe("StaffPassword", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // default happy mocks
+    supabaseClient.auth.signOut.mockResolvedValue({});
+    supabaseClient.auth.verifyOtp.mockResolvedValue({ error: null });
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "123" } },
+      error: null,
+    });
+    ensureUserProfile.mockResolvedValue({});
   });
 
   // ---------------- INITIAL STATE ----------------
-  test("shows verifying message initially", () => {
+  test("shows verifying message initially", async () => {
     setSearch("?token_hash=abc&type=signup");
+
+    // delay signOut so initial state is visible
+    supabaseClient.auth.signOut.mockImplementation(
+      () => new Promise(() => {})
+    );
 
     render(
       <MemoryRouter>
@@ -44,7 +66,7 @@ describe("StaffPassword", () => {
     );
 
     expect(
-      screen.getByText(/verifying your invite link/i)
+      await screen.findByText(/verifying your invite link/i)
     ).toBeInTheDocument();
   });
 
@@ -86,10 +108,6 @@ describe("StaffPassword", () => {
   test("navigates to reset-password on success", async () => {
     setSearch("?token_hash=abc&type=signup");
 
-    supabaseClient.auth.verifyOtp.mockResolvedValue({
-      error: null,
-    });
-
     render(
       <MemoryRouter>
         <StaffPassword />
@@ -101,6 +119,8 @@ describe("StaffPassword", () => {
         token_hash: "abc",
         type: "signup",
       });
+
+      expect(ensureUserProfile).toHaveBeenCalled();
 
       expect(mockNavigate).toHaveBeenCalledWith(
         "/reset-password",
