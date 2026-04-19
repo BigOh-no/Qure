@@ -12,7 +12,7 @@ function FitBounds({ clinics }) {
     const validPoints = clinics
         .filter( (clinic) =>
             clinic.lat !== null &&
-            clinic.long !== null &&
+            clinic.lon !== null &&
             !isNaN(Number(clinic.lat)) &&
             !isNaN(Number(clinic.lon))    
         )
@@ -58,7 +58,7 @@ export default function ClinicMap({ clinics, selectedClinic }) {
     >
       <TileLayer
         attribution="© OpenStreetMap contributors"
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
 
       <FitBounds clinics={clinics} />

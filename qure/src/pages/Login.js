@@ -5,13 +5,15 @@ import { Link,useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { login, loginGoogle, getUserRole } from '../lib/auth';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import ForgotPassword from "./ForgotPassword";
 
 function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false); //password
+    const [showPassword, setShowPassword] = useState(false);
+    const [forgotOpen, setForgotOpen] = useState(false);
 
     const handleLogin = async (e) => {
     e.preventDefault();
@@ -98,7 +100,17 @@ function Login() {
     </span>
 </label>
                     <p className="forgot-link">
-                        <a href="/forgot-password">Forgot password?</a>
+                        <a
+                            href="#"
+                            className="forgot-link"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setForgotOpen(true);
+                            }}
+                            aria-haspopup="dialog"
+                            >
+                            Forgot password?
+                        </a>
                     </p>
 
                     <button type="submit" className="login-btn">Log In</button>
@@ -130,6 +142,11 @@ function Login() {
                     </ul>
                 </article>
             </aside>
+            <ForgotPassword
+                isOpen={forgotOpen}
+                onClose={() => setForgotOpen(false)}
+                email={email}
+            />
         </main>
     );
 }

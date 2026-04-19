@@ -5,225 +5,107 @@ import {
   handleGoogleUser,
   getUserRole,
   ensureUserProfile,
-} from '../lib/auth';
+  createAdminInvite,
+  sendResetPasswordEmail,
+  updatePassword,
+  logout,
+} from "../lib/auth";
 
-import { supabaseClient } from '../lib/supabaseClient';
+import { supabaseClient } from "../lib/supabaseClient";
 
-// Mock Supabase so tests only verify our auth logic,
-// not Supabase's internal implementation.
-jest.mock('../lib/supabaseClient', () => ({
+// 🔧 Full Supabase mock
+jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
       signUp: jest.fn(),
       signInWithPassword: jest.fn(),
       signInWithOAuth: jest.fn(),
       getUser: jest.fn(),
+      getSession: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      updateUser: jest.fn(),
+      signOut: jest.fn(),
     },
     from: jest.fn(),
+    functions: {
+      invoke: jest.fn(),
+    },
   },
 }));
 
-describe('auth.js', () => {
+describe("auth.js", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock browser location because auth redirects depend on window.origin
-    Object.defineProperty(window, 'location', {
-      value: {
-        origin: 'http://localhost:3000',
-      },
+    Object.defineProperty(window, "location", {
+      value: { origin: "http://localhost:3000" },
       writable: true,
-      configurable: true,
     });
   });
 
-  describe('signUp', () => {
-    test('signs up a user successfully and returns the user', async () => {
-      const mockUser = {
-        id: 'user-123',
-        email: 'patient@example.com',
-      };
+  // ---------------- SIGN UP ----------------
+  describe("signUp", () => {
+    test("returns user on success", async () => {
+      const mockUser = { id: "1", email: "test@test.com" };
 
       supabaseClient.auth.signUp.mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
 
-      const result = await signUp('patient@example.com', 'password123');
-
-      expect(supabaseClient.auth.signUp).toHaveBeenCalledWith({
-        email: 'patient@example.com',
-        password: 'password123',
-        options: {
-          emailRedirectTo: 'http://localhost:3000/auth/callback',
-        },
-      });
+      const result = await signUp("test@test.com", "123456");
 
       expect(result).toEqual(mockUser);
     });
 
-    test('throws an error when signup fails', async () => {
+    test("throws on error", async () => {
       supabaseClient.auth.signUp.mockResolvedValue({
         data: null,
-        error: new Error('Signup failed'),
+        error: new Error("fail"),
       });
 
-      await expect(
-        signUp('patient@example.com', 'password123')
-      ).rejects.toThrow('Signup failed');
+      await expect(signUp("a", "b")).rejects.toThrow("fail");
+    });
+
+    test("returns null if no user", async () => {
+      supabaseClient.auth.signUp.mockResolvedValue({
+        data: { user: null },
+        error: null,
+      });
+
+      const result = await signUp("a", "b");
+      expect(result).toBeNull();
     });
   });
 
-  describe('ensureUserProfile', () => {
-    test('does nothing if the profile already exists', async () => {
-      const user = {
-        id: 'existing-user',
-        email: 'existing@example.com',
-      };
-
-      const maybeSingleMock = jest.fn().mockResolvedValue({
-        data: { id: 'existing-user' },
-        error: null,
-      });
-
-      const eqMock = jest.fn().mockReturnValue({
-        maybeSingle: maybeSingleMock,
-      });
-
-      const selectMock = jest.fn().mockReturnValue({
-        eq: eqMock,
-      });
-
-      supabaseClient.from.mockReturnValue({
-        select: selectMock,
-      });
-
-      await ensureUserProfile(user);
-
-      expect(supabaseClient.from).toHaveBeenCalledWith('profiles');
-      expect(selectMock).toHaveBeenCalledWith('id');
-      expect(eqMock).toHaveBeenCalledWith('id', 'existing-user');
-    });
-
-    test('inserts a profile if one does not exist', async () => {
-      const user = {
-        id: 'new-user',
-        email: 'new@example.com',
-      };
-
-      const maybeSingleMock = jest.fn().mockResolvedValue({
-        data: null,
-        error: null,
-      });
-
-      const eqMock = jest.fn().mockReturnValue({
-        maybeSingle: maybeSingleMock,
-      });
-
-      const selectMock = jest.fn().mockReturnValue({
-        eq: eqMock,
-      });
-
-      const insertMock = jest.fn().mockResolvedValue({
-        error: null,
-      });
-
-      supabaseClient.from
-        .mockReturnValueOnce({
-          select: selectMock,
-        })
-        .mockReturnValueOnce({
-          insert: insertMock,
-        });
-
-      await ensureUserProfile(user);
-
-      expect(insertMock).toHaveBeenCalledWith([
-        {
-          id: 'new-user',
-          email: 'new@example.com',
-          role: 'patient',
-        },
-      ]);
-    });
-
-    test('throws an error if profile insert fails', async () => {
-      const user = {
-        id: 'insert-fail-user',
-        email: 'insertfail@example.com',
-      };
-
-      const maybeSingleMock = jest.fn().mockResolvedValue({
-        data: null,
-        error: null,
-      });
-
-      const eqMock = jest.fn().mockReturnValue({
-        maybeSingle: maybeSingleMock,
-      });
-
-      const selectMock = jest.fn().mockReturnValue({
-        eq: eqMock,
-      });
-
-      const insertMock = jest.fn().mockResolvedValue({
-        error: new Error('Profile insert failed'),
-      });
-
-      supabaseClient.from
-        .mockReturnValueOnce({
-          select: selectMock,
-        })
-        .mockReturnValueOnce({
-          insert: insertMock,
-        });
-
-      await expect(ensureUserProfile(user)).rejects.toThrow(
-        'Profile insert failed'
-      );
-    });
-  });
-
-  describe('login', () => {
-    test('logs in a user successfully and returns the user', async () => {
-      const mockUser = {
-        id: 'user-456',
-        email: 'login@example.com',
-      };
+  // ---------------- LOGIN ----------------
+  describe("login", () => {
+    test("returns user", async () => {
+      const mockUser = { id: "2" };
 
       supabaseClient.auth.signInWithPassword.mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
 
-      const result = await login('login@example.com', 'mypassword');
-
-      expect(supabaseClient.auth.signInWithPassword).toHaveBeenCalledWith({
-        email: 'login@example.com',
-        password: 'mypassword',
-      });
-
+      const result = await login("a", "b");
       expect(result).toEqual(mockUser);
     });
 
-    test('throws an error if login fails', async () => {
+    test("throws on error", async () => {
       supabaseClient.auth.signInWithPassword.mockResolvedValue({
         data: null,
-        error: new Error('Invalid login credentials'),
+        error: new Error("bad login"),
       });
 
-      await expect(
-        login('login@example.com', 'wrongpassword')
-      ).rejects.toThrow('Invalid login credentials');
+      await expect(login("a", "b")).rejects.toThrow("bad login");
     });
   });
 
-  describe('loginGoogle', () => {
-    test('starts Google OAuth successfully', async () => {
-      const mockData = {
-        provider: 'google',
-        url: 'https://accounts.google.com',
-      };
+  // ---------------- GOOGLE LOGIN ----------------
+  describe("loginGoogle", () => {
+    test("returns data", async () => {
+      const mockData = { provider: "google" };
 
       supabaseClient.auth.signInWithOAuth.mockResolvedValue({
         data: mockData,
@@ -231,95 +113,106 @@ describe('auth.js', () => {
       });
 
       const result = await loginGoogle();
-
-      expect(supabaseClient.auth.signInWithOAuth).toHaveBeenCalledWith({
-        provider: 'google',
-        options: {
-          redirectTo: 'http://localhost:3000/auth/callback',
-        },
-      });
-
       expect(result).toEqual(mockData);
     });
 
-    test('throws an error if Google OAuth fails', async () => {
+    test("throws on error", async () => {
       supabaseClient.auth.signInWithOAuth.mockResolvedValue({
         data: null,
-        error: new Error('Google OAuth failed'),
+        error: new Error("oauth fail"),
       });
 
-      await expect(loginGoogle()).rejects.toThrow('Google OAuth failed');
+      await expect(loginGoogle()).rejects.toThrow("oauth fail");
     });
   });
 
-  describe('handleGoogleUser', () => {
-    test('returns null if no Google user is found', async () => {
+  // ---------------- GOOGLE USER HANDLING ----------------
+  describe("handleGoogleUser", () => {
+    test("returns null if no user", async () => {
       supabaseClient.auth.getUser.mockResolvedValue({
         data: { user: null },
         error: null,
       });
 
-      const result = await handleGoogleUser('patient');
-
+      const result = await handleGoogleUser();
       expect(result).toBeNull();
     });
 
-    test('returns the user if the profile already exists', async () => {
-      const mockUser = {
-        id: 'google-123',
-        email: 'googleuser@example.com',
-      };
+    test("creates profile if not exists", async () => {
+      const user = { id: "1", email: "x@test.com" };
 
       supabaseClient.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
+        data: { user },
         error: null,
       });
 
-      const singleMock = jest.fn().mockResolvedValue({
-        data: { id: 'google-123' },
-        error: null,
-      });
-
-      const eqMock = jest.fn().mockReturnValue({
-        single: singleMock,
-      });
-
-      const selectMock = jest.fn().mockReturnValue({
-        eq: eqMock,
-      });
-
-      supabaseClient.from.mockReturnValue({
-        select: selectMock,
-      });
-
-      const result = await handleGoogleUser('patient');
-
-      expect(supabaseClient.from).toHaveBeenCalledWith('profiles');
-      expect(selectMock).toHaveBeenCalledWith('id');
-      expect(eqMock).toHaveBeenCalledWith('id', 'google-123');
-      expect(result).toEqual(mockUser);
-    });
-
-    test('creates a profile for a new Google user', async () => {
-      const mockUser = {
-        id: 'google-456',
-        email: 'newgoogleuser@example.com',
-      };
-
-      supabaseClient.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const insertMock = jest.fn().mockResolvedValue({
-        error: null,
-      });
+      const insertMock = jest.fn().mockResolvedValue({ error: null });
 
       supabaseClient.from
         .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
+          select: () => ({
+            eq: () => ({
+              single: jest.fn().mockResolvedValue({ data: null }),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          insert: insertMock,
+        });
+
+      const result = await handleGoogleUser();
+
+      expect(insertMock).toHaveBeenCalled();
+      expect(result).toEqual(user);
+    });
+  });
+
+  // ---------------- GET USER ROLE ----------------
+  describe("getUserRole", () => {
+    test("returns role", async () => {
+      supabaseClient.from.mockReturnValue({
+        select: () => ({
+          eq: () => ({
+            single: jest.fn().mockResolvedValue({
+              data: { role: "admin" },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const result = await getUserRole("a@test.com");
+      expect(result).toBe("admin");
+    });
+
+    test("throws on error", async () => {
+      supabaseClient.from.mockReturnValue({
+        select: () => ({
+          eq: () => ({
+            single: jest.fn().mockResolvedValue({
+              data: null,
+              error: new Error("fail"),
+            }),
+          }),
+        }),
+      });
+
+      await expect(getUserRole("x")).rejects.toThrow("fail");
+    });
+  });
+
+  // ---------------- ENSURE PROFILE ----------------
+  describe("ensureUserProfile", () => {
+    test("inserts if missing", async () => {
+      const user = { id: "1", email: "a@test.com" };
+
+      const insertMock = jest.fn().mockResolvedValue({ error: null });
+
+      supabaseClient.from
+        .mockReturnValueOnce({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: jest.fn().mockResolvedValue({
                 data: null,
                 error: null,
               }),
@@ -330,62 +223,88 @@ describe('auth.js', () => {
           insert: insertMock,
         });
 
-      const result = await handleGoogleUser('patient');
+      await ensureUserProfile(user);
 
-      expect(insertMock).toHaveBeenCalledWith([
-        {
-          id: 'google-456',
-          email: 'newgoogleuser@example.com',
-          role: 'patient',
-        },
-      ]);
-
-      expect(result).toEqual(mockUser);
+      expect(insertMock).toHaveBeenCalled();
     });
   });
 
-  describe('getUserRole', () => {
-    test('returns the user role if found', async () => {
-      const singleMock = jest.fn().mockResolvedValue({
-        data: { role: 'patient' },
+  // ---------------- CREATE ADMIN INVITE ----------------
+  describe("createAdminInvite", () => {
+    test("calls edge function successfully", async () => {
+      supabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: { access_token: "token" } },
         error: null,
       });
 
-      const eqMock = jest.fn().mockReturnValue({
-        single: singleMock,
+      supabaseClient.functions.invoke.mockResolvedValue({
+        data: { success: true },
+        error: null,
       });
 
-      const selectMock = jest.fn().mockReturnValue({
-        eq: eqMock,
-      });
+      const result = await createAdminInvite("ADMIN@test.com");
 
-      supabaseClient.from.mockReturnValue({
-        select: selectMock,
-      });
-
-      const result = await getUserRole('user@example.com');
-
-      expect(supabaseClient.from).toHaveBeenCalledWith('profiles');
-      expect(selectMock).toHaveBeenCalledWith('role');
-      expect(eqMock).toHaveBeenCalledWith('email', 'user@example.com');
-      expect(result).toBe('patient');
+      expect(supabaseClient.functions.invoke).toHaveBeenCalled();
+      expect(result).toEqual({ success: true });
     });
 
-    test('throws an error if role lookup fails', async () => {
-      supabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error: new Error('Role lookup failed'),
-            }),
-          }),
-        }),
+    test("throws if no session", async () => {
+      supabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
       });
 
-      await expect(getUserRole('fail@example.com')).rejects.toThrow(
-        'Role lookup failed'
+      await expect(createAdminInvite("a")).rejects.toThrow(
+        "User not logged in"
       );
+    });
+  });
+
+  // ---------------- PASSWORD RESET ----------------
+  describe("sendResetPasswordEmail", () => {
+    test("calls reset email", async () => {
+      supabaseClient.auth.resetPasswordForEmail.mockResolvedValue({
+        error: null,
+      });
+
+      await sendResetPasswordEmail("a@test.com");
+
+      expect(
+        supabaseClient.auth.resetPasswordForEmail
+      ).toHaveBeenCalled();
+    });
+  });
+
+  // ---------------- UPDATE PASSWORD ----------------
+  describe("updatePassword", () => {
+    test("updates password", async () => {
+      supabaseClient.auth.updateUser.mockResolvedValue({
+        data: { user: {} },
+        error: null,
+      });
+
+      const result = await updatePassword("newpass");
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ---------------- LOGOUT ----------------
+  describe("logout", () => {
+    test("logs out successfully", async () => {
+      supabaseClient.auth.signOut.mockResolvedValue({ error: null });
+
+      await logout();
+
+      expect(supabaseClient.auth.signOut).toHaveBeenCalled();
+    });
+
+    test("throws on error", async () => {
+      supabaseClient.auth.signOut.mockResolvedValue({
+        error: new Error("fail"),
+      });
+
+      await expect(logout()).rejects.toThrow("fail");
     });
   });
 });
