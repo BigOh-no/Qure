@@ -162,8 +162,7 @@ function PatientDashboard() {
         return;
       }
 
-      const bookedSlots = await getBookedSlots(appointment.clinic_id, newDate);
-      const currentTime = appointment.appointment_time?.slice(0, 5) || "";
+      const bookedSlots = (await getBookedSlots(appointment.clinic_id, newDate)) || [];      const currentTime = appointment.appointment_time?.slice(0, 5) || "";
       const allSlots = generateHourlySlots();
       const now = new Date();
 

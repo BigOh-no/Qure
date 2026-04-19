@@ -54,11 +54,13 @@ describe("ResetPasswordPage", () => {
       error: null,
     });
 
-    render(
-      <MemoryRouter>
-        <ResetPasswordPage />
-      </MemoryRouter>
-    );
+await waitFor(() => {
+  render(
+    <MemoryRouter>
+      <ResetPasswordPage />
+    </MemoryRouter>
+  );
+});
 
     expect(
       screen.getByText(/verifying your invite link/i)

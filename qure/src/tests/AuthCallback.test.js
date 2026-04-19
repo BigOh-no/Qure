@@ -31,9 +31,21 @@ jest.mock("../lib/auth", () => ({
 describe("AuthCallback", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // safe default so tests don't crash on mount
+    supabaseClient.auth.getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { email: "default@test.com", id: "default-id" },
+        },
+      },
+      error: null,
+    });
+
+    ensureUserProfile.mockResolvedValue();
+    getUserRole.mockResolvedValue("patient");
   });
 
-  // ---------------- RENDER ----------------
   test("renders loading text", () => {
     render(
       <MemoryRouter>
@@ -44,7 +56,6 @@ describe("AuthCallback", () => {
     expect(screen.getByText(/logging in/i)).toBeInTheDocument();
   });
 
-  // ---------------- PATIENT FLOW ----------------
   test("redirects patient user to /patient", async () => {
     supabaseClient.auth.getSession.mockResolvedValue({
       data: {
@@ -55,7 +66,6 @@ describe("AuthCallback", () => {
       error: null,
     });
 
-    ensureUserProfile.mockResolvedValue();
     getUserRole.mockResolvedValue("patient");
 
     render(
@@ -65,11 +75,15 @@ describe("AuthCallback", () => {
     );
 
     await waitFor(() => {
+      expect(ensureUserProfile).toHaveBeenCalledWith({
+        email: "patient@test.com",
+        id: "1",
+      });
+      expect(getUserRole).toHaveBeenCalledWith("patient@test.com");
       expect(mockNavigate).toHaveBeenCalledWith("/patient");
     });
   });
 
-  // ---------------- ADMIN FLOW ----------------
   test("redirects admin user to /admin", async () => {
     supabaseClient.auth.getSession.mockResolvedValue({
       data: {
@@ -80,7 +94,6 @@ describe("AuthCallback", () => {
       error: null,
     });
 
-    ensureUserProfile.mockResolvedValue();
     getUserRole.mockResolvedValue("admin");
 
     render(
@@ -94,7 +107,6 @@ describe("AuthCallback", () => {
     });
   });
 
-  // ---------------- STAFF FLOW ----------------
   test("redirects clinic staff to /staff", async () => {
     supabaseClient.auth.getSession.mockResolvedValue({
       data: {
@@ -105,7 +117,6 @@ describe("AuthCallback", () => {
       error: null,
     });
 
-    ensureUserProfile.mockResolvedValue();
     getUserRole.mockResolvedValue("clinicstaff");
 
     render(
@@ -119,7 +130,6 @@ describe("AuthCallback", () => {
     });
   });
 
-  // ---------------- DEFAULT FLOW ----------------
   test("redirects unknown role to home", async () => {
     supabaseClient.auth.getSession.mockResolvedValue({
       data: {
@@ -130,7 +140,6 @@ describe("AuthCallback", () => {
       error: null,
     });
 
-    ensureUserProfile.mockResolvedValue();
     getUserRole.mockResolvedValue("something_else");
 
     render(
@@ -144,11 +153,27 @@ describe("AuthCallback", () => {
     });
   });
 
-  // ---------------- ERROR FLOW ----------------
-  test("redirects to login on error", async () => {
+  test("redirects to login on session error", async () => {
     supabaseClient.auth.getSession.mockResolvedValue({
       data: { session: null },
       error: new Error("Session error"),
+    });
+
+    render(
+      <MemoryRouter>
+        <AuthCallback />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/login");
+    });
+  });
+
+  test("redirects to login when no user exists", async () => {
+    supabaseClient.auth.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
     });
 
     render(

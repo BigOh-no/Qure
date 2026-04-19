@@ -1,4 +1,4 @@
-import { use, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserRole, ensureUserProfile } from "../lib/auth";
 import { supabaseClient } from "../lib/supabaseClient";
