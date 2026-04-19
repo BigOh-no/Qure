@@ -95,9 +95,7 @@ export const ensureUserProfile = async (user) => {
 
   if (existingError) throw existingError;
 
-  // If profile already exists, do NOT overwrite the role
   if (existingProfile) {
-    // only update email if needed, preserve existing role
     if (existingProfile.email !== email) {
       const { error: updateError } = await supabaseClient
         .from("profiles")
@@ -110,7 +108,6 @@ export const ensureUserProfile = async (user) => {
     return existingProfile;
   }
 
-  // Only for brand new users, decide the role from metadata
   const roleFromMetadata =
     user?.user_metadata?.role ||
     user?.app_metadata?.role ||

@@ -10,9 +10,6 @@ function StaffAuth() {
   useEffect(() => {
     const run = async () => {
       try {
-        // Important during testing: remove any old local session first
-        await supabaseClient.auth.signOut();
-
         const params = new URLSearchParams(window.location.search);
         const tokenHash = params.get("token_hash");
         const type = params.get("type");
@@ -22,27 +19,15 @@ function StaffAuth() {
           return;
         }
 
-        const { error: verifyError } = await supabaseClient.auth.verifyOtp({
+        const { error } = await supabaseClient.auth.verifyOtp({
           token_hash: tokenHash,
           type,
         });
 
-        if (verifyError) {
-          setMessage(verifyError.message || "Could not verify invite link.");
+        if (error) {
+          setMessage(error.message || "Could not verify invite link.");
           return;
         }
-
-        const {
-          data: { user },
-          error: userError,
-        } = await supabaseClient.auth.getUser();
-
-        if (userError || !user) {
-          setMessage("Could not load invited staff user.");
-          return;
-        }
-
-        await ensureUserProfile(user);
 
         navigate("/reset-password", { replace: true });
       } catch (error) {
@@ -76,7 +61,7 @@ function StaffAuth() {
           textAlign: "center",
         }}
       >
-        <h1 style={{ color: "#8b0000", marginTop: 0 }}>Qure Staff Access</h1>
+        <h1 style={{ color: "#8b0000", marginTop: 0 }}>Qure</h1>
         <p style={{ color: "#555555", marginBottom: 0 }}>{message}</p>
       </section>
     </main>
