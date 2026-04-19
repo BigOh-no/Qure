@@ -81,23 +81,48 @@ export const getUserRole = async (identifier) => {
 };
 
 export const ensureUserProfile = async (user) => {
+  if (!user?.id) {
+    throw new Error("User is required.");
+  }
+
+  const email = user?.email?.trim().toLowerCase();
+
+  const { data: existingProfile, error: existingError } = await supabaseClient
+    .from("profiles")
+    .select("id, email, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+
+  // If profile already exists, do NOT overwrite the role
+  if (existingProfile) {
+    // only update email if needed, preserve existing role
+    if (existingProfile.email !== email) {
+      const { error: updateError } = await supabaseClient
+        .from("profiles")
+        .update({ email })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+    }
+
+    return existingProfile;
+  }
+
+  // Only for brand new users, decide the role from metadata
   const roleFromMetadata =
     user?.user_metadata?.role ||
     user?.app_metadata?.role ||
     "patient";
 
-  const email = user?.email?.trim().toLowerCase();
-
   const { data, error } = await supabaseClient
     .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        email,
-        role: roleFromMetadata,
-      },
-      { onConflict: "id" }
-    )
+    .insert({
+      id: user.id,
+      email,
+      role: roleFromMetadata,
+    })
     .select()
     .maybeSingle();
 
