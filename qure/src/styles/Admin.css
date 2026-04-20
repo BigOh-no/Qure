@@ -22,7 +22,7 @@ body {
   flex-direction: column;
 }
 
-.sidebar-logo {
+.sidebar-logo1 {
   width: 300px;
   height: auto;
   display: block;
@@ -134,16 +134,16 @@ body {
   padding: 1.2rem;
 }
 
-.action-list {
+.action-list1 {
   list-style: none;
   padding: 0;
 }
 
-.action-list li {
+.action-list1 li {
   margin-bottom: 0.8rem;
 }
 
-.action-btn {
+.action-btn1 {
   width: 100%;
   padding: 0.8rem;
   border: none;
@@ -154,7 +154,7 @@ body {
   cursor: pointer;
 }
 
-.action-btn:hover {
+.action-btn1:hover {
   opacity: 0.9;
 }
 
