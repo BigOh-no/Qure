@@ -253,9 +253,7 @@
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
 }
 
-/* ========================= */
-/* 🔥 SLOT SYSTEM (UPDATED)  */
-/* ========================= */
+
 
 .slot-grid {
   display: grid;
@@ -281,7 +279,7 @@
   transform: translateY(-1px);
 }
 
-/* 🔴 BOOKED */
+/*BOOKED */
 .slot-btn-booked {
   background: #2c2c2c;
   color: #ffffff;
@@ -290,7 +288,7 @@
   cursor: not-allowed;
 }
 
-/* ⚫ PAST */
+/* PAST */
 .slot-btn-past {
   background: #6b6b6b;
   color: #ffffff;
@@ -299,7 +297,7 @@
   cursor: not-allowed;
 }
 
-/* 🟢 SELECTED */
+/* SELECTED */
 .slot-btn-active {
   background: #8b0000;
   color: #ffffff;
@@ -313,9 +311,9 @@
   border: 1px solid #d88;
 }
 
-/* ========================= */
+
 /* MODALS */
-/* ========================= */
+
 
 .modal-overlay {
   position: fixed;
@@ -419,9 +417,9 @@
   }
 }
 
-/* ========================= */
+
 /* MOBILE */
-/* ========================= */
+
 
 @media (max-width: 768px) {
   .patient-dashboard {
