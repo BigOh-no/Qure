@@ -32,7 +32,7 @@ Implement the functionality of searching for clinics. Implement some admin dashb
 - As an admin I can add a staff member to assign them to a clinic
 - As an admin I can add an admin to give them admin permission
 - As a user, I can log out of my profile so that I can return to the landing page
-- As a patient, I can search a province to get a list of clinics in that province
+- As a patient, I can search a clinic by province to get a list of clinics in that province
 - As a patient, I can search a clinic by facility type to get a list of clinics of that type
 
 ## Extra user stories completed
@@ -184,7 +184,7 @@ View number of appointments today
 - Aaliah: front-end for admin home page, functionality of admin home page
 - Ammaarah: front end for staff home page, show password for signup and login, google logo, admin functionality
 - Vareshan: front-end for patient page
-- Muhammed: testing, Github testing
+- Muhammed: testing, Github testing, patient functionality
 - Vikram: dataset
 - Vikram, Vareshan, Muhammed: searching & finding closest clinic
 
