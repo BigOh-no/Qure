@@ -1,58 +1,91 @@
 import { supabaseClient } from './supabaseClient';
 
-export const signUp = async (email, password, role='patient') => {
-    const { data, error } = await supabaseClient.auth.signUp({ 
-        email, 
-        password, 
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
-    });
-    if (error) throw error;
-    if (!data?.user) return null;
+export const signUp = async (email, password, role = 'patient') => {
+  const cleanEmail = email.trim().toLowerCase();
 
-    // const { error: profileError } = await supabaseClient
-    //     .from('profiles')
-    //     .insert([{id: data.user.id, email: data.user.email, role: role}]);
-    // if (profileError) throw profileError;
-    
-    return data.user;
+  const { data, error } = await supabaseClient.auth.signUp({
+    email: cleanEmail,
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      data: { role },
+    },
+  });
+
+  if (error) throw error;
+  if (!data?.user) return null;
+
+  const { error: profileError } = await supabaseClient
+    .from('profiles')
+    .upsert([
+      {
+        id: data.user.id,
+        email: cleanEmail,
+        role,
+      },
+    ]);
+
+  if (profileError) throw profileError;
+
+  return data.user;
 };
 
 export const login = async (email, password) => {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data.user;
+  const cleanEmail = email.trim().toLowerCase();
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email: cleanEmail,
+    password,
+  });
+
+  if (error) throw error;
+  return data.user;
 };
 
 export const loginGoogle = async () => {
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: `${window.location.origin}/auth/callback`
-        }
-    });
-    if (error) throw error;
-    return data;
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  if (error) throw error;
+  return data;
 };
 
-export const handleGoogleUser = async (role='patient') => {
-    const { data, error } = await supabaseClient.auth.getUser();
-    if (error) throw error;
-    if (!data?.user) return null;
+export const handleGoogleUser = async (role = 'patient') => {
+  const { data, error } = await supabaseClient.auth.getUser();
 
-    const { data: existingProfile } = await supabaseClient
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
-    if (!existingProfile){
-        const { error: profileError } = await supabaseClient
-            .from('profiles')
-            .insert([{id: data.user.id, email: data.user.email, role: role}]);
-        if (profileError) throw profileError;
-    }
-    
-    return data.user;
-}
+  if (error) throw error;
+  if (!data?.user) return null;
+
+  const cleanEmail = data.user.email?.trim().toLowerCase() || null;
+
+  const { data: existingProfile, error: existingProfileError } = await supabaseClient
+    .from('profiles')
+    .select('id')
+    .eq('id', data.user.id)
+    .maybeSingle();
+
+  if (existingProfileError) throw existingProfileError;
+
+  if (!existingProfile) {
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .insert([
+        {
+          id: data.user.id,
+          email: cleanEmail,
+          role,
+        },
+      ]);
+
+    if (profileError) throw profileError;
+  }
+
+  return data.user;
+};
 
 export const getUserRole = async (identifier) => {
   if (!identifier) {
@@ -60,17 +93,17 @@ export const getUserRole = async (identifier) => {
   }
 
   let query = supabaseClient
-    .from("profiles")
-    .select("role");
+    .from('profiles')
+    .select('role');
 
   const looksLikeUuid =
-    typeof identifier === "string" &&
+    typeof identifier === 'string' &&
     /^[0-9a-fA-F-]{36}$/.test(identifier);
 
   if (looksLikeUuid) {
-    query = query.eq("id", identifier);
+    query = query.eq('id', identifier);
   } else {
-    query = query.eq("email", String(identifier).trim().toLowerCase());
+    query = query.eq('email', String(identifier).trim().toLowerCase());
   }
 
   const { data, error } = await query.maybeSingle();
@@ -82,15 +115,15 @@ export const getUserRole = async (identifier) => {
 
 export const ensureUserProfile = async (user) => {
   if (!user?.id) {
-    throw new Error("User is required.");
+    throw new Error('User is required.');
   }
 
-  const email = user?.email?.trim().toLowerCase();
+  const email = user?.email?.trim().toLowerCase() || null;
 
   const { data: existingProfile, error: existingError } = await supabaseClient
-    .from("profiles")
-    .select("id, email, role")
-    .eq("id", user.id)
+    .from('profiles')
+    .select('id, email, role')
+    .eq('id', user.id)
     .maybeSingle();
 
   if (existingError) throw existingError;
@@ -98,9 +131,9 @@ export const ensureUserProfile = async (user) => {
   if (existingProfile) {
     if (existingProfile.email !== email) {
       const { error: updateError } = await supabaseClient
-        .from("profiles")
+        .from('profiles')
         .update({ email })
-        .eq("id", user.id);
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
     }
@@ -111,10 +144,10 @@ export const ensureUserProfile = async (user) => {
   const roleFromMetadata =
     user?.user_metadata?.role ||
     user?.app_metadata?.role ||
-    "patient";
+    'patient';
 
   const { data, error } = await supabaseClient
-    .from("profiles")
+    .from('profiles')
     .insert({
       id: user.id,
       email,
@@ -137,20 +170,20 @@ export const createAdminInvite = async (email) => {
   } = await supabaseClient.auth.getSession();
 
   if (sessionError) throw sessionError;
-  if (!session) throw new Error("User not logged in");
+  if (!session) throw new Error('User not logged in');
 
-  const { data, error } = await supabaseClient.functions.invoke("create-admin", {
+  const { data, error } = await supabaseClient.functions.invoke('create-admin', {
     body: { email: cleanEmail },
     headers: {
       Authorization: `Bearer ${session.access_token}`,
     },
   });
 
-  console.log("invoke data:", data);
-  console.log("invoke error:", error);
+  console.log('invoke data:', data);
+  console.log('invoke error:', error);
 
   if (error) {
-    let message = "Edge Function returned a non-2xx status code";
+    let message = 'Edge Function returned a non-2xx status code';
 
     if (error.message) {
       message = error.message;
@@ -159,7 +192,7 @@ export const createAdminInvite = async (email) => {
     if (error.context) {
       try {
         const text = await error.context.text();
-        console.log("raw function error body:", text);
+        console.log('raw function error body:', text);
 
         if (text) {
           const parsed = JSON.parse(text);
@@ -168,7 +201,7 @@ export const createAdminInvite = async (email) => {
           }
         }
       } catch (parseError) {
-        console.log("could not parse function error body:", parseError);
+        console.log('could not parse function error body:', parseError);
       }
     }
 
@@ -176,14 +209,16 @@ export const createAdminInvite = async (email) => {
   }
 
   if (!data?.success) {
-    throw new Error(data?.error || "Failed to invite admin");
+    throw new Error(data?.error || 'Failed to invite admin');
   }
 
   return data;
 };
 
 export const sendResetPasswordEmail = async (email) => {
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+  const cleanEmail = email.trim().toLowerCase();
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(cleanEmail, {
     redirectTo: `${window.location.origin}/reset-password`,
   });
 
