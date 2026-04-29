@@ -41,6 +41,25 @@ function AdminDashboard() {
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [loadingClinics, setLoadingClinics] = useState(false);
 
+  const [editClinicSearch, setEditClinicSearch] = useState("");
+  const [editClinicResults, setEditClinicResults] = useState([]);
+  const [selectedEditClinic, setSelectedEditClinic] = useState(null);
+  const [editClinicLoading, setEditClinicLoading] = useState(false);
+  const [editClinicError, setEditClinicError] = useState("");
+
+  const [openingHour, setOpeningHour] = useState("00");
+  const [openingMinute, setOpeningMinute] = useState("00");
+  const [closingHour, setClosingHour] = useState("23");
+  const [closingMinute, setClosingMinute] = useState("59");
+
+  const hours = Array.from({ length: 24 }, (_, i) =>
+  String(i).padStart(2, "0")
+);
+
+const minutes = Array.from({ length: 60 }, (_, i) =>
+  String(i).padStart(2, "0")
+);
+
   //new func 
   const fetchAllStaff = async () => {
   setLoadingStaff(true);
@@ -67,6 +86,7 @@ const removeStaff = async (email) => {
     if (error) throw error;
     setStaffList((prev) => prev.filter((s) => s.email !== email));
     setSuccessMessage(`Staff member ${email} has been removed.`);
+    await fetchDashboardCounts();
   } catch (error) {
     console.error('Error removing staff:', error.message);
     setErrorMessage('Failed to remove staff member.');
@@ -119,6 +139,12 @@ const fetchClinics = async () => {
 
   useEffect(()=> {
     fetchDashboardCounts();
+
+    const intervalId = setInterval(() => {
+      fetchDashboardCounts();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   },[]);
 
   const fetchDashboardCounts = async () => {
@@ -193,11 +219,11 @@ const fetchClinics = async () => {
     { title: 'Patients Waiting', value: 11 },
   ];
 
-  const recentActivity = [
-    "Dr Smith added to Hillbrow Clinic",
-    "New admin created",
-    "Clinic hours updated",
-  ];
+  const [recentActivity, setRecentActivity] = useState([]);
+
+  const addRecentActivity = (message) => {
+    setRecentActivity((prev) => [message, ...prev].slice(0, 3));
+  };
 
   useEffect(() => {
     const runStaffClinicSearch = async () => {
@@ -279,6 +305,9 @@ const handleStaffSubmit = async (event) => {
     setSuccessMessage(
       `Invite sent to ${result.email}. Tell them to check their inbox and set a password.`
     );
+    addRecentActivity(
+      `${result.email} added as staff member to ${selectedStaffClinic.facility_name}`
+    );
 
     event.target.reset();
     resetStaffPopup();
@@ -306,6 +335,7 @@ const handleStaffSubmit = async (event) => {
       setSuccessMessage(
         `Tell ${email} to check their inbox to reset their password.`
       );
+      addRecentActivity("New admin added");
 
       event.target.reset();
       setShowAdminPopup(false);
@@ -317,21 +347,86 @@ const handleStaffSubmit = async (event) => {
     }
   };
 
-  const handleClinicSubmit = (event) => {
+  const handleClinicSubmit = async (event) => {
     event.preventDefault();
+
+    if (!selectedEditClinic){
+      alert("Please select a clinic first.");
+      return;
+    }
     const formData = new FormData(event.target);
 
-    const clinicData = {
-      clinicName: formData.get("clinicName"),
-      location: formData.get("clinicLocation"),
-      operatingHours: formData.get("clinicHours"),
-      contactNumber: formData.get("clinicContact"),
-    };
+    const openingTime = formData.get("openingTime");
+    const closingTime = formData.get("closingTime");
 
-    console.log("Clinic data:", clinicData);
-    event.target.reset();
-    setShowClinicPopup(false);
+    if (openingTime > closingTime){
+      alert("Closing time must be after opening time.")
+      return;
+    }
+    setSuccessMessage("");
+    setErrorMessage("");
+
+    try{
+      const { error } = await supabaseClient
+        .from("clinics")
+        .update({
+          open_t: openingTime,
+          closed_t: closingTime,
+        })
+        .eq("id", selectedEditClinic.id);
+      
+      if (error){
+        throw error;
+      }
+      setSuccessMessage(`Operating hours updated fpr ${selectedEditClinic.facility_name}.`);
+      addRecentActivity(`${selectedEditClinic.facility_name} hours updated`);
+      await fetchDashboardCounts();
+      resetEditClinicPopup();
+    } catch (error){
+      console.error("Failed to update clinic hours:", error);
+      setErrorMessage("Failed to update clinic operating hours.");
+    }
   };
+
+useEffect(() => {
+  const runEditClinicSearch = async () => {
+    if (!showClinicPopup) return;
+
+    setEditClinicError("");
+
+    if (!editClinicSearch.trim()) {
+      setEditClinicResults([]);
+      return;
+    }
+
+    setEditClinicLoading(true);
+
+    try {
+      const results = await searchClinics({
+        searchTerm: editClinicSearch,
+        limit: 50,
+      });
+
+      setEditClinicResults(results);
+    } catch (error) {
+      console.error("Edit clinic search failed:", error);
+      setEditClinicError("Failed to search clinics.");
+    } finally {
+      setEditClinicLoading(false);
+    }
+  };
+
+  runEditClinicSearch();
+}, [showClinicPopup, editClinicSearch]);
+
+const resetEditClinicPopup = () => {
+  setShowClinicPopup(false);
+  setEditClinicSearch("");
+  setEditClinicResults([]);
+  setSelectedEditClinic(null);
+  setEditClinicError("");
+  setEditClinicLoading(false);
+};
 
   return (
     <main className="admin-page">
@@ -512,35 +607,44 @@ const handleStaffSubmit = async (event) => {
                 )}
 
                 <section className="popup-results-box" aria-label="Clinic search results">
-                  {staffClinicResults.length === 0 ? (
-                    <p className="popup-empty-message">No clinics found.</p>
-                  ) : (
-                    staffClinicResults.map((clinic) => (
-                      <article
-                        key={clinic.id}
-                        className={`popup-clinic-card ${
-                          selectedStaffClinic?.id === clinic.id
-                            ? "popup-clinic-card-selected"
-                            : ""
-                        }`}
-                      >
-                        <section className="popup-clinic-info">
-                          <p><strong>Name:</strong> {clinic.facility_name}</p>
-                          <p><strong>Province:</strong> {clinic.admin1}</p>
-                          <p><strong>Type:</strong> {clinic.facility_type}</p>
-                        </section>
 
-                        <button
-                          type="button"
-                          className="popup-select-btn"
-                          onClick={() => setSelectedStaffClinic(clinic)}
+                  {staffClinicSearch.trim() !== "" || staffProvince || staffFacilityType ? (
+                    staffClinicResults.length === 0 ? (
+                      <p className="popup-empty-message">No clinics found.</p>
+                    ) : (
+                      staffClinicResults.map((clinic) => (
+                        <article
+                          key={clinic.id}
+                          className={`popup-clinic-card ${
+                            selectedStaffClinic?.id === clinic.id
+                              ? "popup-clinic-card-selected"
+                              : ""
+                          }`}
                         >
-                          {selectedStaffClinic?.id === clinic.id ? "Selected" : "Select"}
-                        </button>
-                      </article>
-                    ))
-                  )}
-                </section>
+                          <section className="popup-clinic-info">
+                            <p><strong>Name:</strong> {clinic.facility_name}</p>
+                            <p><strong>Province:</strong> {clinic.admin1}</p>
+                            <p><strong>Type:</strong> {clinic.facility_type}</p>
+                          </section>
+
+                          <button
+                            type="button"
+                            className="popup-select-btn"
+                            onClick={() => {
+                              setSelectedStaffClinic(clinic);
+                              setStaffProvince(clinic.admin1 || "");
+                              setStaffFacilityType(clinic.facility_type || "");
+
+                            }}
+                          >
+                            {selectedStaffClinic?.id === clinic.id ? "Selected" : "Select"}
+                          </button>
+                        </article>
+                      ))
+                    )
+                  ) : null}
+                  </section>
+      
 
                 {selectedStaffClinic && (
                   <p className="selected-clinic-note">
@@ -606,73 +710,125 @@ const handleStaffSubmit = async (event) => {
 
                
 
-        {showClinicPopup && (
-          <dialog className="popup-dialog" open>
-            <form className="popup-form" onSubmit={handleClinicSubmit}>
-              <header className="popup-header">
-                <h2>Edit Clinic</h2>
-              </header>
+  {showClinicPopup && (
+    <dialog className="popup-dialog popup-dialog-wide" open>
+      <form className="popup-form" onSubmit={handleClinicSubmit}>
+        <header className="popup-header">
+          <h2>Edit Clinic Hours</h2>
+        </header>
 
-              <label className="popup-label" htmlFor="clinicName">
-                Clinic Name
-              </label>
-              <input
-                className="popup-input"
-                id="clinicName"
-                name="clinicName"
-                type="text"
-                required
-              />
+        <section className="clinic-search-section">
+          <section className="popup-field-group">
+            <label className="popup-label" htmlFor="editClinicSearch">
+              Search Clinic Name
+            </label>
+            <input
+              className="popup-input"
+              id="editClinicSearch"
+              type="text"
+              value={editClinicSearch}
+              onChange={(event) => setEditClinicSearch(event.target.value)}
+              placeholder="Type clinic name"
+            />
+          </section>
 
-              <label className="popup-label" htmlFor="clinicLocation">
-                Location
-              </label>
-              <input
-                className="popup-input"
-                id="clinicLocation"
-                name="clinicLocation"
-                type="text"
-                required
-              />
+          {editClinicLoading && (
+            <p className="popup-status-message">Searching clinics...</p>
+          )}
 
-              <label className="popup-label" htmlFor="clinicHours">
-                Operating Hours
-              </label>
-              <input
-                className="popup-input"
-                id="clinicHours"
-                name="clinicHours"
-                type="text"
-                placeholder="e.g. 08:00 - 17:00"
-                required
-              />
+          {editClinicError && (
+            <p className="popup-error-message">{editClinicError}</p>
+          )}
 
-              <label className="popup-label" htmlFor="clinicContact">
-                Contact Number
-              </label>
-              <input
-                className="popup-input"
-                id="clinicContact"
-                name="clinicContact"
-                type="tel"
-                required
-              />
+        <section className="popup-results-box" aria-label="Clinic search results">
+          {editClinicSearch.trim() !== "" && editClinicResults.length === 0 ? (
+            <p className="popup-empty-message">No clinics found.</p>
+          ) : (
+            editClinicResults.map((clinic) => (
+              <article
+                key={clinic.id}
+                className={`popup-clinic-card ${
+                  selectedEditClinic?.id === clinic.id
+                    ? "popup-clinic-card-selected"
+                    : ""
+                }`}
+              >
+                <section className="popup-clinic-info">
+                  <p><strong>Name:</strong> {clinic.facility_name}</p>
+                  <p><strong>Province:</strong> {clinic.admin1}</p>
+                  <p><strong>Type:</strong> {clinic.facility_type}</p>
+                </section>
 
-              <footer className="popup-footer">
                 <button
                   type="button"
-                  className="cancel-btn"
-                  onClick={() => setShowClinicPopup(false)}
+                  className="popup-select-btn"
+                  onClick={() => setSelectedEditClinic(clinic)}
                 >
-                  Cancel
+                  {selectedEditClinic?.id === clinic.id ? "Selected" : "Select"}
                 </button>
-                <button type="submit" className="save-btn">
-                  Save Clinic
-                </button>
-              </footer>
-            </form>
-          </dialog>
-        )}
+              </article>
+            ))
+          )}
+        </section>
+
+          {selectedEditClinic && (
+            <p className="selected-clinic-note">
+              Selected clinic: <strong>{selectedEditClinic.facility_name}</strong>
+            </p>
+          )}
+        </section>
+
+        <h3 className="popup-subheading">Edit Operating Hours</h3>
+
+        <section className="clinic-time-grid">
+          <section className="popup-field-group">
+            <label className="popup-label" htmlFor="openingTime">
+              Opening Time
+            </label>
+            <input
+              className="popup-input"
+              id="openingTime"
+              name="openingTime"
+              type="time"
+              min="00:00"
+              max="23:59"
+              step="60"
+              required
+            />
+          </section>
+
+          <section className="popup-field-group">
+            <label className="popup-label" htmlFor="closingTime">
+              Closing Time
+            </label>
+            <input
+              className="popup-input"
+              id="closingTime"
+              name="closingTime"
+              type="time"
+              min="00:00"
+              max="23:59"
+              step="60"
+              required
+            />
+          </section>
+        </section>
+
+        <footer className="popup-footer">
+          <button
+            type="button"
+            className="cancel-btn"
+            onClick={resetEditClinicPopup}
+          >
+            Cancel
+          </button>
+          <button type="submit" className="save-btn">
+            Save Clinic Hours
+          </button>
+        </footer>
+      </form>
+    </dialog>
+  )}
 
         {showStaffList && (
   <dialog className="popup-dialog" open>

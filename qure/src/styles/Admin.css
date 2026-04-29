@@ -372,6 +372,22 @@ body {
   color: #8b0000;
   border: 1px solid #f0d0d0;
 }
+.clinic-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+.time-select {
+  margin-top: 0.4rem;
+}
+.popup-field-group select.time-select {
+  width: 48%;
+  display: inline-block;
+}
+
+.popup-field-group select.time-select:first-of-type {
+  margin-right: 4%;
+}
 
 @media (max-width: 900px) {
   .admin-page {
@@ -404,6 +420,9 @@ body {
 
   .popup-select-btn {
     width: 100%;
+  }
+  .clinic-time-grid {
+    grid-template-columns: 1fr;
   }
 }
 .staff-list-item {
