@@ -406,3 +406,31 @@ body {
     width: 100%;
   }
 }
+.staff-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f0d0d0;
+}
+
+.remove-btn {
+  background: linear-gradient(135deg, #ff4d4d, #8b0000);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.remove-btn:hover {
+  opacity: 0.85;
+}
+
+.activity-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}

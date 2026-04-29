@@ -41,6 +41,38 @@ function AdminDashboard() {
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [loadingClinics, setLoadingClinics] = useState(false);
 
+  //new func 
+  const fetchAllStaff = async () => {
+  setLoadingStaff(true);
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('email, role')
+      .eq('role', 'clinicstaff');
+    if (error) throw error;
+    setStaffList(data || []);
+  } catch (error) {
+    console.error('Error fetching staff:', error.message);
+  } finally {
+    setLoadingStaff(false);
+  }
+};
+//new func 
+const removeStaff = async (email) => {
+  try {
+    const { error } = await supabaseClient
+      .from('profiles')
+      .delete()
+      .eq('email', email);
+    if (error) throw error;
+    setStaffList((prev) => prev.filter((s) => s.email !== email));
+    setSuccessMessage(`Staff member ${email} has been removed.`);
+  } catch (error) {
+    console.error('Error removing staff:', error.message);
+    setErrorMessage('Failed to remove staff member.');
+  }
+};
+
   const fetchStaff = async () => {
   setLoadingStaff(true);
   try {
@@ -310,7 +342,7 @@ const handleStaffSubmit = async (event) => {
 
         <nav className="sidebar-nav">
           <ul>
-            <li><button type="button" onClick={() => { setShowStaffList(true); setStaffList([]); setStaffSearch(''); }}>Staff</button></li>
+            <li><button type="button" onClick={() => { setShowStaffList(true); setStaffSearch(''); fetchAllStaff(); }}>Staff</button></li>
             <li><button type="button" onClick={() => { setShowClinicList(true); setClinicList([]); setClinicSearch(''); }}>Clinics</button></li>
             <li><button type="button">Analytics</button></li>
             <li><button type="button">Profile</button></li>
@@ -678,8 +710,17 @@ const handleStaffSubmit = async (event) => {
           {staffList
             .filter((s) => s.email.toLowerCase().includes(staffSearch.toLowerCase()))
             .map((staff, index) => (
-              <li key={index}>{staff.email}</li>
-            ))}
+  <li key={index} className="staff-list-item">
+    <span>{staff.email}</span>
+    <button
+      type="button"
+      className="remove-btn"
+      onClick={() => removeStaff(staff.email)}
+    >
+      Remove
+    </button>
+  </li>
+))}
         </ul>
       )}
       <footer className="popup-footer">
