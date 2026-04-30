@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { searchClinics } from "../pages/clinicService";
 import { getBookedSlots, createAppointment } from "../pages/appointmentService";
 import { generateHourlySlots } from "../pages/slotUtils";
@@ -27,6 +27,11 @@ function BookAppointment() {
 
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const selectedClinicRef = useRef(null);
+
+  const hasSearchParams =
+    searchTerm.trim() !== "" || admin1 !== "" || facilityType !== "";
 
   const provinces = [
     "Eastern Cape",
@@ -141,6 +146,13 @@ function BookAppointment() {
     setAvailableSlots([]);
     setSlotStatusMap({});
     setErrorMessage("");
+
+    setTimeout(() => {
+      selectedClinicRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
   };
 
   const handleSlotSelect = (slot) => {
@@ -283,71 +295,74 @@ function BookAppointment() {
 
       <hr className="section-divider" />
 
-      <section className="results-section" aria-labelledby="results-heading">
-        <h2 id="results-heading" className="section-title">
-          Search Results
-        </h2>
+      {hasSearchParams && (
+        <section className="results-section" aria-labelledby="results-heading">
+          <h2 id="results-heading" className="section-title">
+            Search Results
+          </h2>
 
-        {loading && <p className="status-message">Searching clinics...</p>}
-        {errorMessage && <p className="error-message">{errorMessage}</p>}
+          {loading && <p className="status-message">Searching clinics...</p>}
+          {errorMessage && <p className="error-message">{errorMessage}</p>}
 
-        <section className="results-layout">
-          <section
-            className="results-list-panel"
-            aria-label="Clinic search results"
-          >
-            <section className="results-list">
-              {clinics.length === 0 ? (
-                <p className="empty-state">No clinics found.</p>
-              ) : (
-                clinics.map((clinic) => (
-                  <article className="clinic-card" key={clinic.id}>
-                    <p>
-                      <strong>Name:</strong> {clinic.facility_name}
-                    </p>
-                    <p>
-                      <strong>Province:</strong> {clinic.admin1}
-                    </p>
-                    <p>
-                      <strong>Type:</strong> {clinic.facility_type}
-                    </p>
+          <section className="results-layout">
+            <section
+              className="results-list-panel"
+              aria-label="Clinic search results"
+            >
+              <section className="results-list">
+                {clinics.length === 0 ? (
+                  <p className="empty-state">No clinics found.</p>
+                ) : (
+                  clinics.map((clinic) => (
+                    <article className="clinic-card" key={clinic.id}>
+                      <p>
+                        <strong>Name:</strong> {clinic.facility_name}
+                      </p>
+                      <p>
+                        <strong>Province:</strong> {clinic.admin1}
+                      </p>
+                      <p>
+                        <strong>Type:</strong> {clinic.facility_type}
+                      </p>
 
-                    <button
-                      className="primary-btn"
-                      type="button"
-                      onClick={() => handleSelectClinic(clinic)}
-                    >
-                      Select Clinic
-                    </button>
-                  </article>
-                ))
-              )}
+                      <button
+                        className="primary-btn"
+                        type="button"
+                        onClick={() => handleSelectClinic(clinic)}
+                      >
+                        Select Clinic
+                      </button>
+                    </article>
+                  ))
+                )}
+              </section>
             </section>
-          </section>
 
-          <section className="map-section" aria-labelledby="map-heading">
-            <h3 id="map-heading" className="subsection-title">
-              Clinic Map
-            </h3>
+            <section className="map-section" aria-labelledby="map-heading">
+              <h3 id="map-heading" className="subsection-title">
+                Clinic Map
+              </h3>
 
-            <section className="map-wrapper">
-              {clinics.length === 0 ? (
-                <p className="empty-state">
-                  Map will appear once clinics are found.
-                </p>
-              ) : (
-                <ClinicMap
-                  clinics={clinics}
-                  selectedClinic={selectedClinic}
-                />
-              )}
+              <section className="map-wrapper">
+                {clinics.length === 0 ? (
+                  <p className="empty-state">
+                    Map will appear once clinics are found.
+                  </p>
+                ) : (
+                  <ClinicMap
+                    clinics={clinics}
+                    selectedClinic={selectedClinic}
+                  />
+                )}
+              </section>
             </section>
           </section>
         </section>
-      </section>
+      )}
 
       {selectedClinic && (
         <section
+          ref={selectedClinicRef}
           className="selected-clinic-section"
           aria-labelledby="selected-clinic-heading"
         >
