@@ -266,6 +266,7 @@ const fetchClinics = async () => {
     setStaffClinicResults([]);
     setSelectedStaffClinic(null);
     setStaffClinicError("");
+
     setStaffClinicLoading(false);
   };
 
@@ -378,7 +379,7 @@ const handleStaffSubmit = async (event) => {
       if (error){
         throw error;
       }
-      setSuccessMessage(`Operating hours updated fpr ${selectedEditClinic.facility_name}.`);
+      setSuccessMessage(`Operating hours updated for ${selectedEditClinic.facility_name}.`);
       addRecentActivity(`${selectedEditClinic.facility_name} hours updated`);
       await fetchDashboardCounts();
       resetEditClinicPopup();
