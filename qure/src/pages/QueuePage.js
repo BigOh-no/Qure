@@ -1,250 +1,464 @@
-import React, { useEffect, useState } from "react";
-import { searchClinics } from "../pages/clinicService";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { supabaseClient } from "../lib/supabaseClient";
+import {
+  QUEUE_OPEN_TIME,
+  QUEUE_CLOSE_TIME,
+  AVERAGE_CONSULTATION_MINUTES,
+  calculateEstimatedWait,
+  getMyActiveQueueStatusForToday,
+  getMyQueueEntryForClinic,
+  getTodayQueueForClinic,
+  isQueueOpenNow,
+  joinQueue,
+  leaveQueue,
+} from "../pages/queueService";
 import "../styles/Queue.css";
 
 function QueuePage() {
-  const navigate = useNavigate();
+  const queueSectionRef = useRef(null);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [admin1, setAdmin1] = useState("");
+  const [clinicSearch, setClinicSearch] = useState("");
+  const [province, setProvince] = useState("");
   const [facilityType, setFacilityType] = useState("");
 
-  const [clinics, setClinics] = useState([]);
+  const [clinicResults, setClinicResults] = useState([]);
+  const [hasSearched, setHasSearched] = useState(false);
+
   const [selectedClinic, setSelectedClinic] = useState(null);
+  const [queueEntries, setQueueEntries] = useState([]);
+  const [myQueueEntry, setMyQueueEntry] = useState(null);
+  const [myActiveQueueStatus, setMyActiveQueueStatus] = useState(null);
 
-  const [joined, setJoined] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loadingClinics, setLoadingClinics] = useState(false);
+  const [loadingQueue, setLoadingQueue] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const provinces = [
+  const [showQueueBlockedPopup, setShowQueueBlockedPopup] = useState(false);
+
+  const queueOpen = isQueueOpenNow();
+
+  const provinceOptions = [
     "Eastern Cape",
     "Free State",
     "Gauteng",
     "KwaZulu-Natal",
     "Limpopo",
     "Mpumalanga",
-    "North West",
     "Northern Cape",
+    "North West",
     "Western Cape",
   ];
 
-  const facilityTypes = [
+  const facilityTypeOptions = [
     "District Hospital",
     "Clinic",
     "Satellite Clinic",
-    "Community Health Centre",
+    "Community health centre",
     "Regional Hospital",
     "Provincial Tertiary Hospital",
     "National Central Hospital",
   ];
 
-  useEffect(() => {
-    const runSearch = async () => {
-      setErrorMessage("");
+  async function refreshMyActiveQueueStatus() {
+    const activeStatus = await getMyActiveQueueStatusForToday();
+    setMyActiveQueueStatus(activeStatus);
+    return activeStatus;
+  }
 
-      if (!searchTerm.trim() && !admin1 && !facilityType) {
-        setClinics([]);
-        return;
-      }
+  async function searchClinics() {
+    const hasSearchParams =
+      clinicSearch.trim() !== "" || province !== "" || facilityType !== "";
 
-      setLoading(true);
+    setHasSearched(hasSearchParams);
+    setSelectedClinic(null);
+    setQueueEntries([]);
+    setMyQueueEntry(null);
+    setMessage("");
 
-      try {
-        const results = await searchClinics({
-          searchTerm,
-          admin1,
-          facilityType,
-        });
-
-        setClinics(results);
-      } catch (error) {
-        console.error(error);
-        setErrorMessage("Failed to search clinics.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    runSearch();
-  }, [searchTerm, admin1, facilityType]);
-
-  const handleSelectClinic = (clinic) => {
-    setSelectedClinic(clinic);
-    setJoined(false);
-  };
-
-  const handleJoinQueue = () => {
-    if (!selectedClinic) {
-      alert("Please select a clinic first.");
+    if (!hasSearchParams) {
+      setClinicResults([]);
+      setMyActiveQueueStatus(null);
       return;
     }
 
-    setJoined(true);
-  };
+    setLoadingClinics(true);
+
+    try {
+      await refreshMyActiveQueueStatus();
+
+      let query = supabaseClient.from("clinics").select("*").limit(50);
+
+      if (clinicSearch.trim() !== "") {
+        query = query.ilike("facility_name", `${clinicSearch.trim()}%`);
+      }
+
+      if (province !== "") {
+        query = query.eq("province", province);
+      }
+
+      if (facilityType !== "") {
+        query = query.eq("facility_type", facilityType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setClinicResults(data || []);
+    } catch (error) {
+      setMessage(error.message || "Failed to search clinics.");
+    } finally {
+      setLoadingClinics(false);
+    }
+  }
+
+  async function loadQueue(clinic) {
+    setSelectedClinic(clinic);
+    setLoadingQueue(true);
+    setMessage("");
+
+    try {
+      const [queueData, myEntry, activeStatus] = await Promise.all([
+        getTodayQueueForClinic(clinic.id),
+        getMyQueueEntryForClinic(clinic.id),
+        getMyActiveQueueStatusForToday(),
+      ]);
+
+      setQueueEntries(queueData);
+      setMyQueueEntry(myEntry);
+      setMyActiveQueueStatus(activeStatus);
+
+      setTimeout(() => {
+        queueSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    } catch (error) {
+      setMessage(error.message || "Failed to load queue.");
+    } finally {
+      setLoadingQueue(false);
+    }
+  }
+
+  async function handleJoinQueue() {
+    if (!selectedClinic) return;
+
+    setActionLoading(true);
+    setMessage("");
+
+    try {
+      const activeStatus = await refreshMyActiveQueueStatus();
+
+      if (activeStatus && activeStatus.entry.clinic_id !== selectedClinic.id) {
+        setShowQueueBlockedPopup(true);
+        return;
+      }
+
+      await joinQueue(selectedClinic.id);
+      await loadQueue(selectedClinic);
+      setMessage("You have joined the queue.");
+    } catch (error) {
+      if (error.message === "ALREADY_IN_QUEUE") {
+        const activeStatus = await refreshMyActiveQueueStatus();
+        if (activeStatus) {
+          setShowQueueBlockedPopup(true);
+        }
+      } else {
+        setMessage(error.message || "Failed to join queue.");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleLeaveQueue() {
+    if (!myQueueEntry) return;
+
+    setActionLoading(true);
+    setMessage("");
+
+    try {
+      await leaveQueue(myQueueEntry.id);
+      await loadQueue(selectedClinic);
+      await refreshMyActiveQueueStatus();
+      setMessage("You have left the queue.");
+    } catch (error) {
+      setMessage(error.message || "Failed to leave queue.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const hasSearchParams =
+      clinicSearch.trim() !== "" || province !== "" || facilityType !== "";
+
+    if (!hasSearchParams) {
+      setHasSearched(false);
+      setClinicResults([]);
+      setSelectedClinic(null);
+      setQueueEntries([]);
+      setMyQueueEntry(null);
+      setMyActiveQueueStatus(null);
+      setMessage("");
+      return;
+    }
+
+    const delaySearch = setTimeout(() => {
+      searchClinics();
+    }, 400);
+
+    return () => clearTimeout(delaySearch);
+  }, [clinicSearch, province, facilityType]);
+
+  const myPosition = myQueueEntry
+    ? queueEntries.findIndex((entry) => entry.id === myQueueEntry.id) + 1
+    : null;
+
+  const previewPosition = queueEntries.length + 1;
+  const previewWaitTime = calculateEstimatedWait(previewPosition);
+  const myWaitTime = calculateEstimatedWait(myPosition);
+
+  const blockedClinicName =
+    myActiveQueueStatus?.clinic?.facility_name || "another clinic";
+
+  const blockedQueuePosition = myActiveQueueStatus?.position || "unknown";
+
+  const blockedEstimatedWait = myActiveQueueStatus?.estimatedWait ?? 0;
 
   return (
     <main className="queue-page">
       <header className="queue-header">
-
-  
-      <section className="header-top">
-      <h1 className="queue-title">Join Queue</h1>
-
-        <button
-          className="back-btn"
-          onClick={() => navigate("/patient")}
-        >
-          ← Back
-          </button>
-        </section>
-
- 
+        <h1 className="queue-title">Clinic Queue</h1>
         <p className="queue-subtitle">
-            Search for a clinic, select one, and join the queue.
+          Search for a clinic, view the current queue, and join the queue for today.
         </p>
-
       </header>
 
-      <section className="search-section" aria-labelledby="search-heading">
-        <h2 id="search-heading" className="section-title">
-          Find a Clinic
-        </h2>
+      <section className="queue-search-section">
+        <h2 className="section-title">Find a Clinic</h2>
 
-        <form
-          className="search-form"
-          onSubmit={(event) => event.preventDefault()}
-        >
-          <section className="form-field">
-            <label htmlFor="clinic-search">Search Clinic Name</label>
-            <input
-              id="clinic-search"
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Type clinic name"
-            />
-          </section>
+        <div className="queue-search-grid">
+          <input
+            className="queue-input"
+            type="text"
+            placeholder="Search clinic by name"
+            value={clinicSearch}
+            onChange={(event) => setClinicSearch(event.target.value)}
+          />
 
-          <section className="form-field">
-            <label htmlFor="province-select">Province</label>
-            <select
-              id="province-select"
-              value={admin1}
-              onChange={(event) => setAdmin1(event.target.value)}
-            >
-              <option value="">Select Province</option>
-              {provinces.map((province) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
-          </section>
+          <select
+            className="queue-input"
+            value={province}
+            onChange={(event) => setProvince(event.target.value)}
+          >
+            <option value="">All provinces</option>
+            {provinceOptions.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
 
-          <section className="form-field">
-            <label htmlFor="facility-type-select">Facility Type</label>
-            <select
-              id="facility-type-select"
-              value={facilityType}
-              onChange={(event) => setFacilityType(event.target.value)}
-            >
-              <option value="">Select Facility Type</option>
-              {facilityTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </section>
-        </form>
+          <select
+            className="queue-input"
+            value={facilityType}
+            onChange={(event) => setFacilityType(event.target.value)}
+          >
+            <option value="">All facility types</option>
+            {facilityTypeOptions.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
       </section>
 
-      <hr className="section-divider" />
+      {message && <p className="queue-message">{message}</p>}
 
-      <section className="results-section" aria-labelledby="results-heading">
-        <h2 id="results-heading" className="section-title">
-          Search Results
-        </h2>
+      {hasSearched && (
+        <section className="queue-results-section">
+          <h2 className="section-title">Search Results</h2>
 
-        {loading && <p className="status-message">Searching clinics...</p>}
-        {errorMessage && <p className="error-message">{errorMessage}</p>}
-
-        <section className="results-list" aria-label="Clinic search results">
-          {clinics.length === 0 ? (
-            <p className="empty-state">No clinics found.</p>
+          {loadingClinics ? (
+            <p>Loading clinics...</p>
+          ) : clinicResults.length === 0 ? (
+            <p>No clinics found.</p>
           ) : (
-            clinics.map((clinic) => (
-              <article className="clinic-card" key={clinic.id}>
-                <p>
-                  <strong>Name:</strong> {clinic.facility_name}
-                </p>
-                <p>
-                  <strong>Province:</strong> {clinic.admin1}
-                </p>
-                <p>
-                  <strong>Type:</strong> {clinic.facility_type}
-                </p>
-
-                <button
-                  className="primary-btn"
-                  type="button"
-                  onClick={() => handleSelectClinic(clinic)}
+            <div className="queue-results-list">
+              {clinicResults.map((clinic) => (
+                <article
+                  key={clinic.id}
+                  className={`clinic-result-card ${
+                    selectedClinic?.id === clinic.id ? "clinic-result-card-selected" : ""
+                  }`}
+                  onClick={() => loadQueue(clinic)}
                 >
-                  Select Clinic
-                </button>
-              </article>
-            ))
+                  <h3>{clinic.facility_name}</h3>
+                  <p>
+                    <strong>Province:</strong> {clinic.province || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Facility Type:</strong> {clinic.facility_type || "N/A"}
+                  </p>
+                  <p>
+                    <strong>District:</strong> {clinic.district || "N/A"}
+                  </p>
+                </article>
+              ))}
+            </div>
           )}
         </section>
-      </section>
+      )}
 
       {selectedClinic && (
-        <section
-          className="selected-clinic-section"
-          aria-labelledby="selected-clinic-heading"
-        >
-          <h2 id="selected-clinic-heading" className="section-title">
-            Selected Clinic
-          </h2>
+        <section className="selected-queue-section" ref={queueSectionRef}>
+          <h2 className="section-title">{selectedClinic.facility_name} Queue</h2>
 
-          <article className="selected-clinic-card">
+          <div className="queue-info-card">
             <p>
-              <strong>Name:</strong> {selectedClinic.facility_name}
+              <strong>Queue hours:</strong> {QUEUE_OPEN_TIME} - {QUEUE_CLOSE_TIME}
             </p>
             <p>
-              <strong>Province:</strong> {selectedClinic.admin1}
+              <strong>Status:</strong>{" "}
+              {queueOpen ? "Open for joining" : "Closed for joining"}
             </p>
             <p>
-              <strong>Type:</strong> {selectedClinic.facility_type}
+              <strong>Average consultation time:</strong>{" "}
+              {AVERAGE_CONSULTATION_MINUTES} minutes
             </p>
+            <p>
+              <strong>Current queue length:</strong> {queueEntries.length}
+            </p>
+          </div>
 
-            {!joined ? (
-              <button
-                className="primary-btn join-btn"
-                type="button"
-                onClick={handleJoinQueue}
-              >
-                Join Queue
-              </button>
-            ) : (
-              <section className="queue-status" aria-label="Queue status">
-                <p>
-                  <strong>Clinic:</strong> {selectedClinic.facility_name}
-                </p>
-                <p>
-                  <strong>Queue Number:</strong> 7
-                </p>
-                <p>
-                  <strong>Status:</strong> Waiting
-                </p>
-                <p>
-                  <strong>Estimated Wait:</strong> 45 mins
-                </p>
-              </section>
-            )}
-          </article>
+          {loadingQueue ? (
+            <p>Loading queue...</p>
+          ) : (
+            <>
+              <div className="visual-queue">
+                {queueEntries.length === 0 && !myQueueEntry ? (
+                  <p className="empty-queue-message">
+                    No patients are currently waiting. You would be first.
+                  </p>
+                ) : (
+                  queueEntries.map((entry, index) => {
+                    const isMe = myQueueEntry?.id === entry.id;
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`queue-person-card ${isMe ? "queue-person-you" : ""}`}
+                      >
+                        <div className="queue-position-number">{index + 1}</div>
+                        <div>
+                          <p className="queue-person-label">
+                            {isMe ? "You" : `Patient ${index + 1}`}
+                          </p>
+                          <p className="queue-person-status">{entry.status}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {!myQueueEntry && (
+                  <div className="queue-person-card queue-person-preview">
+                    <div className="queue-position-number">{previewPosition}</div>
+                    <div>
+                      <p className="queue-person-label">You would join here</p>
+                      <p className="queue-person-status">Preview</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!myQueueEntry ? (
+                <div className="queue-action-card">
+                  <p>
+                    <strong>Your position would be:</strong> {previewPosition}
+                  </p>
+                  <p>
+                    <strong>Estimated wait time:</strong> {previewWaitTime} minutes
+                  </p>
+
+                  <button
+                    className="queue-button"
+                    onClick={handleJoinQueue}
+                    disabled={!queueOpen || actionLoading}
+                  >
+                    {actionLoading ? "Joining..." : "Join Queue"}
+                  </button>
+
+                  {!queueOpen && (
+                    <p className="queue-warning">
+                      The queue is closed. Queue joining is only available from 08:00 to
+                      17:00.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="queue-action-card">
+                  <p>
+                    <strong>Your current position:</strong> {myPosition}
+                  </p>
+                  <p>
+                    <strong>Your estimated wait time:</strong> {myWaitTime} minutes
+                  </p>
+                  <p>
+                    <strong>Your status:</strong> {myQueueEntry.status}
+                  </p>
+
+                  <button
+                    className="queue-button queue-danger-button"
+                    onClick={handleLeaveQueue}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? "Leaving..." : "Leave Queue"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </section>
+      )}
+
+      {showQueueBlockedPopup && (
+        <div className="queue-popup-overlay">
+          <div className="queue-popup-box">
+            <h2 className="queue-popup-title">Already in a Queue</h2>
+
+            <p className="queue-popup-text">
+              You are currently in the queue at:
+            </p>
+
+            <p className="queue-popup-clinic-name">{blockedClinicName}</p>
+
+            <div className="queue-popup-details">
+              <p>
+                <strong>Your current position:</strong> {blockedQueuePosition}
+              </p>
+              <p>
+                <strong>Estimated wait time:</strong> {blockedEstimatedWait} minutes
+              </p>
+            </div>
+
+            <p className="queue-popup-text">
+              You can only be in one clinic queue at a time. Please leave your current
+              queue before joining another one.
+            </p>
+
+            <button
+              className="queue-button queue-popup-button"
+              onClick={() => setShowQueueBlockedPopup(false)}
+            >
+              Okay
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );
