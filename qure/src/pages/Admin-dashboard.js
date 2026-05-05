@@ -10,7 +10,7 @@ import { supabaseClient } from '../lib/supabaseClient';
 function AdminDashboard() {
   const navigate = useNavigate();
 
-  const adminName = "Admin";
+  const [adminName, setAdminName] = useState("Admin");
 
   const [showStaffPopup, setShowStaffPopup] = useState(false);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
@@ -30,7 +30,9 @@ function AdminDashboard() {
   
   const[staffCount, setStaffCount] = useState(0);
   const[clinicCount, setClinicCount] = useState(0);
+  const [patientsWaiting, setPatientsWaiting] = useState(0);
   const[isLoadingStats, setIsLoadingStats] = useState(true);
+  
 
   const [staffList, setStaffList] = useState([]);
   const [clinicList, setClinicList] = useState([]);
@@ -51,6 +53,8 @@ function AdminDashboard() {
   const [openingMinute, setOpeningMinute] = useState("00");
   const [closingHour, setClosingHour] = useState("23");
   const [closingMinute, setClosingMinute] = useState("59");
+
+  
 
   const hours = Array.from({ length: 24 }, (_, i) =>
   String(i).padStart(2, "0")
@@ -137,6 +141,50 @@ const fetchClinics = async () => {
     return `${year}-${month}-${day}`;
   }
 
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage("");
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage("");
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  useEffect(() =>{
+    const fetchAdminName = async () => {
+      const {
+        data: {user},
+        error,
+      } = await supabaseClient.auth.getUser();
+
+      if (error){
+        console.error(error);
+        return;
+      }
+      if (user){
+        let displayName = user.user_metadata?.full_name || user.user_metadata?.name;
+
+        if (!displayName && user.email){
+          displayName = user.email.split("@")[0];
+        }
+        setAdminName(displayName || "Admin")
+      }
+    };
+    fetchAdminName();
+  }, []);
+
+
   useEffect(()=> {
     fetchDashboardCounts();
 
@@ -146,6 +194,7 @@ const fetchClinics = async () => {
 
     return () => clearInterval(intervalId);
   },[]);
+
 
   const fetchDashboardCounts = async () => {
     setIsLoadingStats(true);
@@ -179,9 +228,19 @@ const fetchClinics = async () => {
         throw appointmentsError;
       }
 
+      const{count: totalPatientsWaiting, error: waitingError} = await supabaseClient
+        .from("queue_entries")
+        .select("*", {count: "exact", head: true})
+        .eq("status", "waiting");
+      
+      if(waitingError){
+        throw waitingError;
+      }
+
       setStaffCount(totalStaff || 0);
       setClinicCount(totalClinics ||0);
       setAppointmentsToday(totalAppointmentsToday ||0);
+      setPatientsWaiting(totalPatientsWaiting ||0);
     } catch(error){
       console.error("Failed to load dashboard counts:", error);
       setErrorMessage("Failed to load dashboard statistics");
@@ -216,10 +275,22 @@ const fetchClinics = async () => {
     { title: 'Total Staff', value: isLoadingStats ? '...': staffCount },
     { title: 'Total Clinics', value: isLoadingStats ? '...': clinicCount },
     { title: 'Appointments Today', value: isLoadingStats ? '...': appointmentsToday },
-    { title: 'Patients Waiting', value: 11 },
+    { title: 'Patients Waiting', value: isLoadingStats ? '...': patientsWaiting }
   ];
 
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentActivity, setRecentActivity] = useState(() => {
+    try {
+      const saved = localStorage.getItem("recentActivity");
+      return saved ? JSON.parse(saved) : [];
+    } catch (err) {
+      console.error("Failed to load recent activity:", err);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("recentActivity", JSON.stringify(recentActivity));
+  }, [recentActivity]);
 
   const addRecentActivity = (message) => {
     setRecentActivity((prev) => [message, ...prev].slice(0, 3));
@@ -440,7 +511,12 @@ const resetEditClinicPopup = () => {
           <ul>
             <li><button type="button" onClick={() => { setShowStaffList(true); setStaffSearch(''); fetchAllStaff(); }}>Staff</button></li>
             <li><button type="button" onClick={() => { setShowClinicList(true); setClinicList([]); setClinicSearch(''); }}>Clinics</button></li>
-            <li><button type="button">Analytics</button></li>
+            <li><button
+                  type="button"
+                  onClick={() => navigate("/analytics")}
+                >
+                  Analytics
+                </button></li>
             <li><button type="button">Profile</button></li>
           </ul>
         </nav>
@@ -842,23 +918,45 @@ const resetEditClinicPopup = () => {
         type="text"
         placeholder="Search staff..."
         value={staffSearch}
-       onChange={async (e) => {
-    const value = e.target.value;
-    setStaffSearch(value);
-    if (value.length > 1) {
-      setLoadingStaff(true);
-      const { data } = await supabaseClient
-        .from('profiles')
-        .select('email, role')
-        .eq('role', 'clinicstaff')
-        .ilike('email', `%${value}%`)
-        .limit(20);
-      setStaffList(data || []);
-      setLoadingStaff(false);
-    } else {
-      setStaffList([]);
-    }
-  }}
+        onChange={async (e) => {
+          const value = e.target.value;
+          setStaffSearch(value);
+
+          const searchTerm = value.trim();
+
+          if (searchTerm.length >= 1) {
+            setLoadingStaff(true);
+
+            
+            const { data: startsWithData } = await supabaseClient
+              .from("profiles")
+              .select("email, role")
+              .eq("role", "clinicstaff")
+              .ilike("email", `${searchTerm}%`)
+              .limit(20);
+
+            
+            const { data: containsData } = await supabaseClient
+              .from("profiles")
+              .select("email, role")
+              .eq("role", "clinicstaff")
+              .ilike("email", `%${searchTerm}%`)
+              .limit(50);
+
+            
+            const allStaff = [...(startsWithData || []), ...(containsData || [])];
+
+            const uniqueStaff = allStaff.filter(
+              (staff, index, self) =>
+                index === self.findIndex((s) => s.email === staff.email)
+            );
+
+            setStaffList(uniqueStaff);
+            setLoadingStaff(false);
+          } else {
+            setStaffList([]);
+          }
+        }}
       />
       {loadingStaff ? (
         <p>Loading...</p>
@@ -905,21 +1003,44 @@ const resetEditClinicPopup = () => {
         placeholder="Search clinics..."
         value={clinicSearch}
        onChange={async (e) => {
-    const value = e.target.value;
-    setClinicSearch(value);
-    if (value.length > 1) {
-      setLoadingClinics(true);
-      const { data } = await supabaseClient
-        .from('clinics')
-        .select('facility_name, admin1, facility_type')
-        .ilike('facility_name', `%${value}%`)
-        .limit(20);
-      setClinicList(data || []);
-      setLoadingClinics(false);
-    } else {
-      setClinicList([]);
-    }
-  }}
+          const value = e.target.value;
+          setClinicSearch(value);
+
+          const searchTerm = value.trim();
+
+          if (searchTerm.length >= 1) {
+            setLoadingClinics(true);
+
+            
+            const { data: startsWithData } = await supabaseClient
+              .from("clinics")
+              .select("facility_name, admin1, facility_type")
+              .ilike("facility_name", `${searchTerm}%`)
+              .limit(20);
+
+            
+            const { data: containsData } = await supabaseClient
+              .from("clinics")
+              .select("facility_name, admin1, facility_type")
+              .ilike("facility_name", `%${searchTerm}%`)
+              .limit(50);
+
+            
+            const allClinics = [...(startsWithData || []), ...(containsData || [])];
+
+            const uniqueClinics = allClinics.filter(
+              (clinic, index, self) =>
+                index === self.findIndex(
+                  (c) => c.facility_name === clinic.facility_name
+                )
+            );
+
+            setClinicList(uniqueClinics);
+            setLoadingClinics(false);
+          } else {
+            setClinicList([]);
+          }
+        }}
       />
       {loadingClinics ? (
         <p>Loading...</p>
