@@ -1,22 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/staff.css";
 import logo from "../assets/images/TLogo.png";
+import{
+  getStaffClinicAndQueue,
+  updateQueueStatus,
+} from "./staffService";
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
-  const [patients, setPatients] = useState([
-    { id: 1, name: "John Doe", time: "09:00", status: "Waiting" },
-    { id: 2, name: "Jane Smith", time: "09:15", status: "Waiting" },
-    { id: 3, name: "Ali Khan", time: "09:30", status: "In Consultation" }
-  ]);
+  const [patients, setPatients] = useState([]);
+  const [clinic, setClinic] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const updateStatus = (id, newStatus) => {
-    setPatients((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status: newStatus } : p
-      )
-    );
+  useEffect(() => {
+    async function loadStaffQueue() {
+      try {
+        setLoading(true);
+
+        const { clinicName, patients } = await getStaffClinicAndQueue();
+
+        setClinic(clinicName);
+        setPatients(patients);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadStaffQueue();
+  }, []);
+  const updateStatus = async (id, newStatus) => {
+    try {
+      await updateQueueStatus(id, newStatus);
+      setPatients((prev) =>
+        prev.map((p) =>
+          p.id === id ? {...p, status: newStatus} : p
+        )
+      );
+    }
+    catch (err){
+      console.error(err);
+    }
   };
 
   const getStatusClass = (status) => {
@@ -51,7 +76,7 @@ export default function StaffDashboard() {
 
         <header className="topbar">
           <h1 className="topbar-title">Staff Dashboard</h1>
-          <p className="topbar-subtitle">Hillbrow Clinic</p>
+          <p className="topbar-subtitle">{clinic || "Loading..."}</p>
         </header>
 
         <article className="card">
@@ -71,31 +96,41 @@ export default function StaffDashboard() {
             </thead>
 
             <tbody>
-              {patients.map((patient) => (
-                <tr key={patient.id}>
-                  <td>{patient.name}</td>
-                  <td>{patient.time}</td>
-                  <td>
-                    <span className={getStatusClass(patient.status)}>
-                      {patient.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="btn start"
-                      onClick={() => updateStatus(patient.id, "In Consultation")}
-                    >
-                      Start
-                    </button>
-                    <button
-                      className="btn complete"
-                      onClick={() => updateStatus(patient.id, "Complete")}
-                    >
-                      Complete
-                    </button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="4">Loading queue...</td>
                 </tr>
-              ))}
+              ): patients.length === 0 ?(
+                <tr>
+                  <td colSpan="4">No patients in queue</td>
+                </tr>
+              ): (
+                patients.map((entry, index) => (
+                  <tr key={entry.id}>
+                    <td>Patient {index+1}</td>
+                    <td>{new Date(entry.joined_at).toLocaleDateString()}</td>
+                    <td>
+                      <span className={getStatusClass(entry.status)}>
+                        {entry.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="btn start"
+                        onClick={() => updateStatus(entry.id, "In consultation")}
+                      >
+                        Start
+                      </button>
+                      <button
+                        className="btn complete"
+                        onClick={() => updateStatus(entry.id, "Completed")}
+                      >
+                        Complete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </article>
