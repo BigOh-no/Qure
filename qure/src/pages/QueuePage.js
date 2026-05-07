@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabaseClient } from "../lib/supabaseClient";
 import {
   QUEUE_OPEN_TIME,
@@ -15,6 +16,7 @@ import {
 import "../styles/Queue.css";
 
 function QueuePage() {
+  const navigate = useNavigate();
   const queueSectionRef = useRef(null);
 
   const [clinicSearch, setClinicSearch] = useState("");
@@ -35,6 +37,7 @@ function QueuePage() {
   const [message, setMessage] = useState("");
 
   const [showQueueBlockedPopup, setShowQueueBlockedPopup] = useState(false);
+  const [showQueueJoinedPopup, setShowQueueJoinedPopup] = useState(false);
 
   const queueOpen = isQueueOpenNow();
 
@@ -131,10 +134,10 @@ function QueuePage() {
 
       setTimeout(() => {
         queueSectionRef.current?.scrollIntoView({
-          behavior: "smooth",
+          behavior: "instant",
           block: "start",
         });
-      }, 100);
+      }, 50);
     } catch (error) {
       setMessage(error.message || "Failed to load queue.");
     } finally {
@@ -158,10 +161,11 @@ function QueuePage() {
 
       await joinQueue(selectedClinic.id);
       await loadQueue(selectedClinic);
-      setMessage("You have joined the queue.");
+      setShowQueueJoinedPopup(true);
     } catch (error) {
       if (error.message === "ALREADY_IN_QUEUE") {
         const activeStatus = await refreshMyActiveQueueStatus();
+
         if (activeStatus) {
           setShowQueueBlockedPopup(true);
         }
@@ -189,6 +193,11 @@ function QueuePage() {
     } finally {
       setActionLoading(false);
     }
+  }
+
+  function handleQueueJoinedPopupClose() {
+    setShowQueueJoinedPopup(false);
+    navigate("/patient");
   }
 
   useEffect(() => {
@@ -231,9 +240,21 @@ function QueuePage() {
   return (
     <main className="queue-page">
       <header className="queue-header">
-        <h1 className="queue-title">Clinic Queue</h1>
+        <section className="header-top">
+          <h1 className="queue-title">Clinic Queue</h1>
+
+          <button
+            className="back-btn"
+            type="button"
+            onClick={() => navigate("/patient")}
+          >
+            ← Back
+          </button>
+        </section>
+
         <p className="queue-subtitle">
-          Search for a clinic, view the current queue, and join the queue for today.
+          Search for a clinic, view the current queue, and join the queue for
+          today.
         </p>
       </header>
 
@@ -293,7 +314,9 @@ function QueuePage() {
                 <article
                   key={clinic.id}
                   className={`clinic-result-card ${
-                    selectedClinic?.id === clinic.id ? "clinic-result-card-selected" : ""
+                    selectedClinic?.id === clinic.id
+                      ? "clinic-result-card-selected"
+                      : ""
                   }`}
                   onClick={() => loadQueue(clinic)}
                 >
@@ -302,7 +325,8 @@ function QueuePage() {
                     <strong>Province:</strong> {clinic.province || "N/A"}
                   </p>
                   <p>
-                    <strong>Facility Type:</strong> {clinic.facility_type || "N/A"}
+                    <strong>Facility Type:</strong>{" "}
+                    {clinic.facility_type || "N/A"}
                   </p>
                   <p>
                     <strong>District:</strong> {clinic.district || "N/A"}
@@ -320,7 +344,8 @@ function QueuePage() {
 
           <div className="queue-info-card">
             <p>
-              <strong>Queue hours:</strong> {QUEUE_OPEN_TIME} - {QUEUE_CLOSE_TIME}
+              <strong>Queue hours:</strong> {QUEUE_OPEN_TIME} -{" "}
+              {QUEUE_CLOSE_TIME}
             </p>
             <p>
               <strong>Status:</strong>{" "}
@@ -351,9 +376,12 @@ function QueuePage() {
                     return (
                       <div
                         key={entry.id}
-                        className={`queue-person-card ${isMe ? "queue-person-you" : ""}`}
+                        className={`queue-person-card ${
+                          isMe ? "queue-person-you" : ""
+                        }`}
                       >
                         <div className="queue-position-number">{index + 1}</div>
+
                         <div>
                           <p className="queue-person-label">
                             {isMe ? "You" : `Patient ${index + 1}`}
@@ -367,7 +395,10 @@ function QueuePage() {
 
                 {!myQueueEntry && (
                   <div className="queue-person-card queue-person-preview">
-                    <div className="queue-position-number">{previewPosition}</div>
+                    <div className="queue-position-number">
+                      {previewPosition}
+                    </div>
+
                     <div>
                       <p className="queue-person-label">You would join here</p>
                       <p className="queue-person-status">Preview</p>
@@ -382,7 +413,8 @@ function QueuePage() {
                     <strong>Your position would be:</strong> {previewPosition}
                   </p>
                   <p>
-                    <strong>Estimated wait time:</strong> {previewWaitTime} minutes
+                    <strong>Estimated wait time:</strong> {previewWaitTime}{" "}
+                    minutes
                   </p>
 
                   <button
@@ -395,8 +427,8 @@ function QueuePage() {
 
                   {!queueOpen && (
                     <p className="queue-warning">
-                      The queue is closed. Queue joining is only available from 08:00 to
-                      17:00.
+                      The queue is closed. Queue joining is only available from
+                      08:00 to 17:00.
                     </p>
                   )}
                 </div>
@@ -406,7 +438,8 @@ function QueuePage() {
                     <strong>Your current position:</strong> {myPosition}
                   </p>
                   <p>
-                    <strong>Your estimated wait time:</strong> {myWaitTime} minutes
+                    <strong>Your estimated wait time:</strong> {myWaitTime}{" "}
+                    minutes
                   </p>
                   <p>
                     <strong>Your status:</strong> {myQueueEntry.status}
@@ -442,13 +475,14 @@ function QueuePage() {
                 <strong>Your current position:</strong> {blockedQueuePosition}
               </p>
               <p>
-                <strong>Estimated wait time:</strong> {blockedEstimatedWait} minutes
+                <strong>Estimated wait time:</strong> {blockedEstimatedWait}{" "}
+                minutes
               </p>
             </div>
 
             <p className="queue-popup-text">
-              You can only be in one clinic queue at a time. Please leave your current
-              queue before joining another one.
+              You can only be in one clinic queue at a time. Please leave your
+              current queue before joining another one.
             </p>
 
             <button
@@ -456,6 +490,34 @@ function QueuePage() {
               onClick={() => setShowQueueBlockedPopup(false)}
             >
               Okay
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showQueueJoinedPopup && (
+        <div className="queue-popup-overlay">
+          <div className="queue-popup-box">
+            <h2 className="queue-popup-title">Queue Joined Successfully</h2>
+
+            <p className="queue-popup-text">
+              You have successfully joined the queue at:
+            </p>
+
+            <p className="queue-popup-clinic-name">
+              {selectedClinic?.facility_name || "this clinic"}
+            </p>
+
+            <p className="queue-popup-text">
+              You can now view your queue position and estimated wait time from
+              your dashboard.
+            </p>
+
+            <button
+              className="queue-button queue-popup-button"
+              onClick={handleQueueJoinedPopupClose}
+            >
+              Go to Dashboard
             </button>
           </div>
         </div>

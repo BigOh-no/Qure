@@ -230,7 +230,18 @@ function BookAppointment() {
   return (
     <main className="book-appointment-page">
       <header className="booking-header">
-        <h1 className="booking-title">Book Appointment</h1>
+        <section className="header-top">
+          <h1 className="booking-title">Book Appointment</h1>
+
+          <button
+            className="back-btn"
+            type="button"
+            onClick={() => navigate("/patient")}
+          >
+            ← Back
+          </button>
+        </section>
+
         <p className="booking-subtitle">
           Search for a clinic, choose a date and time, and confirm your booking.
         </p>
