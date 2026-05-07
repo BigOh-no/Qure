@@ -190,3 +190,38 @@ export async function rescheduleAppointment({
 
   return data;
 }
+
+export async function getAllPatientAppointments() {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseClient.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("User not logged in.");
+  }
+
+  const { data, error } = await supabaseClient
+    .from("appointments")
+    .select(
+      `
+      *,
+      clinics (
+        facility_name
+      )
+    `
+    )
+    .eq("patient_user_id", user.id)
+    .order("appointment_date", { ascending: false })
+    .order("appointment_time", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
