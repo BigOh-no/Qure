@@ -88,9 +88,23 @@ export async function getStaffClinicAndQueue() {
 
     const queue = await getTodayQueueForClinic(clinicId);
 
+    const patientIds = queue.map(
+      (entry) => entry.patient_id
+    );
+    const profileMap = await getProfilesByIds(patientIds);
+    console.log(profileMap);
+    const queueWithPatients = queue.map((entry) => {
+      const profile = profileMap[entry.patient_id];
+
+      return {
+        ...entry,
+        patient_name:
+          profile?.full_name || profile?.email || "Unknown Patient",
+      };
+    });
     return {
       clinicName: clinic.facility_name,
-      patients: queue,
+      patients: queueWithPatients,
     };
   } catch (error) {
     console.error(error);
@@ -104,12 +118,35 @@ export async function getStaffClinicAndQueue() {
 
 export async function updateQueueStatus(id, newStatus) {
   try {
-    const { error } = await supabaseClient
+    const currentTime = new Date().toISOString();
+
+    if (newStatus === "in_consultation"){
+      const { error } = await supabaseClient
       .from("queue_entries")
-      .update({ status: newStatus })
+      .update({ 
+        status: newStatus,
+        started_at: currentTime,
+      })
+      .eq("id", id);
+
+      if (error) throw error;
+    }
+    else if (newStatus === "completed"){
+      const { error } = await supabaseClient
+      .from("queue_entries")
+      .update({ 
+        status: newStatus,
+        completed_at: currentTime,
+      })
       .eq("id", id);
 
     if (error) throw error;
+    }
+    else{
+      console.error("Invalid Status");
+      return false;
+    }
+    
 
     return true;
   } catch (err) {

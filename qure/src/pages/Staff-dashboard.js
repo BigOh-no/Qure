@@ -78,10 +78,19 @@ export default function StaffDashboard() {
   async function updateStatus(id, newStatus) {
     try {
       await updateQueueStatus(id, newStatus);
-
+      var stat;
+      if (newStatus === "in_consultation"){
+        stat = "In Consultation";
+      }
+      else if (newStatus === "completed"){
+        stat = "Completed";
+      }
+      else{
+        stat = "Unknown"
+      }
       setPatients((prev) =>
         prev.map((p) =>
-          p.id === id ? { ...p, status: newStatus } : p
+          p.id === id ? { ...p, status: stat } : p
         )
       );
 
@@ -191,7 +200,18 @@ export default function StaffDashboard() {
       showMessage("Could not reschedule appointment.");
     }
   }
-
+  function getStatusName(status){
+    if (status === "waiting"){
+      return "Waiting";
+    }
+    else if (status === "in_consultation"){
+      return "In Consultation";
+    }
+    else if (status === "completed"){
+      return "Completed";
+    }
+    return status;
+  }
   function getStatusClass(status) {
     const normalizedStatus = status?.toLowerCase();
 
@@ -294,7 +314,7 @@ export default function StaffDashboard() {
               ) : (
                 patients.map((entry, index) => (
                   <tr key={entry.id}>
-                    <td>Patient {index + 1}</td>
+                    <td>{entry.patient_name}</td>
 
                     <td>
                       {entry.joined_at
@@ -304,7 +324,7 @@ export default function StaffDashboard() {
 
                     <td>
                       <strong className={getStatusClass(entry.status)}>
-                        {entry.status}
+                        {getStatusName(entry.status)}
                       </strong>
                     </td>
 
@@ -313,8 +333,9 @@ export default function StaffDashboard() {
                         type="button"
                         className="btn start"
                         onClick={() =>
-                          updateStatus(entry.id, "In consultation")
+                          updateStatus(entry.id, "in_consultation")
                         }
+
                       >
                         Start
                       </button>
@@ -323,7 +344,7 @@ export default function StaffDashboard() {
                         type="button"
                         className="btn complete"
                         onClick={() =>
-                          updateStatus(entry.id, "Completed")
+                          updateStatus(entry.id, "completed")
                         }
                       >
                         Complete
