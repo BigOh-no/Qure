@@ -1,82 +1,154 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import AppointmentsPage from "../pages/AppointmentsPage";
+import * as appointmentService from "../pages/appointmentService";
+import { BrowserRouter } from "react-router-dom";
 
-// ---------------- MOCK ROUTER ----------------
+// -------------------- MOCKS --------------------
+
+jest.mock("../pages/appointmentService");
+
 const mockNavigate = jest.fn();
 
-jest.mock("react-router-dom", () => {
-  const actual = jest.requireActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
 
-// ---------------- TEST HELPER ----------------
+// Helper wrapper
 const renderComponent = () =>
   render(
-    <MemoryRouter>
+    <BrowserRouter>
       <AppointmentsPage />
-    </MemoryRouter>
+    </BrowserRouter>
   );
 
-// ---------------- TESTS ----------------
+// -------------------- TEST DATA --------------------
+
+const mockAppointments = [
+  {
+    id: 1,
+    appointment_date: "2099-12-31",
+    appointment_time: "10:00:00",
+    status: "booked",
+    clinic_id: 123,
+    clinics: { facility_name: "Test Clinic A" },
+  },
+  {
+    id: 2,
+    appointment_date: "2020-01-01",
+    appointment_time: "09:00:00",
+    status: "completed",
+    clinic_id: 456,
+    clinics: { facility_name: "Test Clinic B" },
+  },
+];
+
+// -------------------- TESTS --------------------
+
 describe("AppointmentsPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    appointmentService.getAllPatientAppointments.mockResolvedValue(
+      mockAppointments
+    );
+
+    appointmentService.cancelAppointment.mockResolvedValue({});
+    appointmentService.rescheduleAppointment.mockResolvedValue({});
+
+    appointmentService.getBookedSlots.mockResolvedValue([]);
+    appointmentService.generateHourlySlots.mockReturnValue([
+      "09:00",
+      "10:00",
+      "11:00",
+    ]);
   });
 
-  test("renders page title", () => {
+  test("renders loading state initially", async () => {
     renderComponent();
 
+    expect(screen.getByText(/loading appointments/i)).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(screen.queryByText(/loading appointments/i)).not.toBeInTheDocument()
+    );
+  });
+
+  test("renders appointments after load", async () => {
+    renderComponent();
+
+    expect(await screen.findByText("Test Clinic A")).toBeInTheDocument();
+    expect(screen.getByText("Test Clinic B")).toBeInTheDocument();
+  });
+
+  test("filters appointments by status", async () => {
+    renderComponent();
+
+    await screen.findByText("Test Clinic A");
+
+    const filter = screen.getByLabelText(/filter by status/i);
+
+    fireEvent.change(filter, { target: { value: "completed" } });
+
+    expect(screen.queryByText("Test Clinic A")).not.toBeInTheDocument();
+    expect(screen.getByText("Test Clinic B")).toBeInTheDocument();
+  });
+
+  test("opens cancel modal", async () => {
+    renderComponent();
+
+    const cancelBtn = await screen.findAllByText("Cancel");
+
+    fireEvent.click(cancelBtn[0]);
+
     expect(
-      screen.getByText(/my appointments/i)
+      screen.getByText(/cancel appointment/i)
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(/are you sure you want to cancel/i)
     ).toBeInTheDocument();
   });
 
-  test("renders back button and navigates", () => {
-    renderComponent();
+  test("confirms cancellation", async () => {
+  renderComponent();
 
-    fireEvent.click(screen.getByRole("button", { name: /back/i }));
+  const cancelBtn = await screen.findAllByText("Cancel");
+  fireEvent.click(cancelBtn[0]);
 
-    expect(mockNavigate).toHaveBeenCalledWith("/patient");
+  const confirmBtn = screen.getByText(/confirm cancel/i);
+  fireEvent.click(confirmBtn);
+
+  await waitFor(() => {
+    expect(appointmentService.cancelAppointment).toHaveBeenCalledWith(1);
   });
 
-  test("renders appointment cards", () => {
+  expect(
+    await screen.findByText(/appointment cancelled successfully/i)
+  ).toBeInTheDocument();
+});
+
+  test("opens reschedule modal", async () => {
     renderComponent();
 
-    expect(screen.getByText(/hillbrow clinic/i)).toBeInTheDocument();
-    expect(screen.getByText(/soweto clinic/i)).toBeInTheDocument();
+    const rescheduleBtn = await screen.findAllByText("Reschedule");
 
-    expect(screen.getByText(/2026-04-18/i)).toBeInTheDocument();
-    expect(screen.getByText(/2026-04-22/i)).toBeInTheDocument();
-  });
-
-  test("renders appointment actions", () => {
-    renderComponent();
-
-    const rescheduleButtons = screen.getAllByRole("button", {
-      name: /reschedule/i,
-    });
-
-    const cancelButtons = screen.getAllByRole("button", {
-      name: /cancel/i,
-    });
-
-    expect(rescheduleButtons).toHaveLength(2);
-    expect(cancelButtons).toHaveLength(2);
-  });
-
-  test("shows empty state when no appointments", () => {
-    // override component logic by mocking module behavior is not possible here
-    // so we test by checking correct rendering assumption is safe
-
-    renderComponent();
+    fireEvent.click(rescheduleBtn[0]);
 
     expect(
-      screen.queryByText(/no appointments found/i)
-    ).not.toBeInTheDocument();
+      screen.getByText(/reschedule appointment/i)
+    ).toBeInTheDocument();
+
+    expect(screen.getByLabelText(/choose a new date/i)).toBeInTheDocument();
+  });
+
+  test("navigates back button", async () => {
+    renderComponent();
+
+    const backBtn = screen.getByText(/back/i);
+    fireEvent.click(backBtn);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/patient");
   });
 });
