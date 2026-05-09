@@ -41,6 +41,8 @@ function AdminDashboard() {
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [loadingClinics, setLoadingClinics] = useState(false);
 
+  const [staffToRemove, setStaffToRemove] = useState(null);
+
   //new func 
   const fetchAllStaff = async () => {
   setLoadingStaff(true);
@@ -699,8 +701,8 @@ const handleStaffSubmit = async (event) => {
       setStaffList(data || []);
       setLoadingStaff(false);
     } else {
-      setStaffList([]);
-    }
+  fetchAllStaff();
+}
   }}
       />
       {loadingStaff ? (
@@ -715,7 +717,7 @@ const handleStaffSubmit = async (event) => {
     <button
       type="button"
       className="remove-btn"
-      onClick={() => removeStaff(staff.email)}
+     onClick={() => setStaffToRemove(staff.email)}
     >
       Remove
     </button>
@@ -787,7 +789,35 @@ const handleStaffSubmit = async (event) => {
       </form>
       </dialog>
     )}
-
+    {staffToRemove && (
+  <dialog className="popup-dialog" open>
+    <section className="popup-form">
+      <header className="popup-header">
+        <h2>Confirm Removal</h2>
+      </header>
+      <p>Are you sure you want to remove <strong>{staffToRemove}</strong>?</p>
+      <footer className="popup-footer">
+        <button
+          type="button"
+          className="cancel-btn"
+          onClick={() => setStaffToRemove(null)}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="remove-btn"
+          onClick={() => {
+            removeStaff(staffToRemove);
+            setStaffToRemove(null);
+          }}
+        >
+          Confirm Remove
+        </button>
+      </footer>
+    </section>
+  </dialog>
+)}
       </section>
     </main>
   );
