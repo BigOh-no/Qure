@@ -1,218 +1,281 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import QueuePage from "../pages/QueuePage";
-import { searchClinics } from "../pages/clinicService";
-import { MemoryRouter } from "react-router-dom";
+import { supabaseClient } from "../lib/supabaseClient";
+import {
+  isQueueOpenNow,
+  joinQueue,
+  leaveQueue,
+  getTodayQueueForClinic,
+  getMyQueueEntryForClinic,
+  getMyActiveQueueStatusForToday,
+  calculateEstimatedWait,
+} from "../pages/queueService";
+import { useNavigate } from "react-router-dom";
 
-// Mock navigate
-const mockNavigate = jest.fn();
+// -------------------- mocks --------------------
+
+jest.mock("../lib/supabaseClient", () => ({
+  supabaseClient: {
+    from: jest.fn(),
+  },
+}));
+
+jest.mock("../pages/queueService", () => ({
+  isQueueOpenNow: jest.fn(),
+  joinQueue: jest.fn(),
+  leaveQueue: jest.fn(),
+  getTodayQueueForClinic: jest.fn(),
+  getMyQueueEntryForClinic: jest.fn(),
+  getMyActiveQueueStatusForToday: jest.fn(),
+  calculateEstimatedWait: jest.fn((pos) => pos * 10),
+  QUEUE_OPEN_TIME: "08:00",
+  QUEUE_CLOSE_TIME: "17:00",
+  AVERAGE_CONSULTATION_MINUTES: 10,
+}));
 
 jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useNavigate: () => mockNavigate,
+  useNavigate: jest.fn(),
 }));
 
-// Mock API
-jest.mock("../pages/clinicService", () => ({
-  searchClinics: jest.fn(),
-}));
+// -------------------- navigation mock --------------------
 
-describe("QueuePage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+const navigateMock = jest.fn();
+
+// -------------------- helpers --------------------
+
+const setupSupabaseMock = (data = []) => {
+  const select = jest.fn().mockReturnThis();
+  const limit = jest.fn().mockReturnThis();
+  const ilike = jest.fn().mockReturnThis();
+  const eq = jest.fn().mockReturnThis();
+
+  supabaseClient.from.mockReturnValue({
+    select,
+    limit,
+    ilike,
+    eq,
+    then: (resolve) => resolve({ data, error: null }),
   });
 
-  test("renders initial UI", () => {
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  return { select, limit, ilike, eq };
+};
 
-    expect(screen.getByText(/Join Queue/i)).toBeInTheDocument();
-    expect(screen.getByText(/Find a Clinic/i)).toBeInTheDocument();
-    expect(screen.getByText(/Search Results/i)).toBeInTheDocument();
-    expect(screen.getByText(/No clinics found/i)).toBeInTheDocument();
+const renderPage = async () => {
+  await act(async () => {
+    render(<QueuePage />);
+  });
+};
+
+// -------------------- setup --------------------
+
+beforeEach(() => {
+  jest.clearAllMocks();
+
+  // navigation mock FIX
+  useNavigate.mockReturnValue(navigateMock);
+
+  isQueueOpenNow.mockReturnValue(true);
+
+  getMyActiveQueueStatusForToday.mockResolvedValue(null);
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+
+  joinQueue.mockResolvedValue();
+  leaveQueue.mockResolvedValue();
+});
+
+// -------------------- tests --------------------
+
+test("renders page correctly", async () => {
+  await renderPage();
+
+  expect(screen.getByText(/Clinic Queue/i)).toBeInTheDocument();
+  expect(
+    screen.getByPlaceholderText(/Search clinic by name/i)
+  ).toBeInTheDocument();
+});
+
+test("debounced clinic search works", async () => {
+  jest.useFakeTimers();
+
+  setupSupabaseMock([
+    {
+      id: "1",
+      facility_name: "Test Clinic",
+      province: "Gauteng",
+      facility_type: "Clinic",
+    },
+  ]);
+
+  await renderPage();
+
+  fireEvent.change(screen.getByPlaceholderText(/Search clinic by name/i), {
+    target: { value: "Test" },
   });
 
-  test("navigates back when back button is clicked", async () => {
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    const backBtn = screen.getByRole("button", { name: /back/i });
-    await userEvent.click(backBtn);
-
-    expect(mockNavigate).toHaveBeenCalledWith("/patient");
+  act(() => {
+    jest.advanceTimersByTime(500);
   });
 
-  test("calls searchClinics when typing search term", async () => {
-    searchClinics.mockResolvedValue([]);
-
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Test Clinic");
-
-    await waitFor(() => {
-      expect(searchClinics).toHaveBeenCalled();
-    });
+  await waitFor(() => {
+    expect(screen.getByText("Test Clinic")).toBeInTheDocument();
   });
 
-  test("displays loading state", async () => {
-    searchClinics.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
-    );
+  jest.useRealTimers();
+});
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+test("selecting clinic loads queue", async () => {
+  setupSupabaseMock([
+    {
+      id: "1",
+      facility_name: "Test Clinic",
+      province: "Gauteng",
+      facility_type: "Clinic",
+    },
+  ]);
 
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "A");
+  getTodayQueueForClinic.mockResolvedValue([{ id: "a", status: "waiting" }]);
 
-    expect(screen.getByText(/searching clinics/i)).toBeInTheDocument();
+  await renderPage();
+
+  fireEvent.change(screen.getByPlaceholderText(/Search clinic by name/i), {
+    target: { value: "Test" },
   });
 
-  test("displays clinics after search", async () => {
-    const mockClinics = [
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ];
-
-    searchClinics.mockResolvedValue(mockClinics);
-
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
-
-    await waitFor(() => {
-      expect(screen.getByText(/Clinic A/i)).toBeInTheDocument();
-    });
+  await act(async () => {
+    jest.advanceTimersByTime(500);
   });
 
-  test("handles API error", async () => {
-    searchClinics.mockRejectedValue(new Error("API Error"));
+  fireEvent.click(await screen.findByText("Test Clinic"));
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  await waitFor(() => {
+    expect(screen.getByText(/Queue hours/i)).toBeInTheDocument();
+    expect(screen.getByText(/Current queue length/i)).toBeInTheDocument();
+  });
+});
 
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
+test("join queue success shows popup", async () => {
+  setupSupabaseMock([
+    {
+      id: "1",
+      facility_name: "Test Clinic",
+    },
+  ]);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/failed to search clinics/i)
-      ).toBeInTheDocument();
-    });
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+  getMyActiveQueueStatusForToday.mockResolvedValue(null);
+
+  await renderPage();
+
+  fireEvent.change(screen.getByPlaceholderText(/Search clinic by name/i), {
+    target: { value: "Test" },
   });
 
-  test("selects a clinic", async () => {
-    const mockClinics = [
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ];
-
-    searchClinics.mockResolvedValue(mockClinics);
-
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
-
-    await waitFor(() => {
-      expect(screen.getByText(/Clinic A/i)).toBeInTheDocument();
-    });
-
-    const selectBtn = screen.getByRole("button", {
-      name: /select clinic/i,
-    });
-
-    await userEvent.click(selectBtn);
-
-    expect(screen.getByText(/Selected Clinic/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Clinic A/i).length).toBeGreaterThan(1);
+  await act(async () => {
+    jest.advanceTimersByTime(500);
   });
 
-  test("joins queue after selecting clinic", async () => {
-    const mockClinics = [
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ];
+  fireEvent.click(await screen.findByText("Test Clinic"));
 
-    searchClinics.mockResolvedValue(mockClinics);
+  fireEvent.click(await screen.findByText(/Join Queue/i));
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  await waitFor(() => {
+    expect(joinQueue).toHaveBeenCalled();
+    expect(
+      screen.getByText(/Queue Joined Successfully/i)
+    ).toBeInTheDocument();
+  });
+});
 
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
+test("blocked join queue shows popup", async () => {
+  setupSupabaseMock([{ id: "1", facility_name: "Test Clinic" }]);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Clinic A/i)).toBeInTheDocument();
-    });
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /select clinic/i })
-    );
-
-    const joinBtn = screen.getByRole("button", { name: /join queue/i });
-    await userEvent.click(joinBtn);
-
-    expect(screen.getByText(/Queue Number/i)).toBeInTheDocument();
-    expect(screen.getByText(/Waiting/i)).toBeInTheDocument();
+  getMyActiveQueueStatusForToday.mockResolvedValue({
+    entry: { clinic_id: "999" },
+    clinic: { facility_name: "Other Clinic" },
+    position: 3,
+    estimatedWait: 30,
   });
 
-  test("alerts if joining queue without selecting clinic", async () => {
-    const alertMock = jest.spyOn(window, "alert").mockImplementation(() => {});
+  await renderPage();
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    // Try to click join queue (not visible unless selected, so call directly)
-    alert("Please select a clinic first.");
-
-    expect(alertMock).toHaveBeenCalled();
-
-    alertMock.mockRestore();
+  fireEvent.change(screen.getByPlaceholderText(/Search clinic by name/i), {
+    target: { value: "Test" },
   });
+
+  await act(async () => {
+    jest.advanceTimersByTime(500);
+  });
+
+  fireEvent.click(await screen.findByText("Test Clinic"));
+
+  fireEvent.click(await screen.findByText(/Join Queue/i));
+
+  await waitFor(() => {
+    expect(screen.getByText(/Already in a Queue/i)).toBeInTheDocument();
+  });
+});
+
+test("leave queue works", async () => {
+  setupSupabaseMock([{ id: "1", facility_name: "Test Clinic" }]);
+
+  getTodayQueueForClinic.mockResolvedValue([
+    { id: "q1", status: "waiting" },
+  ]);
+
+  getMyQueueEntryForClinic.mockResolvedValue({
+    id: "q1",
+    status: "waiting",
+  });
+
+  await renderPage();
+
+  fireEvent.change(screen.getByPlaceholderText(/Search clinic by name/i), {
+    target: { value: "Test" },
+  });
+
+  await act(async () => {
+    jest.advanceTimersByTime(500);
+  });
+
+  fireEvent.click(await screen.findByText("Test Clinic"));
+
+  fireEvent.click(await screen.findByText(/Leave Queue/i));
+
+  await waitFor(() => {
+    expect(leaveQueue).toHaveBeenCalled();
+    expect(
+      screen.getByText(/You have left the queue/i)
+    ).toBeInTheDocument();
+  });
+});
+
+test("navigates after closing success popup", async () => {
+  setupSupabaseMock([{ id: "1", facility_name: "Test Clinic" }]);
+
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+
+  await renderPage();
+
+  fireEvent.change(screen.getByPlaceholderText(/Search clinic by name/i), {
+    target: { value: "Test" },
+  });
+
+  await act(async () => {
+    jest.advanceTimersByTime(500);
+  });
+
+  fireEvent.click(await screen.findByText("Test Clinic"));
+
+  fireEvent.click(await screen.findByText(/Join Queue/i));
+
+  fireEvent.click(await screen.findByText(/Go to Dashboard/i));
+
+  expect(navigateMock).toHaveBeenCalledWith("/patient");
 });
