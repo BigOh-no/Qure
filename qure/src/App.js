@@ -15,6 +15,7 @@ import ResetPasswordPage from "./pages/resetPasswordPage";
 import StaffAuth from "./pages/staffAuth";
 import AdminAuth from "./pages/adminAuth";
 import L from "leaflet";
+import AnalyticsPage from "./pages/analyticsPage";
 
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -44,6 +45,7 @@ function App() {
         <Route path="/staff/auth/callback" element={<StaffAuth />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/admin/auth/callback" element={<AdminAuth />} />
+        <Route path="/analytics" element={<AnalyticsPage/>} />
       </Routes>
     </Router>
   );
