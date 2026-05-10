@@ -13,8 +13,6 @@
 ## Sprint Goal
 Implement the staff functionality and some more admin functionality. Fix bugs.
 
-## Sprint Backlog
-
 ### Frontend Development
 - Staff home page
 
@@ -32,6 +30,8 @@ Implement the staff functionality and some more admin functionality. Fix bugs.
 - As a staff member, I can create an appointment on a patients behalf so that patients who cannot book themselves can still receive appointment slots
 - As a staff member, I can cancel an appointment on a patients behalf so that the appointment schedule remains accurate when a patient can no longer attend
 - As a staff member, I can reschedule an appointment on a patients behalf so that patients can be moved to a more suitable date or time without losing their booking
+- As an admin, I can remove a staff member so that I can revoke their access when they no longer work at a clinic or should no longer have staff permissions.
+
 
 ## User acceptance tests
 
@@ -233,11 +233,51 @@ Scenario 4: Old slot becomes available
 - Then the old appointment slot should become available
 - And the appointment should appear in the new selected slot
 
-## Task Allocation
-- Aaliah: front-end for admin home page, functionality of admin home page
-- Ammaarah: front end for staff home page, show password for signup and login, google logo, admin functionality
-- Vareshan: front-end for patient page
-- Muhammed: testing, Github testing, patient functionality
-- Vikram: dataset
-- Vikram, Vareshan, Muhammed: searching & finding closest clinic
+Remove Staff Member:
 
+Scenario 1: Successfully remove a staff member
+
+- Given I am logged in as an admin
+- And I am viewing the staff management page
+- And there is an existing staff member in the staff list
+- When I select the staff member and click “Remove”
+- Then the staff member should be removed from the staff list
+- And their staff access should be revoked successfully
+
+Scenario 2: Confirm removal before deleting staff member
+
+- Given I am logged in as an admin
+- And I am viewing the staff management page
+- When I click the remove button for a staff member
+- Then I should be asked to confirm the removal
+- And the staff member should only be removed if I confirm
+
+Scenario 3: Removed staff member cannot access staff features
+
+- Given a staff member has been removed by an admin
+- When the removed staff member tries to access the staff dashboard
+- Then the system should prevent access to staff-only features
+- And the user should no longer be treated as a staff member
+
+Scenario 4: Display success message after staff removal
+
+- Given I am logged in as an admin
+- And I have confirmed the removal of a staff member
+- When the system successfully removes the staff member
+- Then I should see a success message confirming that the staff member was removed
+
+Scenario 5: Display error message if staff removal fails
+
+- Given I am logged in as an admin
+- And I have confirmed the removal of a staff member
+- When the system fails to remove the staff member
+- Then the staff member should remain in the staff list
+- And I should see an error message explaining that the staff member could not be removed
+
+## Task Allocation
+- Aaliah & Ammarah: Admin page
+- Ammaarah: staff button: needs to have staff and clinic, and a remove button and a scrollbar because the default should show all the staff members. The scrollbar for clinics. Remove staff functionality
+- Aaliah: Edit clinic (operating hours), patients waiting board and recent activities board.
+- Muhammed: Patient page (queueing system)
+- Vikram: Staff queueing system (add or reschedule first)
+- Vareshan: Staff queue UI

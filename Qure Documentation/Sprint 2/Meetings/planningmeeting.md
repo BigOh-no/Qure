@@ -1,4 +1,4 @@
-# Sprint 1 Planning
+# Sprint 2 Planning
 
 ## Date
 14 April 2026

@@ -197,3 +197,44 @@ Scenario 4: Old slot becomes available
 - When I view the appointment schedule
 - Then the old appointment slot should become available
 - And the appointment should appear in the new selected slot
+
+Remove Staff Member:
+
+Scenario 1: Successfully remove a staff member
+
+- Given I am logged in as an admin
+- And I am viewing the staff management page
+- And there is an existing staff member in the staff list
+- When I select the staff member and click “Remove”
+- Then the staff member should be removed from the staff list
+- And their staff access should be revoked successfully
+
+Scenario 2: Confirm removal before deleting staff member
+
+- Given I am logged in as an admin
+- And I am viewing the staff management page
+- When I click the remove button for a staff member
+- Then I should be asked to confirm the removal
+- And the staff member should only be removed if I confirm
+
+Scenario 3: Removed staff member cannot access staff features
+
+- Given a staff member has been removed by an admin
+- When the removed staff member tries to access the staff dashboard
+- Then the system should prevent access to staff-only features
+- And the user should no longer be treated as a staff member
+
+Scenario 4: Display success message after staff removal
+
+- Given I am logged in as an admin
+- And I have confirmed the removal of a staff member
+- When the system successfully removes the staff member
+- Then I should see a success message confirming that the staff member was removed
+
+Scenario 5: Display error message if staff removal fails
+
+- Given I am logged in as an admin
+- And I have confirmed the removal of a staff member
+- When the system fails to remove the staff member
+- Then the staff member should remain in the staff list
+- And I should see an error message explaining that the staff member could not be removed

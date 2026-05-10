@@ -8,3 +8,4 @@
 - As a staff member, I can create an appointment on a patients behalf so that patients who cannot book themselves can still receive appointment slots
 - As a staff member, I can cancel an appointment on a patients behalf so that the appointment schedule remains accurate when a patient can no longer attend
 - As a staff member, I can reschedule an appointment on a patients behalf so that patients can be moved to a more suitable date or time without losing their booking
+- As an admin, I can remove a staff member so that I can revoke their access when they no longer work at a clinic or should no longer have staff permissions.
