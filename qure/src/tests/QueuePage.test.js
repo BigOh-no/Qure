@@ -1,218 +1,277 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import QueuePage from "../pages/QueuePage";
 import { searchClinics } from "../pages/clinicService";
-import { MemoryRouter } from "react-router-dom";
+import {
+  isQueueOpenNow,
+  joinQueue,
+  leaveQueue,
+  getTodayQueueForClinic,
+  getMyQueueEntryForClinic,
+  getMyActiveQueueStatusForToday,
+} from "../pages/queueService";
+import { useNavigate } from "react-router-dom";
 
-// Mock navigate
-const mockNavigate = jest.fn();
+// -------------------- mocks --------------------
 
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useNavigate: () => mockNavigate,
-}));
+jest.mock("../pages/ClinicMap.js", () => {
+  const React = require("react");
 
-// Mock API
+  return function MockClinicMap() {
+    return React.createElement(
+      "section",
+      { "data-testid": "clinic-map" },
+      "Mock Clinic Map"
+    );
+  };
+});
+
 jest.mock("../pages/clinicService", () => ({
   searchClinics: jest.fn(),
 }));
 
-describe("QueuePage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+jest.mock("../pages/queueService", () => ({
+  isQueueOpenNow: jest.fn(),
+  joinQueue: jest.fn(),
+  leaveQueue: jest.fn(),
+  getTodayQueueForClinic: jest.fn(),
+  getMyQueueEntryForClinic: jest.fn(),
+  getMyActiveQueueStatusForToday: jest.fn(),
+  calculateEstimatedWait: jest.fn((position) => {
+    if (!position || position <= 1) return 0;
+    return (position - 1) * 10;
+  }),
+  QUEUE_OPEN_TIME: "08:00",
+  QUEUE_CLOSE_TIME: "17:00",
+  AVERAGE_CONSULTATION_MINUTES: 10,
+}));
+
+jest.mock("react-router-dom", () => ({
+  useNavigate: jest.fn(),
+}));
+
+// -------------------- navigation mock --------------------
+
+const navigateMock = jest.fn();
+
+// -------------------- helpers --------------------
+
+const testClinic = {
+  id: "1",
+  facility_name: "Test Clinic",
+  admin1: "Gauteng",
+  facility_type: "Clinic",
+};
+
+const renderPage = async () => {
+  await act(async () => {
+    render(<QueuePage />);
+  });
+};
+
+const searchForClinic = async () => {
+  fireEvent.change(screen.getByPlaceholderText(/Type clinic name/i), {
+    target: { value: "Test" },
   });
 
-  test("renders initial UI", () => {
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  await act(async () => {
+    jest.advanceTimersByTime(500);
+  });
+};
 
+// -------------------- setup --------------------
+
+beforeEach(() => {
+  jest.clearAllMocks();
+
+  useNavigate.mockReturnValue(navigateMock);
+
+  isQueueOpenNow.mockReturnValue(true);
+
+  searchClinics.mockResolvedValue([testClinic]);
+
+  getMyActiveQueueStatusForToday.mockResolvedValue(null);
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+
+  joinQueue.mockResolvedValue();
+  leaveQueue.mockResolvedValue();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+// -------------------- tests --------------------
+
+test("renders page correctly", async () => {
+  await renderPage();
+
+  expect(screen.getByText(/Clinic Queue/i)).toBeInTheDocument();
+  expect(screen.getByPlaceholderText(/Type clinic name/i)).toBeInTheDocument();
+  expect(screen.getByText(/Find a Clinic/i)).toBeInTheDocument();
+});
+
+test("debounced clinic search works", async () => {
+  jest.useFakeTimers();
+
+  await renderPage();
+
+  await searchForClinic();
+
+  await waitFor(() => {
+    expect(searchClinics).toHaveBeenCalledWith({
+      searchTerm: "Test",
+      admin1: "",
+      facilityType: "",
+    });
+
+    expect(screen.getByText("Test Clinic")).toBeInTheDocument();
+    expect(screen.getByText(/Province:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Type:/i)).toBeInTheDocument();
+  });
+});
+
+test("search results show the map", async () => {
+  jest.useFakeTimers();
+
+  await renderPage();
+
+  await searchForClinic();
+
+  await waitFor(() => {
+    expect(screen.getByTestId("clinic-map")).toBeInTheDocument();
+  });
+});
+
+test("selecting clinic loads queue", async () => {
+  jest.useFakeTimers();
+
+  getTodayQueueForClinic.mockResolvedValue([{ id: "a", status: "waiting" }]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+
+  await renderPage();
+
+  await searchForClinic();
+
+  fireEvent.click(await screen.findByText(/Select Clinic/i));
+
+  await waitFor(() => {
+    expect(getTodayQueueForClinic).toHaveBeenCalledWith("1");
+    expect(getMyQueueEntryForClinic).toHaveBeenCalledWith("1");
+    expect(screen.getByText(/Queue hours/i)).toBeInTheDocument();
+    expect(screen.getByText(/Current queue length/i)).toBeInTheDocument();
+  });
+});
+
+test("join queue success shows popup", async () => {
+  jest.useFakeTimers();
+
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+  getMyActiveQueueStatusForToday.mockResolvedValue(null);
+
+  await renderPage();
+
+  await searchForClinic();
+
+  fireEvent.click(await screen.findByText(/Select Clinic/i));
+
+  await waitFor(() => {
     expect(screen.getByText(/Join Queue/i)).toBeInTheDocument();
-    expect(screen.getByText(/Find a Clinic/i)).toBeInTheDocument();
-    expect(screen.getByText(/Search Results/i)).toBeInTheDocument();
-    expect(screen.getByText(/No clinics found/i)).toBeInTheDocument();
   });
 
-  test("navigates back when back button is clicked", async () => {
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  fireEvent.click(screen.getByText(/Join Queue/i));
 
-    const backBtn = screen.getByRole("button", { name: /back/i });
-    await userEvent.click(backBtn);
+  await waitFor(() => {
+    expect(joinQueue).toHaveBeenCalledWith("1");
+    expect(screen.getByText(/Queue Joined Successfully/i)).toBeInTheDocument();
+  });
+});
 
-    expect(mockNavigate).toHaveBeenCalledWith("/patient");
+test("blocked join queue shows popup", async () => {
+  jest.useFakeTimers();
+
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+
+  getMyActiveQueueStatusForToday.mockResolvedValue({
+    entry: { clinic_id: "999" },
+    clinic: { facility_name: "Other Clinic" },
+    position: 3,
+    estimatedWait: 30,
   });
 
-  test("calls searchClinics when typing search term", async () => {
-    searchClinics.mockResolvedValue([]);
+  await renderPage();
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  await searchForClinic();
 
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Test Clinic");
+  fireEvent.click(await screen.findByText(/Select Clinic/i));
 
-    await waitFor(() => {
-      expect(searchClinics).toHaveBeenCalled();
-    });
+  await waitFor(() => {
+    expect(screen.getByText(/Join Queue/i)).toBeInTheDocument();
   });
 
-  test("displays loading state", async () => {
-    searchClinics.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
-    );
+  fireEvent.click(screen.getByText(/Join Queue/i));
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  await waitFor(() => {
+    expect(screen.getByText(/Already in a Queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Other Clinic/i)).toBeInTheDocument();
+  });
+});
 
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "A");
+test("leave queue works", async () => {
+  jest.useFakeTimers();
 
-    expect(screen.getByText(/searching clinics/i)).toBeInTheDocument();
+  getTodayQueueForClinic.mockResolvedValue([{ id: "q1", status: "waiting" }]);
+
+  getMyQueueEntryForClinic.mockResolvedValue({
+    id: "q1",
+    status: "waiting",
   });
 
-  test("displays clinics after search", async () => {
-    const mockClinics = [
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ];
+  await renderPage();
 
-    searchClinics.mockResolvedValue(mockClinics);
+  await searchForClinic();
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  fireEvent.click(await screen.findByText(/Select Clinic/i));
 
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
-
-    await waitFor(() => {
-      expect(screen.getByText(/Clinic A/i)).toBeInTheDocument();
-    });
+  await waitFor(() => {
+    expect(screen.getByText(/Leave Queue/i)).toBeInTheDocument();
   });
 
-  test("handles API error", async () => {
-    searchClinics.mockRejectedValue(new Error("API Error"));
+  fireEvent.click(screen.getByText(/Leave Queue/i));
 
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
+  await waitFor(() => {
+    expect(leaveQueue).toHaveBeenCalledWith("q1");
+    expect(screen.getByText(/You have left the queue/i)).toBeInTheDocument();
+  });
+});
 
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
+test("navigates after closing success popup", async () => {
+  jest.useFakeTimers();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/failed to search clinics/i)
-      ).toBeInTheDocument();
-    });
+  getTodayQueueForClinic.mockResolvedValue([]);
+  getMyQueueEntryForClinic.mockResolvedValue(null);
+  getMyActiveQueueStatusForToday.mockResolvedValue(null);
+
+  await renderPage();
+
+  await searchForClinic();
+
+  fireEvent.click(await screen.findByText(/Select Clinic/i));
+
+  await waitFor(() => {
+    expect(screen.getByText(/Join Queue/i)).toBeInTheDocument();
   });
 
-  test("selects a clinic", async () => {
-    const mockClinics = [
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ];
+  fireEvent.click(screen.getByText(/Join Queue/i));
 
-    searchClinics.mockResolvedValue(mockClinics);
-
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
-
-    await waitFor(() => {
-      expect(screen.getByText(/Clinic A/i)).toBeInTheDocument();
-    });
-
-    const selectBtn = screen.getByRole("button", {
-      name: /select clinic/i,
-    });
-
-    await userEvent.click(selectBtn);
-
-    expect(screen.getByText(/Selected Clinic/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Clinic A/i).length).toBeGreaterThan(1);
+  await waitFor(() => {
+    expect(screen.getByText(/Go to Dashboard/i)).toBeInTheDocument();
   });
 
-  test("joins queue after selecting clinic", async () => {
-    const mockClinics = [
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ];
+  fireEvent.click(screen.getByText(/Go to Dashboard/i));
 
-    searchClinics.mockResolvedValue(mockClinics);
-
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
-
-    await waitFor(() => {
-      expect(screen.getByText(/Clinic A/i)).toBeInTheDocument();
-    });
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /select clinic/i })
-    );
-
-    const joinBtn = screen.getByRole("button", { name: /join queue/i });
-    await userEvent.click(joinBtn);
-
-    expect(screen.getByText(/Queue Number/i)).toBeInTheDocument();
-    expect(screen.getByText(/Waiting/i)).toBeInTheDocument();
-  });
-
-  test("alerts if joining queue without selecting clinic", async () => {
-    const alertMock = jest.spyOn(window, "alert").mockImplementation(() => {});
-
-    render(
-      <MemoryRouter>
-        <QueuePage />
-      </MemoryRouter>
-    );
-
-    // Try to click join queue (not visible unless selected, so call directly)
-    alert("Please select a clinic first.");
-
-    expect(alertMock).toHaveBeenCalled();
-
-    alertMock.mockRestore();
-  });
+  expect(navigateMock).toHaveBeenCalledWith("/patient");
 });

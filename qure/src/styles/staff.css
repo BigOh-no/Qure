@@ -42,16 +42,19 @@
   cursor: pointer;
   border-radius: 6px;
   font-weight: bold;
+  font-size: 14px;
 }
 
 .nav-item:hover {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .nav-item.active {
   background: rgba(255, 255, 255, 0.15);
   color: white;
 }
+
+/* SIDEBAR LOGOUT BUTTON */
 .logout {
   width: 100%;
   padding: 0.8rem;
@@ -79,12 +82,30 @@
   padding: 15px 20px;
   border-radius: 10px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.topbar h1 {
+.topbar h1,
+.topbar-title {
   margin: 0;
   color: #8b0000;
+}
+
+.topbar-subtitle {
+  margin: 6px 0 0;
+  color: #666;
+  font-weight: bold;
+}
+
+/* SUCCESS / ERROR MESSAGE */
+.success-message {
+  background-color: #e8f8ef;
+  color: #1f7a3f;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  border-left: 5px solid #1f7a3f;
 }
 
 /* CARD */
@@ -92,14 +113,31 @@
   background: white;
   border-radius: 10px;
   padding: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 /* CARD HEADER */
 .card-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 15px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.card-header h2 {
+  margin: 0;
+  color: #8b0000;
+}
+
+.patient-count {
+  background: #fff5f5;
+  color: #8b0000;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 0;
 }
 
 /* TABLE */
@@ -113,19 +151,35 @@
   background: #fff5f5;
   color: #8b0000;
   padding: 12px;
+  font-size: 14px;
 }
 
 .table td {
   padding: 12px;
   border-bottom: 1px solid #eee;
+  vertical-align: middle;
+  font-size: 14px;
 }
 
-/* STATUS */
+.table tr:hover {
+  background: #fafafa;
+}
+
+.table input {
+  padding: 0.55rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* STATUS LABELS */
 .status {
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: bold;
+  display: inline-block;
+  font-style: normal;
 }
 
 .waiting {
@@ -143,6 +197,11 @@
   color: #1f7a1f;
 }
 
+.cancelled {
+  background: #f1f1f1;
+  color: #555;
+}
+
 /* BUTTONS */
 .btn {
   padding: 6px 10px;
@@ -150,7 +209,13 @@
   border-radius: 6px;
   cursor: pointer;
   margin-right: 6px;
+  margin-bottom: 4px;
   font-weight: bold;
+  transition: 0.2s ease;
+}
+
+.btn:hover {
+  opacity: 0.85;
 }
 
 .start {
@@ -161,6 +226,54 @@
 .complete {
   background: #8b0000;
   color: white;
+}
+
+/* BUTTON USED FOR CANCELLING APPOINTMENTS */
+.btn.logout {
+  width: auto;
+  background: #ffe5e5;
+  color: #8b0000;
+  padding: 6px 10px;
+}
+
+.btn.logout:hover {
+  background: #ffd6d6;
+}
+
+/* APPOINTMENT FORM */
+.appointment-form {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  align-items: end;
+  margin-top: 1rem;
+}
+
+.appointment-form label {
+  display: flex;
+  flex-direction: column;
+  font-weight: bold;
+  color: #333;
+  gap: 0.4rem;
+  font-size: 14px;
+}
+
+.appointment-form input {
+  padding: 0.7rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.appointment-form input:focus,
+.table input:focus {
+  outline: none;
+  border-color: #ff4d4d;
+  box-shadow: 0 0 0 2px rgba(255, 77, 77, 0.15);
+}
+
+.appointment-form button {
+  height: 42px;
 }
 
 /* SIDEBAR LOGO */
@@ -174,4 +287,59 @@
   width: 100%;
   max-width: 160px;
   height: auto;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1000px) {
+  .appointment-form {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .table {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: auto;
+    padding: 1rem;
+  }
+
+  .nav {
+    gap: 1rem;
+  }
+
+  .nav-top {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .nav-bottom {
+    margin-top: 1rem;
+  }
+
+  .main {
+    padding: 15px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .appointment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
