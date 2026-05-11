@@ -429,8 +429,8 @@ const handleStaffSubmit = async (event) => {
     }
     const formData = new FormData(event.target);
 
-    const openingTime = `${openingHour}:${openingMinute}`;
-    const closingTime = `${closingHour}:${closingMinute}`;  
+    const openingTime = formData.get("openingTime");
+    const closingTime = formData.get("closingTime");
 
     if (openingTime > closingTime){
       alert("Closing time must be after opening time.")
@@ -858,15 +858,13 @@ const resetEditClinicPopup = () => {
 
         <h3 className="popup-subheading">Edit Operating Hours</h3>
 
-      <section className="clinic-time-grid">
-        <section className="popup-field-group">
-          <label className="popup-label">
-            Operating Hours
-          </label>
-
-          <section className="operating-hours-row">
+        <section className="clinic-time-grid">
+          <section className="popup-field-group">
+            <label className="popup-label" htmlFor="openingTime">
+              Opening Time
+            </label>
             <input
-              className="popup-input time-inline-input"
+              className="popup-input"
               id="openingTime"
               name="openingTime"
               type="time"
@@ -875,11 +873,14 @@ const resetEditClinicPopup = () => {
               step="60"
               required
             />
+          </section>
 
-            <p className="time-separator">to</p>
-
+          <section className="popup-field-group">
+            <label className="popup-label" htmlFor="closingTime">
+              Closing Time
+            </label>
             <input
-              className="popup-input time-inline-input"
+              className="popup-input"
               id="closingTime"
               name="closingTime"
               type="time"
@@ -890,7 +891,6 @@ const resetEditClinicPopup = () => {
             />
           </section>
         </section>
-      </section>
 
         <footer className="popup-footer">
           <button

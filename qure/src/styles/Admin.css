@@ -395,23 +395,6 @@ body {
   margin-right: 4%;
 }
 
-.operating-hours-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.time-inline-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.time-separator {
-  font-weight: 700;
-  color: #8b0000;
-  white-space: nowrap;
-}
-
 
 @media (max-width: 900px) {
   .admin-page {
