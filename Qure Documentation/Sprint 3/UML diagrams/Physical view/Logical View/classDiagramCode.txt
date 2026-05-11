@@ -1,0 +1,191 @@
+@startuml
+title Qure System - Class Diagram
+
+skinparam classAttributeIconSize 0
+
+' Make class boxes white with rectangular corners
+skinparam classBackgroundColor white
+skinparam classBorderColor black
+skinparam roundcorner 0
+skinparam shadowing false
+
+' Increase spacing between nodes
+skinparam nodesep 90
+skinparam ranksep 100
+
+class SupabaseClient {
+  +auth
+  +from(table)
+  +functions.invoke(name, options)
+}
+
+class AuthService {
+  +signUp(email, password, role)
+  +login(email, password)
+  +loginGoogle()
+  +handleGoogleUser(role)
+  +getUserRole(identifier)
+  +ensureUserProfile(user)
+  +createAdminInvite(email)
+  +sendResetPasswordEmail(email)
+  +updatePassword(newPassword)
+  +logout()
+}
+
+class AdminService {
+  +createClinicStaffInvite(email, clinicId)
+}
+
+class ClinicService {
+  +searchClinics(searchTerm, admin1, facilityType, limit)
+}
+
+class AppointmentService {
+  +generateHourlySlots()
+  +getBookedSlots(clinicId, appointmentDate)
+  +createAppointment(clinicId, appointmentDate, appointmentTime)
+  +getPatientAppointments()
+  +getAllPatientAppointments()
+  +cancelAppointment(appointmentId)
+  +rescheduleAppointment(appointmentId, clinicId, date, time)
+}
+
+class QueueService {
+  +QUEUE_OPEN_TIME
+  +QUEUE_CLOSE_TIME
+  +AVERAGE_CONSULTATION_MINUTES
+  +getTodayDateString()
+  +isQueueOpenNow()
+  +calculateEstimatedWait(position)
+  +getTodayQueueForClinic(clinicId)
+  +getMyQueueEntryForClinic(clinicId)
+  +getMyActiveQueueStatusForToday()
+  +joinQueue(clinicId)
+  +leaveQueue(queueEntryId)
+}
+
+class StaffService {
+  -getLoggedInStaffClinicId()
+  -getProfilesByIds(userIds)
+  -getPatientProfileByEmail(email)
+  +getStaffClinicAndQueue()
+  +updateQueueStatus(id, newStatus)
+  +getClinicAppointments()
+  +staffCreateAppointment(patientEmail, date, time)
+  +staffCancelAppointment(appointmentId)
+  +staffRescheduleAppointment(appointmentId, date, time)
+  +getPatientsForStaffClinic()
+}
+
+class Profile {
+  +id
+  +email
+  +role
+}
+
+class Clinic {
+  +id
+  +facility_name
+  +admin1
+  +facility_type
+  +ownership
+  +lat
+  +lon
+}
+
+class Appointment {
+  +id
+  +patient_user_id
+  +clinic_id
+  +appointment_date
+  +appointment_time
+  +status
+  +created_at
+}
+
+class QueueEntry {
+  +id
+  +clinic_id
+  +patient_id
+  +queue_date
+  +status
+  +joined_at
+  +started_at
+  +completed_at
+  +cancelled_at
+}
+
+class ClinicStaff {
+  +staff_id
+  +clinic_id
+}
+
+class LandingPage
+class Signup
+class Login
+class AuthCallback
+class AdminAuth
+class StaffAuth
+class ResetPasswordPage
+class PatientDashboard
+class BookAppointment
+class AppointmentsPage
+class QueuePage
+class AdminDashboard
+class StaffDashboard
+class ClinicMap
+class ForgotPassword
+
+AuthService --> SupabaseClient
+AdminService --> SupabaseClient
+ClinicService --> SupabaseClient
+AppointmentService --> SupabaseClient
+QueueService --> SupabaseClient
+StaffService --> SupabaseClient
+
+AuthService --> Profile
+AdminService --> ClinicStaff
+ClinicService --> Clinic
+AppointmentService --> Appointment
+AppointmentService --> Clinic
+QueueService --> QueueEntry
+QueueService --> Clinic
+StaffService --> ClinicStaff
+StaffService --> QueueEntry
+StaffService --> Appointment
+StaffService --> Profile
+
+Profile "1" -- "0..*" Appointment : books
+Clinic "1" -- "0..*" Appointment : has
+Profile "1" -- "0..*" QueueEntry : joins
+Clinic "1" -- "0..*" QueueEntry : manages
+Profile "1" -- "0..1" ClinicStaff : staff profile
+Clinic "1" -- "0..*" ClinicStaff : assigned staff
+
+LandingPage --> Signup
+LandingPage --> Login
+Signup --> AuthService
+Login --> AuthService
+Login --> ForgotPassword
+AuthCallback --> AuthService
+AdminAuth --> AuthService
+StaffAuth --> AuthService
+ResetPasswordPage --> AuthService
+
+PatientDashboard --> AppointmentService
+PatientDashboard --> QueueService
+BookAppointment --> ClinicService
+BookAppointment --> AppointmentService
+BookAppointment --> ClinicMap
+AppointmentsPage --> AppointmentService
+QueuePage --> ClinicService
+QueuePage --> QueueService
+QueuePage --> ClinicMap
+
+AdminDashboard --> AuthService
+AdminDashboard --> AdminService
+AdminDashboard --> ClinicService
+AdminDashboard --> SupabaseClient
+
+StaffDashboard --> StaffService
+@enduml
