@@ -395,6 +395,59 @@ body {
   margin-right: 4%;
 }
 
+.profile-option-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem;
+  border: 1px solid #f0d0d0;
+  border-radius: 12px;
+  background-color: #fffafa;
+}
+
+.profile-option-card h3 {
+  margin: 0;
+  color: #8b0000;
+  font-size: 1.1rem;
+}
+
+.activity-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.activity-message {
+  margin: 0;
+  flex: 1;
+}
+
+.activity-time {
+  font-size: 0.85rem;
+  color: #666666;
+  white-space: nowrap;
+}
+
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.admin-modal-overlay .popup-dialog {
+  position: static;
+  transform: none;
+  margin: 0;
+  z-index: 1001;
+}
+
+
 
 @media (max-width: 900px) {
   .admin-page {

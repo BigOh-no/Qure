@@ -55,6 +55,13 @@ function AdminDashboard() {
   const [closingHour, setClosingHour] = useState("23");
   const [closingMinute, setClosingMinute] = useState("59");
 
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
+
+  const [newUsername, setNewUsername] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [profileError, setProfileError] = useState("");
+
+
   
 
   const hours = Array.from({ length: 24 }, (_, i) =>
@@ -162,39 +169,100 @@ const fetchClinics = async () => {
     }
   }, [errorMessage]);
 
-  useEffect(() =>{
+  useEffect(() => {
     const fetchAdminName = async () => {
       const {
-        data: {user},
+        data: { user },
         error,
       } = await supabaseClient.auth.getUser();
 
-      if (error){
+      if (error) {
         console.error(error);
         return;
       }
-      if (user){
-        let displayName = user.user_metadata?.full_name || user.user_metadata?.name;
 
-        if (!displayName && user.email){
-          displayName = user.email.split("@")[0];
-        }
-        setAdminName(displayName || "Admin")
+      if (!user) return;
+
+      let displayName = user.user_metadata?.full_name || user.user_metadata?.name;
+
+      if (!displayName && user.email) {
+        displayName = user.email.split("@")[0];
+      }
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("user_name")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Failed to fetch profile username:", profileError.message);
+      }
+
+      if (profile?.user_name) {
+        setAdminName(profile.user_name);
+        setNewUsername(profile.user_name);
+      } else {
+        setAdminName(displayName || "Admin");
+        setNewUsername("");
       }
     };
+
     fetchAdminName();
   }, []);
 
 
   useEffect(()=> {
     fetchDashboardCounts();
+    fetchRecentActivity();
 
     const intervalId = setInterval(() => {
       fetchDashboardCounts();
+      fetchRecentActivity();
     }, 10000);
 
     return () => clearInterval(intervalId);
   },[]);
+
+  const handleUsernameUpdate = async () => {
+    const trimmedUsername = newUsername.trim();
+
+    if (!trimmedUsername) {
+      setProfileError("Username cannot be empty.");
+      return;
+    }
+
+    setSuccessMessage("");
+    setErrorMessage("");
+    setProfileError("");
+    setIsSavingUsername(true);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseClient.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("No logged-in user found.");
+
+      const { error } = await supabaseClient
+        .from("profiles")
+        .update({ user_name: trimmedUsername })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      setAdminName(trimmedUsername);
+      setShowProfilePopup(false);
+      setSuccessMessage("Username updated successfully.");
+    } catch (error) {
+      console.error("Failed to update username:", error.message);
+      setProfileError("Failed to update username.");
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
 
 
   const fetchDashboardCounts = async () => {
@@ -279,22 +347,40 @@ const fetchClinics = async () => {
     { title: 'Patients Waiting', value: isLoadingStats ? '...': patientsWaiting }
   ];
 
-  const [recentActivity, setRecentActivity] = useState(() => {
+  const [recentActivity, setRecentActivity] = useState([]);
+
+  const fetchRecentActivity = async () => {
     try {
-      const saved = localStorage.getItem("recentActivity");
-      return saved ? JSON.parse(saved) : [];
-    } catch (err) {
-      console.error("Failed to load recent activity:", err);
-      return [];
+      const { data, error } = await supabaseClient
+        .from("recent_activity")
+        .select("message, created_at")
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+
+      setRecentActivity(data || []);
+    } catch (error) {
+      console.error("Failed to fetch recent activity:", error.message);
     }
-  });
+  };
 
-  useEffect(() => {
-    localStorage.setItem("recentActivity", JSON.stringify(recentActivity));
-  }, [recentActivity]);
+  const addRecentActivity = async (message) => {
+    try {
+      const { error } = await supabaseClient
+        .from("recent_activity")
+        .insert([
+          {
+            message: message,
+          },
+        ]);
 
-  const addRecentActivity = (message) => {
-    setRecentActivity((prev) => [message, ...prev].slice(0, 3));
+      if (error) throw error;
+
+      await fetchRecentActivity();
+    } catch (error) {
+      console.error("Failed to add recent activity:", error.message);
+    }
   };
 
   useEffect(() => {
@@ -378,7 +464,7 @@ const handleStaffSubmit = async (event) => {
     setSuccessMessage(
       `Invite sent to ${result.email}. Tell them to check their inbox and set a password.`
     );
-    addRecentActivity(
+    await addRecentActivity(
       `${result.email} added as staff member to ${selectedStaffClinic.facility_name}`
     );
 
@@ -408,7 +494,7 @@ const handleStaffSubmit = async (event) => {
       setSuccessMessage(
         `Tell ${email} to check their inbox to reset their password.`
       );
-      addRecentActivity("New admin added");
+      await addRecentActivity("New admin added");
 
       event.target.reset();
       setShowAdminPopup(false);
@@ -452,7 +538,7 @@ const handleStaffSubmit = async (event) => {
         throw error;
       }
       setSuccessMessage(`Operating hours updated for ${selectedEditClinic.facility_name}.`);
-      addRecentActivity(`${selectedEditClinic.facility_name} hours updated`);
+      await addRecentActivity(`${selectedEditClinic.facility_name} hours updated`);
       await fetchDashboardCounts();
       resetEditClinicPopup();
     } catch (error){
@@ -501,6 +587,56 @@ const resetEditClinicPopup = () => {
   setEditClinicLoading(false);
 };
 
+  const formatActivityDateTime = (dateValue) => {
+    if (!dateValue) return "";
+
+    const date = new Date(dateValue);
+
+    return date.toLocaleString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const openProfilePopup = async () => {
+  setProfileError("");
+  setShowProfilePopup(true);
+
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabaseClient.auth.getUser();
+
+    if (error) throw error;
+    if (!user) return;
+
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("user_name")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Failed to fetch profile username:", profileError.message);
+    }
+
+    setNewUsername(profile?.user_name || "");
+
+    setTimeout(() => {
+      setNewUsername(profile?.user_name || "");
+    }, 100);
+  } catch (error) {
+    console.error(error);
+    setNewUsername("");
+  }
+};
+
+
+
   return (
     <main className="admin-page">
       <aside className="admin-sidebar">
@@ -518,7 +654,7 @@ const resetEditClinicPopup = () => {
                 >
                   Analytics
                 </button></li>
-            <li><button type="button">Profile</button></li>
+            <li><button type="button" onClick={openProfilePopup}>Profile</button></li>
           </ul>
         </nav>
 
@@ -594,162 +730,181 @@ const resetEditClinicPopup = () => {
               <h2>Recent Activity</h2>
             </header>
             <ul className="activity-list">
-              {recentActivity.map((activity, index) => (
-                <li key={index}>{activity}</li>
-              ))}
+              {recentActivity.length === 0 ? (
+                <li>No recent activity yet.</li>
+              ) : (
+                recentActivity.map((activity, index) => (
+                  <li key={index} className="activity-list-item">
+                    <p className="activity-message">{activity.message}</p>
+                    <time className="activity-time" dateTime={activity.created_at}>
+                      {formatActivityDateTime(activity.created_at)}
+                    </time>
+                  </li>
+                ))
+              )}
             </ul>
           </article>
         </section>
 
         {showStaffPopup && (
-          <dialog className="popup-dialog popup-dialog-wide" open>
-            <form className="popup-form" onSubmit={handleStaffSubmit}>
-              <header className="popup-header">
-                <h2>Add Staff Member</h2>
-              </header>
+          <section className="admin-modal-overlay" onClick={resetStaffPopup}>
+            <dialog className="popup-dialog popup-dialog-wide" open onClick={(event) => event.stopPropagation()}>
+              <form className="popup-form" onSubmit={handleStaffSubmit}>
+                <header className="popup-header">
+                  <h2>Add Staff Member</h2>
+                </header>
 
-              <label className="popup-label" htmlFor="staffEmail">
-                Email
-              </label>
-              <input
-                className="popup-input"
-                id="staffEmail"
-                name="staffEmail"
-                type="email"
-                required
-              />
+                <label className="popup-label" htmlFor="staffEmail">
+                  Email
+                </label>
+                <input
+                  className="popup-input"
+                  id="staffEmail"
+                  name="staffEmail"
+                  type="email"
+                  required
+                />
 
-              <section className="clinic-search-section">
-                <h3 className="popup-subheading">Assign Clinic</h3>
+                <section className="clinic-search-section">
+                  <h3 className="popup-subheading">Assign Clinic</h3>
 
-                <section className="clinic-search-grid">
-                  <section className="popup-field-group">
-                    <label className="popup-label" htmlFor="staffClinicSearch">
-                      Search Clinic Name
-                    </label>
-                    <input
-                      className="popup-input"
-                      id="staffClinicSearch"
-                      type="text"
-                      value={staffClinicSearch}
-                      onChange={(event) => setStaffClinicSearch(event.target.value)}
-                      placeholder="Type clinic name"
-                    />
+                  <section className="clinic-search-grid">
+                    <section className="popup-field-group">
+                      <label className="popup-label" htmlFor="staffClinicSearch">
+                        Search Clinic Name
+                      </label>
+                      <input
+                        className="popup-input"
+                        id="staffClinicSearch"
+                        type="text"
+                        value={staffClinicSearch}
+                        onChange={(event) => setStaffClinicSearch(event.target.value)}
+                        placeholder="Type clinic name"
+                      />
+                    </section>
+
+                    <section className="popup-field-group">
+                      <label className="popup-label" htmlFor="staffProvince">
+                        Province
+                      </label>
+                      <select
+                        className="popup-input"
+                        id="staffProvince"
+                        value={staffProvince}
+                        onChange={(event) => setStaffProvince(event.target.value)}
+                      >
+                        <option value="">Select Province</option>
+                        {provinces.map((province) => (
+                          <option key={province} value={province}>
+                            {province}
+                          </option>
+                        ))}
+                      </select>
+                    </section>
+
+                    <section className="popup-field-group">
+                      <label className="popup-label" htmlFor="staffFacilityType">
+                        Facility Type
+                      </label>
+                      <select
+                        className="popup-input"
+                        id="staffFacilityType"
+                        value={staffFacilityType}
+                        onChange={(event) => setStaffFacilityType(event.target.value)}
+                      >
+                        <option value="">Select Facility Type</option>
+                        {facilityTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </section>
                   </section>
 
-                  <section className="popup-field-group">
-                    <label className="popup-label" htmlFor="staffProvince">
-                      Province
-                    </label>
-                    <select
-                      className="popup-input"
-                      id="staffProvince"
-                      value={staffProvince}
-                      onChange={(event) => setStaffProvince(event.target.value)}
-                    >
-                      <option value="">Select Province</option>
-                      {provinces.map((province) => (
-                        <option key={province} value={province}>
-                          {province}
-                        </option>
-                      ))}
-                    </select>
-                  </section>
+                  {staffClinicLoading && (
+                    <p className="popup-status-message">Searching clinics...</p>
+                  )}
 
-                  <section className="popup-field-group">
-                    <label className="popup-label" htmlFor="staffFacilityType">
-                      Facility Type
-                    </label>
-                    <select
-                      className="popup-input"
-                      id="staffFacilityType"
-                      value={staffFacilityType}
-                      onChange={(event) => setStaffFacilityType(event.target.value)}
-                    >
-                      <option value="">Select Facility Type</option>
-                      {facilityTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </section>
+                  {staffClinicError && (
+                    <p className="popup-error-message">{staffClinicError}</p>
+                  )}
+
+                  <section className="popup-results-box" aria-label="Clinic search results">
+
+                    {staffClinicSearch.trim() !== "" || staffProvince || staffFacilityType ? (
+                      staffClinicResults.length === 0 ? (
+                        <p className="popup-empty-message">No clinics found.</p>
+                      ) : (
+                        staffClinicResults.map((clinic) => (
+                          <article
+                            key={clinic.id}
+                            className={`popup-clinic-card ${
+                              selectedStaffClinic?.id === clinic.id
+                                ? "popup-clinic-card-selected"
+                                : ""
+                            }`}
+                          >
+                            <section className="popup-clinic-info">
+                              <p><strong>Name:</strong> {clinic.facility_name}</p>
+                              <p><strong>Province:</strong> {clinic.admin1}</p>
+                              <p><strong>Type:</strong> {clinic.facility_type}</p>
+                            </section>
+
+                            <button
+                              type="button"
+                              className="popup-select-btn"
+                              onClick={() => {
+                                setSelectedStaffClinic(clinic);
+                                setStaffProvince(clinic.admin1 || "");
+                                setStaffFacilityType(clinic.facility_type || "");
+
+                              }}
+                            >
+                              {selectedStaffClinic?.id === clinic.id ? "Selected" : "Select"}
+                            </button>
+                          </article>
+                        ))
+                      )
+                    ) : null}
+                    </section>
+        
+
+                  {selectedStaffClinic && (
+                    <p className="selected-clinic-note">
+                      Selected clinic: <strong>{selectedStaffClinic.facility_name}</strong>
+                    </p>
+                  )}
                 </section>
 
-                {staffClinicLoading && (
-                  <p className="popup-status-message">Searching clinics...</p>
-                )}
-
-                {staffClinicError && (
-                  <p className="popup-error-message">{staffClinicError}</p>
-                )}
-
-                <section className="popup-results-box" aria-label="Clinic search results">
-
-                  {staffClinicSearch.trim() !== "" || staffProvince || staffFacilityType ? (
-                    staffClinicResults.length === 0 ? (
-                      <p className="popup-empty-message">No clinics found.</p>
-                    ) : (
-                      staffClinicResults.map((clinic) => (
-                        <article
-                          key={clinic.id}
-                          className={`popup-clinic-card ${
-                            selectedStaffClinic?.id === clinic.id
-                              ? "popup-clinic-card-selected"
-                              : ""
-                          }`}
-                        >
-                          <section className="popup-clinic-info">
-                            <p><strong>Name:</strong> {clinic.facility_name}</p>
-                            <p><strong>Province:</strong> {clinic.admin1}</p>
-                            <p><strong>Type:</strong> {clinic.facility_type}</p>
-                          </section>
-
-                          <button
-                            type="button"
-                            className="popup-select-btn"
-                            onClick={() => {
-                              setSelectedStaffClinic(clinic);
-                              setStaffProvince(clinic.admin1 || "");
-                              setStaffFacilityType(clinic.facility_type || "");
-
-                            }}
-                          >
-                            {selectedStaffClinic?.id === clinic.id ? "Selected" : "Select"}
-                          </button>
-                        </article>
-                      ))
-                    )
-                  ) : null}
-                  </section>
-      
-
-                {selectedStaffClinic && (
-                  <p className="selected-clinic-note">
-                    Selected clinic: <strong>{selectedStaffClinic.facility_name}</strong>
-                  </p>
-                )}
-              </section>
-
-              <footer className="popup-footer">
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={resetStaffPopup}
-                >
-                  Cancel
+                <footer className="popup-footer">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={resetStaffPopup}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="save-btn" disabled={isSavingStaff}>
+                    {isSavingStaff ? "Saving..." : "Save Staff"}
                 </button>
-                <button type="submit" className="save-btn" disabled={isSavingStaff}>
-                  {isSavingStaff ? "Saving..." : "Save Staff"}
-              </button>
-              </footer>
-            </form>
-          </dialog>
+                </footer>
+              </form>
+            </dialog>
+          </section> 
         )}
 
         {showAdminPopup && (
-          <dialog className="popup-dialog" open>
-            <form className="popup-form" onSubmit={handleAdminSubmit}>
+          <section
+            className="admin-modal-overlay"
+            onClick={() => setShowAdminPopup(false)}
+          >
+            <dialog
+              className="popup-dialog"
+              open
+              onClick={(event) => event.stopPropagation()}
+            >
+              <form className="popup-form" onSubmit={handleAdminSubmit}>
               <header className="popup-header">
                 <h2>Add Admin</h2>
               </header>
@@ -784,13 +939,19 @@ const resetEditClinicPopup = () => {
               </footer>
             </form>
           </dialog>
+        </section>
         )}
 
                
 
   {showClinicPopup && (
-    <dialog className="popup-dialog popup-dialog-wide" open>
-      <form className="popup-form" onSubmit={handleClinicSubmit}>
+    <section className="admin-modal-overlay" onClick={resetEditClinicPopup}>
+      <dialog
+        className="popup-dialog popup-dialog-wide"
+        open
+        onClick={(event) => event.stopPropagation()}
+      >
+        <form className="popup-form" onSubmit={handleClinicSubmit}>
         <header className="popup-header">
           <h2>Edit Clinic Hours</h2>
         </header>
@@ -906,95 +1067,113 @@ const resetEditClinicPopup = () => {
         </footer>
       </form>
     </dialog>
+  </section>
   )}
 
-        {showStaffList && (
-  <dialog className="popup-dialog" open>
-    <form className="popup-form">
-      <header className="popup-header">
-        <h2>Staff Members</h2>
-      </header>
-      <input
-        className="popup-input"
-        type="text"
-        placeholder="Search staff..."
-        value={staffSearch}
-        onChange={async (e) => {
-          const value = e.target.value;
-          setStaffSearch(value);
-
-          const searchTerm = value.trim();
-
-          if (searchTerm.length >= 1) {
-            setLoadingStaff(true);
-
-            
-            const { data: startsWithData } = await supabaseClient
-              .from("profiles")
-              .select("email, role")
-              .eq("role", "clinicstaff")
-              .ilike("email", `${searchTerm}%`)
-              .limit(20);
-
-            
-            const { data: containsData } = await supabaseClient
-              .from("profiles")
-              .select("email, role")
-              .eq("role", "clinicstaff")
-              .ilike("email", `%${searchTerm}%`)
-              .limit(50);
-
-            
-            const allStaff = [...(startsWithData || []), ...(containsData || [])];
-
-            const uniqueStaff = allStaff.filter(
-              (staff, index, self) =>
-                index === self.findIndex((s) => s.email === staff.email)
-            );
-
-            setStaffList(uniqueStaff);
-            setLoadingStaff(false);
-          } else {
-            setStaffList([]);
-          }
-        }}
-      />
-      {loadingStaff ? (
-        <p>Loading...</p>
-      ) : (
-        <ul className="activity-list">
-          {staffList
-            .filter((s) => s.email.toLowerCase().includes(staffSearch.toLowerCase()))
-            .map((staff, index) => (
-  <li key={index} className="staff-list-item">
-    <span>{staff.email}</span>
-    <button
-      type="button"
-      className="remove-btn"
-     onClick={() => setStaffToRemove(staff.email)}
+  {showStaffList && (
+    <section
+      className="admin-modal-overlay"
+      onClick={() => setShowStaffList(false)}
     >
-      Remove
-    </button>
-  </li>
-))}
-        </ul>
-      )}
-      <footer className="popup-footer">
-        <button
-          type="button"
-          className="cancel-btn"
-          onClick={() => setShowStaffList(false)}
-        >
-          Close
-        </button>
-      </footer>
-    </form>
-  </dialog>
-)}
+      <dialog
+        className="popup-dialog"
+        open
+        onClick={(event) => event.stopPropagation()}
+      >
+        <form className="popup-form">
+        <header className="popup-header">
+          <h2>Staff Members</h2>
+        </header>
+        <input
+          className="popup-input"
+          type="text"
+          placeholder="Search staff..."
+          value={staffSearch}
+          onChange={async (e) => {
+            const value = e.target.value;
+            setStaffSearch(value);
+
+            const searchTerm = value.trim();
+
+            if (searchTerm.length >= 1) {
+              setLoadingStaff(true);
+
+              
+              const { data: startsWithData } = await supabaseClient
+                .from("profiles")
+                .select("email, role")
+                .eq("role", "clinicstaff")
+                .ilike("email", `${searchTerm}%`)
+                .limit(20);
+
+              
+              const { data: containsData } = await supabaseClient
+                .from("profiles")
+                .select("email, role")
+                .eq("role", "clinicstaff")
+                .ilike("email", `%${searchTerm}%`)
+                .limit(50);
+
+              
+              const allStaff = [...(startsWithData || []), ...(containsData || [])];
+
+              const uniqueStaff = allStaff.filter(
+                (staff, index, self) =>
+                  index === self.findIndex((s) => s.email === staff.email)
+              );
+
+              setStaffList(uniqueStaff);
+              setLoadingStaff(false);
+            } else {
+              setStaffList([]);
+            }
+          }}
+        />
+        {loadingStaff ? (
+          <p>Loading...</p>
+        ) : (
+          <ul className="activity-list">
+            {staffList
+              .filter((s) => s.email.toLowerCase().includes(staffSearch.toLowerCase()))
+              .map((staff, index) => (
+    <li key={index} className="staff-list-item">
+      <span>{staff.email}</span>
+      <button
+        type="button"
+        className="remove-btn"
+      onClick={() => setStaffToRemove(staff.email)}
+      >
+        Remove
+      </button>
+    </li>
+  ))}
+          </ul>
+        )}
+        <footer className="popup-footer">
+          <button
+            type="button"
+            className="cancel-btn"
+            onClick={() => setShowStaffList(false)}
+          >
+            Close
+          </button>
+        </footer>
+      </form>
+    </dialog>
+  </section>
+  )}
 
 {showClinicList && (
-  <dialog className="popup-dialog" open>
-    <form className="popup-form">
+  <section
+    className="admin-modal-overlay"
+    onClick={() => setShowClinicList(false)}
+  >
+    <dialog
+      className="popup-dialog"
+      open
+      onClick={(event) => event.stopPropagation()}
+    >
+      <form className="popup-form">
       <header className="popup-header">
         <h2>Clinics</h2>
       </header>
@@ -1065,10 +1244,20 @@ const resetEditClinicPopup = () => {
       </footer>
       </form>
       </dialog>
+    </section>
     )}
-    {staffToRemove && (
-  <dialog className="popup-dialog" open>
-    <section className="popup-form">
+
+  {staffToRemove && (
+    <section
+      className="admin-modal-overlay"
+      onClick={() => setStaffToRemove(null)}
+    >
+      <dialog
+        className="popup-dialog"
+        open
+        onClick={(event) => event.stopPropagation()}
+      >
+      <section className="popup-form">
       <header className="popup-header">
         <h2>Confirm Removal</h2>
       </header>
@@ -1094,7 +1283,141 @@ const resetEditClinicPopup = () => {
       </footer>
     </section>
   </dialog>
+</section>
 )}
+
+{showProfilePopup && (
+  <section
+    className="admin-modal-overlay"
+    onClick={() => setShowProfilePopup(false)}
+  >
+    <dialog
+      className="popup-dialog"
+      open
+      onClick={(event) => event.stopPropagation()}
+    >
+      <form className="popup-form" autoComplete="off">
+        <header className="popup-header">
+          <h2>Profile Settings</h2>
+        </header>
+
+        <input
+          type="text"
+          name="hiddenAdminUsername"
+          autoComplete="username"
+          tabIndex="-1"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            width: "1px",
+            height: "1px",
+            opacity: 0,
+          }}
+        />
+
+        <input
+          type="password"
+          name="hiddenAdminPassword"
+          autoComplete="current-password"
+          tabIndex="-1"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            width: "1px",
+            height: "1px",
+            opacity: 0,
+          }}
+        />
+
+        <section className="profile-option-card">
+          <h3>Change Username</h3>
+
+          <label className="popup-label" htmlFor="adminDisplayNameInput">
+            New Username
+          </label>
+
+          <input
+            className="popup-input"
+            id="adminDisplayNameInput"
+            name="adminDisplayNameInputNoAutoFill"
+            type="text"
+            placeholder="Enter new username"
+            value={newUsername}
+            autoComplete="new-password"
+            spellCheck="false"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            onChange={(event) => setNewUsername(event.target.value)}
+          />
+
+          {profileError && (
+            <p className="admin-error-message">{profileError}</p>
+          )}
+
+          <button
+            type="button"
+            className="save-btn"
+            onClick={handleUsernameUpdate}
+            disabled={isSavingUsername}
+          >
+            {isSavingUsername ? "Updating..." : "Update Username"}
+          </button>
+        </section>
+
+        <section className="profile-option-card">
+          <h3>Change Password</h3>
+
+          <label className="popup-label" htmlFor="adminNewPasswordInput">
+            New Password
+          </label>
+
+          <input
+            className="popup-input"
+            id="adminNewPasswordInput"
+            name="adminNewPasswordInputNoAutofill"
+            type="password"
+            placeholder="Enter new password"
+            autoComplete="new-password"
+            data-lpignore="true"
+            data-1p-ignore="true"
+          />
+
+          <label className="popup-label" htmlFor="adminConfirmPasswordInput">
+            Confirm Password
+          </label>
+
+          <input
+            className="popup-input"
+            id="adminConfirmPasswordInput"
+            name="adminConfirmPasswordInputNoAutofill"
+            type="password"
+            placeholder="Confirm new password"
+            autoComplete="new-password"
+            data-lpignore="true"
+            data-1p-ignore="true"
+          />
+
+          <button type="button" className="save-btn">
+            Update Password
+          </button>
+        </section>
+
+        <footer className="popup-footer">
+          <button
+            type="button"
+            className="cancel-btn"
+            onClick={() => setShowProfilePopup(false)}
+          >
+            Close
+          </button>
+        </footer>
+      </form>
+    </dialog>
+  </section>
+)}
+
       </section>
     </main>
   );

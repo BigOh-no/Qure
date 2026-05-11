@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/staff.css";
 import logo from "../assets/images/TLogo.png";
+import { supabaseClient } from "../lib/supabaseClient";
 
 import {
   getStaffClinicAndQueue,
@@ -32,7 +33,52 @@ export default function StaffDashboard() {
 
   const [message, setMessage] = useState("");
 
+  const [staffName, setStaffName] = useState("Staff");
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [profileError, setProfileError] = useState("");
+
+  async function loadStaffName() {
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabaseClient.auth.getUser();
+
+      if (error) throw error;
+      if (!user) return;
+
+      let displayName = user.user_metadata?.full_name || user.user_metadata?.name;
+
+      if (!displayName && user.email) {
+        displayName = user.email.split("@")[0];
+      }
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("user_name")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Failed to fetch staff username:", profileError.message);
+      }
+
+      if (profile?.user_name) {
+        setStaffName(profile.user_name);
+        setNewUsername(profile.user_name);
+      } else {
+        setStaffName(displayName || "Staff");
+        setNewUsername("");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   useEffect(() => {
+    loadStaffName();
     loadStaffQueue();
     loadAppointments();
   }, []);
@@ -242,6 +288,80 @@ export default function StaffDashboard() {
     return "status";
   }
 
+  async function handleUsernameUpdate() {
+    const trimmedUsername = newUsername.trim();
+
+    if (!trimmedUsername) {
+      setProfileError("Username cannot be empty.");
+      return;
+    }
+
+    setProfileError("");
+    setIsSavingUsername(true);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseClient.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("No logged-in user found.");
+
+      const { error } = await supabaseClient
+        .from("profiles")
+        .update({ user_name: trimmedUsername })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      setStaffName(trimmedUsername);
+      setShowProfilePopup(false);
+      showMessage("Username updated successfully.");
+    } catch (err) {
+      console.error("Failed to update username:", err.message);
+      setProfileError("Failed to update username.");
+    } finally {
+      setIsSavingUsername(false);
+    }
+  }
+
+  async function openProfilePopup() {
+    setProfileError("");
+    setShowProfilePopup(true);
+
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabaseClient.auth.getUser();
+
+      if (error) throw error;
+      if (!user) return;
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("user_name")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Failed to fetch profile username:", profileError.message);
+      }
+
+      setNewUsername(profile?.user_name || "");
+
+      setTimeout(() => {
+        setNewUsername(profile?.user_name || "");
+      }, 100);
+    } catch (err) {
+      console.error(err);
+      setNewUsername("");
+    }
+  }
+
+
+
   return (
     <main className="layout">
       <aside className="sidebar">
@@ -258,7 +378,7 @@ export default function StaffDashboard() {
             <button
               type="button"
               className="nav-item"
-              
+              onClick={openProfilePopup}
             >
               Profile
             </button>
@@ -279,6 +399,7 @@ export default function StaffDashboard() {
       <section className="main">
         <header className="topbar">
           <h1 className="topbar-title">Staff Dashboard</h1>
+          <p className="topbar-subtitle">Welcome back, {staffName}</p>
           <p className="topbar-subtitle">{clinic || "Loading..."}</p>
         </header>
 
@@ -516,6 +637,132 @@ export default function StaffDashboard() {
             </tbody>
           </table>
         </article>
+      {showProfilePopup && (
+        <section
+          className="staff-modal-overlay"
+          onClick={() => setShowProfilePopup(false)}
+        >
+          <section
+            className="staff-profile-popup"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="popup-header">
+              <h2>Profile Settings</h2>
+            </header>
+
+            <input
+              type="text"
+              name="hiddenStaffUsername"
+              autoComplete="username"
+              tabIndex="-1"
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: "-9999px",
+                width: "1px",
+                height: "1px",
+                opacity: 0,
+              }}
+            />
+
+            <input
+              type="password"
+              name="hiddenStaffPassword"
+              autoComplete="current-password"
+              tabIndex="-1"
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: "-9999px",
+                width: "1px",
+                height: "1px",
+                opacity: 0,
+              }}
+            />
+
+            <section className="profile-option-card">
+              <h3>Change Username</h3>
+
+              <label className="popup-label" htmlFor="staffDisplayNameInput">
+                New Username
+              </label>
+
+              <input
+                className="popup-input"
+                id="staffDisplayNameInput"
+                name="staffDisplayNameInputNoAutoFill"
+                type="text"
+                placeholder="Enter new username"
+                value={newUsername}
+                autoComplete="new-password"
+                spellCheck="false"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                onChange={(event) => setNewUsername(event.target.value)}
+              />
+
+              {profileError && <p className="staff-error-message">{profileError}</p>}
+
+              <button
+                type="button"
+                className="save-btn"
+                onClick={handleUsernameUpdate}
+                disabled={isSavingUsername}
+              >
+                {isSavingUsername ? "Updating..." : "Update Username"}
+              </button>
+            </section>
+
+            <section className="profile-option-card">
+              <h3>Change Password</h3>
+
+              <label className="popup-label" htmlFor="staffNewPasswordInput">
+                New Password
+              </label>
+
+              <input
+                className="popup-input"
+                id="staffNewPasswordInput"
+                name="staffNewPasswordInputNoAutofill"
+                type="password"
+                placeholder="Enter new password"
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-1p-ignore="true"
+              />
+
+              <label className="popup-label" htmlFor="staffConfirmPasswordInput">
+                Confirm Password
+              </label>
+
+              <input
+                className="popup-input"
+                id="staffConfirmPasswordInput"
+                name="staffConfirmPasswordInputNoAutofill"
+                type="password"
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-1p-ignore="true"
+              />
+
+              <button type="button" className="save-btn">
+                Update Password
+              </button>
+            </section>
+
+            <footer className="popup-footer">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setShowProfilePopup(false)}
+              >
+                Close
+              </button>
+            </footer>
+          </section>
+        </section>
+      )}
       </section>
     </main>
   );
