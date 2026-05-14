@@ -417,6 +417,35 @@
   }
 }
 
+.profile-popup {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+  animation: fadeInModal 0.2s ease;
+}
+
+.profile-option-card {
+  background-color: #fff5f5;
+  border: 1px solid #f0caca;
+  border-radius: 14px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.profile-option-card h4 {
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+  color: #8b0000;
+}
+
+.profile-option-card .action-btn {
+  width: 100%;
+  max-width: none;
+}
+
 
 /* MOBILE */
 
