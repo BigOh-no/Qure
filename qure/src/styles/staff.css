@@ -423,6 +423,22 @@
   opacity: 0.8;
   transform: none;
 }
+.btn:disabled {
+  background: #d9d9d9 !important;
+  color: #666666 !important;
+  cursor: not-allowed;
+  opacity: 0.8;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn:disabled:hover {
+  background: #d9d9d9 !important;
+  color: #666666 !important;
+  cursor: not-allowed;
+  opacity: 0.8;
+  transform: none;
+}
 
 /* RESPONSIVE DESIGN */
 @media (max-width: 1000px) {
