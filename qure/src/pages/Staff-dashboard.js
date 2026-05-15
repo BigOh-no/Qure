@@ -106,7 +106,13 @@ export default function StaffDashboard() {
       setAppointmentsLoading(true);
 
       const data = await getClinicAppointments();
-      setAppointments(data || []);
+
+      const visibleAppointments = (data || []).filter(
+        (appointment) =>
+          !hasAppointmentPassedByOneMonth(appointment.appointment_date)
+      );
+
+      setAppointments(visibleAppointments);
     } catch (err) {
       console.error(err);
     } finally {
@@ -207,6 +213,19 @@ export default function StaffDashboard() {
 
       return now > oneHourAfterAppointment;
     }
+
+    function hasAppointmentPassedByOneMonth(appointmentDate) {
+      if (!appointmentDate) return false;
+
+      const appointmentDateOnly = new Date(appointmentDate);
+      const oneMonthAfterAppointment = new Date(appointmentDateOnly);
+      oneMonthAfterAppointment.setMonth(oneMonthAfterAppointment.getMonth() + 1);
+
+      const now = new Date();
+
+      return now > oneMonthAfterAppointment;
+    }
+
     async function handleCheckInAppointment(appointmentId) {
       try {
         const updatedAppointment = await staffCheckInAppointment(appointmentId);
@@ -610,8 +629,16 @@ export default function StaffDashboard() {
                   <td colSpan="6">No appointments found</td>
                 </tr>
               ) : (
-                appointments.map((appointment) => (
-                  <tr key={appointment.id}>
+                appointments.map((appointment) => {
+                  const isLocked =
+                    appointment.status?.toLowerCase().trim() === "cancelled" ||
+                    hasAppointmentPassedByOneHour(
+                      appointment.appointment_date,
+                      appointment.appointment_time
+                    );
+
+                  return (
+                    <tr key={appointment.id}>
                     <td>{appointment.patient_email || "Email not found"}</td>
 
                     <td>
@@ -689,28 +716,29 @@ export default function StaffDashboard() {
                         </>
                       ) : (
                         <>
-                          <button
-                            type="button"
-                            className="btn start"
-                            onClick={() => startReschedule(appointment)}
-                          >
-                            Reschedule
-                          </button>
+                      <button
+                        type="button"
+                        className="btn start"
+                        onClick={() => startReschedule(appointment)}
+                        disabled={isLocked}
+                      >
+                        Reschedule
+                      </button>
 
-                          <button
-                            type="button"
-                            className="btn logout"
-                            onClick={() =>
-                              handleCancelAppointment(appointment.id)
-                            }
-                          >
-                            Cancel
-                          </button>
+                      <button
+                        type="button"
+                        className="btn logout"
+                        onClick={() => handleCancelAppointment(appointment.id)}
+                        disabled={isLocked}
+                      >
+                        Cancel
+                      </button>
                         </>
                       )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
