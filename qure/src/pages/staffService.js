@@ -207,6 +207,24 @@ export async function staffCreateAppointment({
     const clinicId = await getLoggedInStaffClinicId();
     const patientProfile = await getPatientProfileByEmail(patientEmail);
 
+    const { data: existingAppointment, error: existingError } =
+      await supabaseClient
+        .from("appointments")
+        .select("id, status")
+        .eq("clinic_id", clinicId)
+        .eq("appointment_date", appointmentDate)
+        .eq("appointment_time", appointmentTime)
+        .in("status", ["booked", "checked_in"])
+        .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    if (existingAppointment) {
+      throw new Error(
+        "This appointment slot is already booked or checked in."
+      );
+    }
+
     const { data, error } = await supabaseClient
       .from("appointments")
       .insert([
@@ -229,7 +247,37 @@ export async function staffCreateAppointment({
     };
   } catch (err) {
     console.error(err);
-    return null;
+    throw err;
+  }
+}
+
+export async function staffCheckInAppointment(appointmentId) {
+  try {
+    const clinicId = await getLoggedInStaffClinicId();
+
+    const { data, error } = await supabaseClient
+      .from("appointments")
+      .update({ status: "checked_in" })
+      .eq("id", appointmentId)
+      .eq("clinic_id", clinicId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Check-in error:", error.message);
+      throw error;
+    }
+
+    const profileMap = await getProfilesByIds([data.patient_user_id]);
+    const profile = profileMap[data.patient_user_id];
+
+    return {
+      ...data,
+      patient_email: profile?.email || "Email not found",
+    };
+  } catch (err) {
+    console.error("Could not check in appointment:", err);
+    throw err;
   }
 }
 

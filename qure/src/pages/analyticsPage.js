@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabaseClient } from "../lib/supabaseClient";
 import "../styles/Admin.css";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function AnalyticsPage() {
   const navigate = useNavigate();
@@ -33,6 +35,20 @@ function AnalyticsPage() {
     setLoading(false);
   };
 
+  // Calculates the average patient wait time.
+  // Wait time is measured from when a patient joins the queue until they start consultation.
+  // This uses the "joined_at" time and the "started_at" time from the queue_entries table.
+  //
+  // Formula:
+  // wait time for one patient = started_at - joined_at
+  // average wait time = total wait time / number of patients
+  //
+  // In this code:
+  // waitMinutes = the number of minutes between joined_at and started_at
+  // totalWait = the sum of all wait times for a clinic and time of day
+  // count = the number of patients included in that clinic/time-of-day group
+  // averageWait = totalWait / count
+
   const fetchAverageWaitTimes = async () => {
     const { data, error } = await supabaseClient
       .from("queue_entries")
@@ -63,6 +79,11 @@ function AnalyticsPage() {
       const started = new Date(entry.started_at);
 
       const waitMinutes = Math.round((started - joined) / 60000);
+
+      if (waitMinutes < 0) {
+        return;
+      }
+
       const hour = joined.getHours();
 
       let timeOfDay = "";
@@ -99,24 +120,59 @@ function AnalyticsPage() {
     setWaitTimes(result);
   };
 
+  // Calculates the appointment no-show rate.
+  // Only appointments that are more than 1 hour past their appointment time are included.
+  // An appointment is counted as a no-show if its status is still "booked".
+  // An appointment is counted as attended if its status is "checked_in".
+  //
+  // Formula:
+  // No-show rate = (number of no-shows / total relevant appointments) * 100
+  //
+  // In this code:
+  // noShowCount = appointments with status "booked"
+  // checkedInCount = appointments with status "checked_in"
+  // totalRelevantAppointments = noShowCount + checkedInCount
   const fetchNoShowRate = async () => {
     const { data, error } = await supabaseClient
       .from("appointments")
-      .select("id, status");
+      .select("id, appointment_date, appointment_time, status");
 
     if (error) {
       console.error("No-show error:", error);
       return;
     }
 
-    const totalAppointments = data.length;
-    const noShows = data.filter(
-      (appointment) => appointment.status === "no-show"
+    const now = new Date();
+
+    const eligibleAppointments = data.filter((appointment) => {
+      if (!appointment.appointment_date || !appointment.appointment_time) {
+        return false;
+      }
+
+      const appointmentDateTime = new Date(
+        `${appointment.appointment_date}T${appointment.appointment_time}`
+      );
+
+      const oneHourAfterAppointment = new Date(
+        appointmentDateTime.getTime() + 60 * 60 * 1000
+      );
+
+      return now > oneHourAfterAppointment;
+    });
+
+    const checkedInCount = eligibleAppointments.filter(
+      (appointment) => appointment.status === "checked_in"
     ).length;
 
+    const noShowCount = eligibleAppointments.filter(
+      (appointment) => appointment.status === "booked"
+    ).length;
+
+    const totalRelevantAppointments = checkedInCount + noShowCount;
+
     const rate =
-      totalAppointments > 0
-        ? Math.round((noShows / totalAppointments) * 100)
+      totalRelevantAppointments > 0
+        ? Math.round((noShowCount / totalRelevantAppointments) * 100)
         : 0;
 
     setNoShowRate(rate);
@@ -145,39 +201,50 @@ function AnalyticsPage() {
   const exportCSV = () => {
     const rows = [];
 
-    rows.push(["Report", "Clinic / Metric", "Time of Day", "Value"]);
+    const today = new Date().toLocaleDateString("en-GB");
 
-    waitTimes.forEach((item) => {
-      rows.push([
-        "Average Patient Wait Times",
-        item.clinic,
-        item.timeOfDay,
-        `${item.averageWait} minutes`,
-      ]);
-    });
+    rows.push([`Analytics Report for Qure`]);
+    rows.push([`Date: ${today}`]);
+    rows.push([]);
 
-    rows.push(["Appointment No-Show Rate", "No-show rate", "-", noShowRate + "%"]);
+    rows.push(["Average Patient Wait Times"]);
+    rows.push(["Clinic", "Time of Day", "Average Wait Time"]);
 
-    rows.push(["Queue Status Summary", "Waiting", "-", queueSummary.waiting]);
-    rows.push(["Queue Status Summary", "Completed", "-", queueSummary.completed]);
-    rows.push(["Queue Status Summary", "Cancelled", "-", queueSummary.cancelled]);
-    rows.push([
-      "Queue Status Summary",
-      "Total Queue Entries",
-      "-",
-      queueSummary.total,
-    ]);
+    if (waitTimes.length === 0) {
+      rows.push(["No wait-time data available yet."]);
+    } else {
+      waitTimes.forEach((item) => {
+        rows.push([
+          item.clinic,
+          item.timeOfDay,
+          `${item.averageWait} minutes`,
+        ]);
+      });
+    }
+
+    rows.push([]);
+
+    rows.push(["Appointment No-Show Rate"]);
+    rows.push(["No-show rate", `${noShowRate}%`]);
+
+    rows.push([]);
+
+    rows.push(["Queue Status Summary"]);
+    rows.push(["Waiting", queueSummary.waiting]);
+    rows.push(["Completed", queueSummary.completed]);
+    rows.push(["Cancelled", queueSummary.cancelled]);
+    rows.push(["Total Queue Entries", queueSummary.total]);
 
     const csvContent = rows
-        .map((row) =>
-            row
-            .map((cell) => {
-                const value = String(cell).replace(/"/g, '""');
-                return '"' + value + '"';
-            })
-            .join(",")
-        )
-        .join("\n");
+      .map((row) =>
+        row
+          .map((cell) => {
+            const value = String(cell ?? "").replace(/"/g, '""');
+            return `"${value}"`;
+          })
+          .join(",")
+      )
+      .join("\n");
 
     const blob = new Blob([csvContent], {
       type: "text/csv;charset=utf-8;",
@@ -187,10 +254,118 @@ function AnalyticsPage() {
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "analytics-report.csv";
+    link.download = `qure-analytics-report-${today}.csv`;
     link.click();
 
     URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+
+    const today = new Date().toLocaleDateString("en-GB");
+
+    const darkRed = [139, 0, 0];
+    const lightRed = [255, 245, 245];
+
+    doc.setFillColor(...darkRed);
+    doc.rect(0, 0, 210, 28, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.text("Analytics Report for Qure", 14, 18);
+
+    doc.setFontSize(10);
+    doc.text(`Date: ${today}`, 150, 18);
+
+    doc.setTextColor(0, 0, 0);
+
+    let y = 40;
+
+    doc.setFontSize(15);
+    doc.setTextColor(...darkRed);
+    doc.text("Average Patient Wait Times", 14, y);
+
+    y += 6;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Clinic", "Time of Day", "Average Wait Time"]],
+      body:
+        waitTimes.length === 0
+          ? [["No wait-time data available yet.", "-", "-"]]
+          : waitTimes.map((item) => [
+              item.clinic,
+              item.timeOfDay,
+              `${item.averageWait} minutes`,
+            ]),
+      headStyles: {
+        fillColor: darkRed,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: lightRed,
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 4,
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    y = doc.lastAutoTable.finalY + 15;
+
+    doc.setFontSize(15);
+    doc.setTextColor(...darkRed);
+    doc.text("Appointment No-Show Rate", 14, y);
+
+    y += 8;
+
+    doc.setFillColor(255, 245, 245);
+    doc.roundedRect(14, y, 70, 18, 3, 3, "F");
+
+    doc.setTextColor(...darkRed);
+    doc.setFontSize(22);
+    doc.text(`${noShowRate}%`, 20, y + 12);
+
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text("No-show rate", 45, y + 12);
+
+    y += 35;
+
+    doc.setFontSize(15);
+    doc.setTextColor(...darkRed);
+    doc.text("Queue Status Summary", 14, y);
+
+    y += 6;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Status", "Count"]],
+      body: [
+        ["Waiting", queueSummary.waiting],
+        ["Completed", queueSummary.completed],
+        ["Cancelled", queueSummary.cancelled],
+        ["Total Queue Entries", queueSummary.total],
+      ],
+      headStyles: {
+        fillColor: darkRed,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: lightRed,
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 4,
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.save(`qure-analytics-report-${today}.pdf`);
   };
 
   return (
@@ -200,13 +375,23 @@ function AnalyticsPage() {
           <h1>Analytics Dashboard</h1>
           <p>Reports and insights</p>
 
-          <button
-            type="button"
-            className="action-btn1"
-            onClick={exportCSV}
-          >
-            Export CSV
-          </button>
+          <section className="export-buttons">
+            <button
+              type="button"
+              className="action-btn1"
+              onClick={exportCSV}
+            >
+              Export CSV
+            </button>
+
+            <button
+              type="button"
+              className="action-btn1"
+              onClick={exportPDF}
+            >
+              Export PDF
+            </button>
+          </section>
 
           <button
             type="button"
