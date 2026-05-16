@@ -146,42 +146,57 @@ function AdminDashboard() {
   }, []);
 
   const fetchAllStaff = async () => {
-    setLoadingStaff(true);
+  setLoadingStaff(true);
+  try {
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select("email, role, user_name")
+      .eq("role", "clinicstaff");
 
-    try {
-      const { data, error } = await supabaseClient
-        .from("profiles")
-        .select("email, role")
-        .eq("role", "clinicstaff");
-
-      if (error) throw error;
-
-      setStaffList(data || []);
-    } catch (error) {
-      console.error("Error fetching staff:", error.message);
-    } finally {
-      setLoadingStaff(false);
-    }
-  };
+    if (error) throw error;
+    setStaffList(data || []);
+  } catch (error) {
+    console.error("Error fetching staff:", error.message);
+  } finally {
+    setLoadingStaff(false);
+  }
+};
 
   const removeStaff = async (email) => {
-    try {
-      const { error } = await supabaseClient
-        .from("profiles")
-        .delete()
-        .eq("email", email);
+  try {
+    // First get the profile id
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .single();
 
-      if (error) throw error;
+    if (profileError) throw profileError;
 
-      setStaffList((prev) => prev.filter((staff) => staff.email !== email));
-      setSuccessMessage(`Staff member ${email} has been removed.`);
-      await fetchDashboardCounts();
-    } catch (error) {
-      console.error("Error removing staff:", error.message);
-      setErrorMessage("Failed to remove staff member.");
-    }
-  };
+    // Delete from clinicStaff table first
+    const { error: clinicStaffError } = await supabaseClient
+      .from("clinicStaff")
+      .delete()
+      .eq("staff_id", profile.id);
 
+    if (clinicStaffError) throw clinicStaffError;
+
+    // Then delete from profiles
+    const { error } = await supabaseClient
+      .from("profiles")
+      .delete()
+      .eq("email", email);
+
+    if (error) throw error;
+
+    setStaffList((prev) => prev.filter((staff) => staff.email !== email));
+    setSuccessMessage(`Staff member ${email} has been removed.`);
+    await fetchDashboardCounts();
+  } catch (error) {
+    console.error("Error removing staff:", error.message);
+    setErrorMessage("Failed to remove staff member.");
+  }
+};
   const fetchDashboardCounts = async () => {
     setIsLoadingStats(true);
     setErrorMessage("");
@@ -1197,14 +1212,14 @@ function AdminDashboard() {
 
                       const { data: startsWithData } = await supabaseClient
                         .from("profiles")
-                        .select("email, role")
+                       .select("email, role, user_name")
                         .eq("role", "clinicstaff")
                         .ilike("email", `${searchTerm}%`)
                         .limit(20);
 
                       const { data: containsData } = await supabaseClient
                         .from("profiles")
-                        .select("email, role")
+                        .select("email, role, user_name")
                         .eq("role", "clinicstaff")
                         .ilike("email", `%${searchTerm}%`)
                         .limit(50);
@@ -1240,7 +1255,7 @@ function AdminDashboard() {
                       )
                       .map((staff, index) => (
                         <li key={index} className="staff-list-item">
-                          <p>{staff.email}</p>
+                          <p>{staff.user_name || staff.email}</p>
 
                           <button
                             type="button"
