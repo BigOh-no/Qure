@@ -1,4 +1,4 @@
-# Sprint 2 – Retrospective meeting
+# Sprint 1 – Retrospective meeting
 
 ## Date
 11 April 2026
