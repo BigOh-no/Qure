@@ -1,7 +1,7 @@
-# Sprint 3 Planning
+# Sprint 4 Planning
 
 ## Date
-25 April 2026
+11 May 2026
 
 ## Team Members
 - Aaliah Reddy (2798790)
@@ -11,273 +11,162 @@
 - Vikram Mahalingam (2800630)
 
 ## Sprint Goal
-Implement the staff functionality and some more admin functionality. Fix bugs.
+Implement check in patients, change username, change password, forgot password, and clinic analytics. Fix bugs.
 
 ### Frontend Development
-- Staff home page
+- Analytics page
 
 ### Backend Development
-- Admins can edit clinic hours
-- Staff functionality
+- Admins can download analytics
+- Users can change their usernames and/or password
+- Usres can change their password if they have forgotten their current password
+- Staff can check patients in to their appointments
 
 ## User Stories
-- As a patient, I can select a clinic to view the current queue so that I can see how busy the clinic is before deciding to join
-- As a patient, I can join a clinic queue so that I can reserve my place before arriving or while waiting
-- As a patient I can leave a queue so that I can cancel my place if I no longer want to wait
-- As an admin, I can edit a clinics operating hours so that patients know when the clinic and queue services are available
-- As an admin, I can view the recent activity of admin changes so that I can keep track of important system updates
-- As a staff member, I can manage the queue so that I can update patient queue progress and keep the clinic flow organised
-- As a staff member, I can create an appointment on a patients behalf so that patients who cannot book themselves can still receive appointment slots
-- As a staff member, I can cancel an appointment on a patients behalf so that the appointment schedule remains accurate when a patient can no longer attend
-- As a staff member, I can reschedule an appointment on a patients behalf so that patients can be moved to a more suitable date or time without losing their booking
-- As an admin, I can remove a staff member so that I can revoke their access when they no longer work at a clinic or should no longer have staff permissions.
+- As an admin, I can view clinic analytics so that I can monitor clinic performance, patient activity, and operational trends. (8)
+- As an admin, I can export clinic analytics as a CSV  or PDF file so that I can analyse data externally, generate reports, and keep records. (8)
+- As a user, I can reset my password when I forget it so that I can regain access to my account securely. (5)
+- As a user, I can change my username so that I can keep my account information accurate and up to date. (3)
+- As a user, I can change my password so that I can maintain the security of my account. (5)
+- As a staff member, I can check a patient in to their appointment so that the clinic can record that the patient has arrived and is not a no show. (5)
 
 
 ## User acceptance tests
 
-View current queue:
+View Clinic Analytics:
 
-Scenario 1: Display clinic queue information
+Scenario 1: Display clinic analytics
 
-- Given the patient is on the clinic selection page
-- When the patient selects a clinic
-- Then the system displays the clinic’s current queue information, including queue length, estimated wait time, and queue status
+- Given the admin is logged into the system
+- When the admin navigates to the clinic analytics page
+- Then the system displays clinic analytics information including patient statistics, queue statistics, and appointment statistics
 
-Scenario 2: No active queue available
+Scenario 2: Prevent non-admin access
 
-- Given the selected clinic has no active queue
-- When the patient views the clinic queue
-- Then the system displays a message saying there is no active queue
+- Given the user is not an admin
+- When the user attempts to access the clinic analytics page
+- Then the system prevents access and displays an authorization error message
 
-Join a queue:
+Scenario 3: Display message when no analytics data exists
 
-Scenario 1: Successfully join a queue
+- Given there is no analytics data available for a clinic
+- When the admin views the clinic analytics page
+- Then the system displays a message indicating that no analytics data is available
 
-- Given the clinic queue is open
-- When the patient clicks “Join Queue”
-- Then the patient is added to the queue and their queue position and estimated wait time are displayed
 
-Scenario 2: Prevent joining multiple queues
+Export Clinic Analytics:
 
-- Given the patient is already in an active queue
-- When the patient tries to join another queue
-- Then the system prevents them from joining and displays an error message
+Scenario 1: Export clinic analytics as a CSV file
 
-Leave a queue:
+- Given the admin is logged into the system
+- When the admin navigates to the clinic analytics page and selects the export CSV option
+- Then the system downloads a CSV file containing the clinic analytics data
 
-Scenario 1: Successfully leave a queue
+Scenario 2: Export clinic analytics as a PDF file
 
-- Given the patient has joined a queue
-- When the patient clicks “Leave Queue”
-- Then their queue entry is marked as cancelled and they are removed from the active queue
+- Given the admin is logged into the system
+- When the admin navigates to the clinic analytics page and selects the export PDF option
+- Then the system downloads a PDF report containing the clinic analytics data
 
-Scenario 2: Queue positions update after leaving
+Scenario 3: Prevent non-admin access to exports
 
-- Given the patient leaves the queue
-- When the queue is refreshed
-- Then the remaining patients’ queue positions are updated
+- Given the user is not an admin
+- When the user attempts to access the clinic analytics export functionality
+- Then the system prevents access and displays an authorization error message
 
-Edit clinic operating hours:
+Scenario 4: Export accurate analytics data
 
-Scenario 1: Successfully update clinic operating hours
+- Given the admin is logged into the system
+- When the admin exports the clinic analytics as a CSV or PDF file
+- Then the exported file contains the same analytics data displayed on the clinic analytics page
 
-- Given the admin is viewing a clinic’s operating hours
-- When the admin changes the opening or closing time and clicks save
-- Then the updated operating hours are saved and displayed to patients
 
-Scenario 2: Invalid operating hours
+Reset Forgotten Password:
 
-- Given the admin enters a closing time before the opening time
-- When the admin clicks save
-- Then the system rejects the update and displays a validation error
+Scenario 1: Successfully request password reset
 
-View recent admin activity:
+- Given the user is on the login page
+- When the user selects “Forgot Password” and enters a registered email address
+- Then the system sends a password reset email to the user
 
-Scenario 1: Display recent admin activity
+Scenario 2: Successfully reset password
 
-- Given admin changes have been made in the system
-- When the admin views the recent activity tile
-- Then the system displays the 3 most recent activities with the newest first
+- Given the user has received a password reset email
+- When the user follows the reset link and enters a new valid password
+- Then the system updates the user’s password successfully
 
-Scenario 2: Display staff activity message
+Scenario 3: Invalid email address entered
 
-- Given a staff member is added to a clinic
-- When the recent activity tile is viewed
-- Then it displays an activity message such as “{Name} added as staff member to {Clinic}”
+- Given the user enters an email address that is not registered
+- When the user submits a password reset request
+- Then the system displays an error message explaining that the email address does not exist
 
-Manage Queue:
 
-Scenario 1: View current queue
+Change Username:
 
-- Given I am logged in as a staff member
-- And I am assigned to a clinic
-- When I open the queue management page
-- Then I should see a list of patients currently in the queue for my clinic
-- And each patient should display their queue status
+Scenario 1: Successfully change username
 
-Scenario 2: Update patient status
+- Given the user is logged into their account
+- When the user enters a new valid username and clicks save
+- Then the system updates and displays the new username successfully
 
-- Given I am viewing the queue management page
-- And there is a patient with the status “waiting”
-- When I update the patient’s status to “in progress”
-- Then the patient’s queue status should change to “in progress”
-- And the updated status should be saved successfully
+Scenario 2: Prevent invalid username update
 
-Scenario 3: Remove completed patient from queue
+- Given the user is changing their username
+- When the user enters an empty or invalid username
+- Then the system rejects the update and displays a validation error message
 
-- Given a patient has completed their consultation
-- When I update their queue status to “completed”
-- Then the patient should no longer appear as actively waiting in the queue
-- And the clinic queue should update accordingly
+Scenario 3: Updated username persists
 
-Scenario 4: Prevent access to another clinic’s queue
+- Given the user has successfully updated their username
+- When the user refreshes the page or logs in again
+- Then the updated username remains displayed on the account
 
-- Given I am logged in as a staff member assigned to a specific clinic
-- When I access the queue management page
-- Then I should only see the queue for my assigned clinic
-- And I should not be able to manage queues from other clinics
 
-Create Appointment on Patient’s Behalf:
+Change Password:
 
-Scenario 1: Create appointment successfully
+Scenario 1: Successfully change password
 
-- Given I am logged in as a staff member
-- And I have selected a patient
-- And I have selected an available date and time slot
-- When I submit the appointment booking
-- Then the appointment should be created successfully
-- And the patient should be assigned to the selected appointment slot
+- Given the user is logged into their account
+- When the user enters their current password and a valid new password
+- Then the system updates the password successfully
 
-Scenario 2: Prevent double booking
+Scenario 2: Incorrect current password entered
 
-- Given I am creating an appointment for a patient
-- And the selected time slot is already booked
-- When I attempt to submit the appointment
-- Then the system should prevent the booking
-- And I should see an error message explaining that the slot is unavailable
+- Given the user is attempting to change their password
+- When the user enters an incorrect current password
+- Then the system prevents the password change and displays an error message
 
-Scenario 3: Require appointment details
+Scenario 3: Weak password validation
 
-- Given I am creating an appointment on behalf of a patient
-- When I submit the form without selecting a required field such as patient, clinic, date, or time
-- Then the appointment should not be created
-- And I should see a validation message explaining what is missing
+- Given the user is changing their password
+- When the user enters a password that does not meet password requirements
+- Then the system rejects the password and displays a validation error message
 
-Scenario 4: Appointment appears in schedule
 
-- Given I have successfully created an appointment for a patient
-- When I view the clinic appointment schedule
-- Then the new appointment should appear in the correct date and time slot
+Check Patient In:
 
-Cancel Appointment on Patient’s Behalf:
+Scenario 1: Check in a patient
 
-Scenario 1: Cancel appointment successfully
+- Given the staff member is logged into the system
+- When the staff member selects a booked patient appointment and clicks the check-in button
+- Then the system updates the patient’s appointment status to checked in
 
-- Given I am logged in as a staff member
-- And I am viewing an existing appointment
-- When I cancel the appointment
-- Then the appointment status should change to “cancelled”
-- And the appointment should no longer appear as an active booking
+Scenario 2: Record patient arrival
 
-Scenario 2: Confirm cancellation before saving
+- Given the staff member has checked in a patient
+- When the appointment record is viewed
+- Then the system shows that the patient has arrived for their appointment
 
-- Given I am viewing an existing appointment
-- When I click the cancel appointment button
-- Then I should be asked to confirm the cancellation
-- And the appointment should only be cancelled if I confirm
+Scenario 3: Prevent checked-in patients from being marked as no-shows
 
-Scenario 3: Keep schedule accurate after cancellation
-
-- Given an appointment has been cancelled
-- When I view the appointment schedule
-- Then the cancelled appointment slot should become available again
-- Or the appointment should clearly show as cancelled, depending on the system design
-
-Scenario 4: Prevent cancelling an already cancelled appointment
-
-- Given an appointment already has the status “cancelled”
-- When I try to cancel it again
-- Then the system should prevent duplicate cancellation
-- And I should see a message explaining that the appointment has already been cancelled
-
-Reschedule Appointment on Patient’s Behalf:
-
-Scenario 1: Reschedule appointment successfully
-
-- Given I am logged in as a staff member
-- And I am viewing an existing appointment
-- And I select a new available date and time
-- When I submit the reschedule request
-- Then the appointment should be updated to the new date and time
-- And the patient should keep the same booking record
-
-Scenario 2: Prevent rescheduling to unavailable slot
-
-- Given I am rescheduling an appointment
-- And the new selected time slot is already booked
-- When I submit the reschedule request
-- Then the appointment should not be updated
-- And I should see an error message explaining that the slot is unavailable
-
-Scenario 3: Require new date and time
-
-- Given I am rescheduling an appointment
-- When I submit the reschedule form without selecting a new date or time
-- Then the appointment should not be changed
-- And I should see a validation message explaining that a new date and time are required
-
-Scenario 4: Old slot becomes available
-
-- Given an appointment has been successfully rescheduled
-- When I view the appointment schedule
-- Then the old appointment slot should become available
-- And the appointment should appear in the new selected slot
-
-Remove Staff Member:
-
-Scenario 1: Successfully remove a staff member
-
-- Given I am logged in as an admin
-- And I am viewing the staff management page
-- And there is an existing staff member in the staff list
-- When I select the staff member and click “Remove”
-- Then the staff member should be removed from the staff list
-- And their staff access should be revoked successfully
-
-Scenario 2: Confirm removal before deleting staff member
-
-- Given I am logged in as an admin
-- And I am viewing the staff management page
-- When I click the remove button for a staff member
-- Then I should be asked to confirm the removal
-- And the staff member should only be removed if I confirm
-
-Scenario 3: Removed staff member cannot access staff features
-
-- Given a staff member has been removed by an admin
-- When the removed staff member tries to access the staff dashboard
-- Then the system should prevent access to staff-only features
-- And the user should no longer be treated as a staff member
-
-Scenario 4: Display success message after staff removal
-
-- Given I am logged in as an admin
-- And I have confirmed the removal of a staff member
-- When the system successfully removes the staff member
-- Then I should see a success message confirming that the staff member was removed
-
-Scenario 5: Display error message if staff removal fails
-
-- Given I am logged in as an admin
-- And I have confirmed the removal of a staff member
-- When the system fails to remove the staff member
-- Then the staff member should remain in the staff list
-- And I should see an error message explaining that the staff member could not be removed
+- Given a patient has been checked in for their appointment
+- When the system calculates no-show information
+- Then the checked-in patient is not counted as a no-show
 
 ## Task Allocation
-- Aaliah & Ammarah: Admin page
-- Ammaarah: staff button: needs to have staff and clinic, and a remove button and a scrollbar because the default should show all the staff members. The scrollbar for clinics. Remove staff functionality
-- Aaliah: Edit clinic (operating hours), patients waiting board and recent activities board.
-- Muhammed: Patient page (queueing system)
-- Vikram: Staff queueing system (add or reschedule first)
-- Vareshan: Staff queue UI
+- Vikram: forgot password functionality, testing
+- Aaliah: edit username functionality, patient check in function and admin analytics
+- Vareshan: change password functionality
+- Muhammed: fixing time slots
+- Ammaarah: fix remove staff

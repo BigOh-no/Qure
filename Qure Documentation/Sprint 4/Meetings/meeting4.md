@@ -28,5 +28,5 @@ None noted.
 
 ## Proof of Meeting
 <p align="center">
-  <img src="meeting4.png" alt="Proof of Sprint 3 Meeting 4" width="500">
+  <img src="meeting4.png" alt="Proof of Sprint 4 Meeting 4" width="500">
 </p>

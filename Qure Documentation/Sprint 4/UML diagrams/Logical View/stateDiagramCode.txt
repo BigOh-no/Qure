@@ -1,0 +1,147 @@
+@startuml
+title Qure System - State Diagram
+
+' Remove extra state compartment line
+hide empty description
+
+' Styling
+skinparam shadowing false
+skinparam nodesep 90
+skinparam ranksep 100
+
+' Rounded white rectangles
+skinparam state {
+    BackgroundColor white
+    BorderColor black
+    RoundCorner 20
+    FontColor black
+}
+
+[*] --> Landing
+
+state Landing
+state Signup
+state Login
+state AwaitingEmailConfirmation
+state GoogleOAuth
+state AuthCallback
+state ForgotPassword
+state PasswordRecoveryEmailSent
+state ResetPassword
+state Authenticated
+state ProfileEnsured
+state PatientDashboard
+state AdminDashboard
+state StaffDashboard
+state AddAdminInvite
+state AdminInviteSent
+state AdminAuth
+state AddStaffInvite
+state StaffInviteSent
+state StaffAuth
+state PasswordUpdated
+state SearchingClinicForAppointment
+state ClinicSelectedForAppointment
+state LoadingBookedSlots
+state SlotAvailable
+state AppointmentBooked
+state ViewingAppointments
+state AppointmentCancelled
+state AppointmentRescheduled
+state SearchingClinicForQueue
+state ClinicSelectedForQueue
+state QueueClosed
+state QueuePreview
+state AlreadyInAnotherQueue
+state InQueue
+state LeftQueue
+state ViewingClinicQueue
+state PatientInConsultation
+state QueueCompleted
+state ViewingClinicAppointments
+state StaffCreatesAppointment
+state StaffCancelsAppointment
+state StaffReschedulesAppointment
+state LoggedOut
+
+Landing --> Signup : Get Started
+Landing --> Login : Login
+
+Signup --> AwaitingEmailConfirmation : signUp()
+AwaitingEmailConfirmation --> AuthCallback : email confirmed
+Signup --> GoogleOAuth : Continue with Google
+Login --> GoogleOAuth : Continue with Google
+
+Login --> ForgotPassword : forgot password
+ForgotPassword --> PasswordRecoveryEmailSent
+PasswordRecoveryEmailSent --> ResetPassword : reset link opened
+
+Login --> Authenticated : email/password login success
+GoogleOAuth --> AuthCallback : OAuth callback
+AuthCallback --> ProfileEnsured : ensureUserProfile()
+
+ProfileEnsured --> PatientDashboard : role = patient
+ProfileEnsured --> AdminDashboard : role = admin
+ProfileEnsured --> StaffDashboard : role = clinicstaff
+
+Authenticated --> PatientDashboard : patient
+Authenticated --> AdminDashboard : admin
+Authenticated --> StaffDashboard : clinicstaff
+
+AdminDashboard --> AddAdminInvite : createAdminInvite()
+AddAdminInvite --> AdminInviteSent
+AdminInviteSent --> AdminAuth : invite link opened
+AdminAuth --> ResetPassword : verifyOtp success
+
+AdminDashboard --> AddStaffInvite : createClinicStaffInvite()
+AddStaffInvite --> StaffInviteSent
+StaffInviteSent --> StaffAuth : invite link opened
+StaffAuth --> ResetPassword : verifyOtp success
+
+ResetPassword --> PasswordUpdated : updatePassword()
+PasswordUpdated --> PatientDashboard : role = patient
+PasswordUpdated --> AdminDashboard : role = admin
+PasswordUpdated --> StaffDashboard : role = clinicstaff
+
+PatientDashboard --> SearchingClinicForAppointment : Book Appointment
+SearchingClinicForAppointment --> ClinicSelectedForAppointment
+ClinicSelectedForAppointment --> LoadingBookedSlots
+LoadingBookedSlots --> SlotAvailable
+SlotAvailable --> AppointmentBooked : createAppointment()
+AppointmentBooked --> PatientDashboard
+
+PatientDashboard --> ViewingAppointments : View All Appointments
+ViewingAppointments --> AppointmentCancelled : cancelAppointment()
+ViewingAppointments --> AppointmentRescheduled : rescheduleAppointment()
+AppointmentCancelled --> ViewingAppointments
+AppointmentRescheduled --> ViewingAppointments
+
+PatientDashboard --> SearchingClinicForQueue : Join Queue
+SearchingClinicForQueue --> ClinicSelectedForQueue
+ClinicSelectedForQueue --> QueueClosed : outside 08:00-17:00
+ClinicSelectedForQueue --> QueuePreview : queue open
+QueuePreview --> AlreadyInAnotherQueue : active queue exists
+QueuePreview --> InQueue : joinQueue()
+InQueue --> PatientDashboard
+PatientDashboard --> InQueue : active queue exists today
+InQueue --> LeftQueue : leaveQueue()
+LeftQueue --> PatientDashboard
+
+StaffDashboard --> ViewingClinicQueue
+ViewingClinicQueue --> PatientInConsultation : updateQueueStatus(in_consultation)
+PatientInConsultation --> QueueCompleted : updateQueueStatus(completed)
+QueueCompleted --> ViewingClinicQueue
+
+StaffDashboard --> ViewingClinicAppointments
+ViewingClinicAppointments --> StaffCreatesAppointment : staffCreateAppointment()
+ViewingClinicAppointments --> StaffCancelsAppointment : staffCancelAppointment()
+ViewingClinicAppointments --> StaffReschedulesAppointment : staffRescheduleAppointment()
+StaffCreatesAppointment --> ViewingClinicAppointments
+StaffCancelsAppointment --> ViewingClinicAppointments
+StaffReschedulesAppointment --> ViewingClinicAppointments
+
+PatientDashboard --> LoggedOut : logout
+AdminDashboard --> LoggedOut : logout
+StaffDashboard --> LoggedOut : logout
+LoggedOut --> Landing
+@enduml

@@ -1,7 +1,7 @@
-# Sprint 3 – Daily Scrum Meeting 3
+# Sprint 4 – Daily Scrum Meeting 3
 
 ## Date
-05 May 2026
+14 May 2026
 
 ## Attendees
 - Aaliah Reddy
@@ -11,25 +11,27 @@
 - Vikram Mahalingam
 
 ## What we spoke about
-We spoke about what we have all done so far. Vikram has completed the back end for staff page. Aaliah has finished most of the admin page by completing the recent activity but she still has a small bug to fix. Aaliah also fixed some bugs on the admin page and finished the patients waiting tile. We also spoke about what still needs to be done, UI for the staff page, and remove staff function. 
+Aaliah said that she finished the admin analytics so it shows the average patient wait times per clinic and time of day and the appointment no show rates. Aaliah also added that staff members can check patients in to their appointment. We had a bit of an issue with our deployed site so we are trying to figure out what went wrong. Everyone still has quite a bit to do. The forgot password, change password, remove staff and all the other fixes still need to be done. We think the issue could have been from a new branch. Muhammed is trying to fix it.
 
 ## What has been completed?
-- Staff functionality
+- Clinic analytics
+- Staff can check patients in to their appointments
 
 ## User stories completed
-- As a staff member, I can manage the queue so that I can update patient queue progress and keep the clinic flow organised
-- As a staff member, I can create an appointment on a patients behalf so that patients who cannot book themselves can still receive appointment slots
-- As a staff member, I can cancel an appointment on a patients behalf so that the appointment schedule remains accurate when a patient can no longer attend
-- As a staff member, I can reschedule an appointment on a patients behalf so that patients can be moved to a more suitable date or time without losing their booking
+- As an admin, I can export clinic analytics as a CSV or PDF file so that I can analyse data externally, generate reports, and keep records.
+- As a staff member, I can check a patient in to their appointment so that the clinic can record that the patient has arrived and is not a no show.
 
 ## Challenges experienced
 None noted.
 
 ## What still needs to be done?
-- UI for the staff page to be finished
-- Remove staff function on the admin page
+- The forgot password
+- Users can change their password
+- Fixing the remove staff function
+- Reflecting the changed times on the patient page
+- Reflecting changed times on the staff page
 
 ## Proof of Meeting
 <p align="center">
-  <img src="meeting3.png" alt="Proof of Sprint 3 Meeting 3" width="500">
+  <img src="meeting3.png" alt="Proof of Sprint 4 Meeting 3" width="500">
 </p>

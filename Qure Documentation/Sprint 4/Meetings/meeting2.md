@@ -1,7 +1,7 @@
-# Sprint 3 – Daily Scrum Meeting 2
+# Sprint 4 – Daily Scrum Meeting 2
 
 ## Date
-30 April 2026
+12 May 2026
 
 ## Attendees
 - Aaliah Reddy
@@ -11,31 +11,26 @@
 - Vikram Mahalingam
 
 ## What we spoke about
-We spoke about what we have all done. Aaliah did most of the admin functionality including the edit clinic function and the bar that has the recent activity. Muhammed did most of the patient stuff including the patient queueing system. Ammaarah fixed the admin staff and clinic search functions but hasn’t gotten to the remove staff function yet. All the fixes that the client wanted us to fix including removing “no clinics found” when the search bar is empty, the back buttons, auto scroll, autofill clinic names. We also spoke about what still needs to be done, Vikram said he will start on the staff page and Vareshan said he will start on the edit profiles and any small fixes that need to be made.
+We spoke about what we all did. So far only Aaliah has done a few things. She completed the fixes for the staff UI and did the edit user name for every page (staff, patient and admin) so that a user can edit their user name and it’ll reflect their names on the page otherwise it’ll show their google user names (if logged in with google) or if not it’ll show the first part of their email address before the “@”. 
 
 ## What has been completed?
-- Patient queue functionality
-- Admins can edit clinics
-- Admins can view recent activity
+- Users can change their usernames
 
 ## User stories completed
-- As a patient, I can select a clinic to view the current queue so that I can see how busy the clinic is before deciding to join
-- As a patient, I can join a clinic queue so that I can reserve my place before arriving or while waiting
-- As a patient I can leave a queue so that I can cancel my place if I no longer want to wait
-- As an admin, I can edit a clinics operating hours so that patients know when the clinic and queue services are available
-- As an admin, I can view the recent activity of admin changes so that I can keep track of important system updates
+- As a user, I can change my username so that I can keep my account information accurate and up to date.
 
 ## Challenges experienced
 None noted.
 
 ## What still needs to be done?
-- The whole staff page functionality 
-- Edit profiles
-- The remove staff function
-- Add a few tweaks to the queueing system
-- Times according the database
+- The admin analytics
+- The forgot password
+- Users can change their password
+- Fixing the remove staff function
+- Reflecting the changed times on the patient page
+- Reflecting changed times on the staff page
 
 ## Proof of Meeting
 <p align="center">
-  <img src="meeting2.png" alt="Proof of Sprint 3 Meeting 2" width="500">
+  <img src="meeting2.png" alt="Proof of Sprint 4 Meeting 2" width="500">
 </p>
