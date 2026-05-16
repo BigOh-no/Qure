@@ -58,7 +58,10 @@ function PatientDashboard() {
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [profileError, setProfileError] = useState("");
 
-
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -102,7 +105,10 @@ function PatientDashboard() {
           .single();
 
         if (profileError) {
-          console.error("Failed to fetch profile username:", profileError.message);
+          console.error(
+            "Failed to fetch profile username:",
+            profileError.message
+          );
         }
 
         if (profile?.user_name) {
@@ -426,6 +432,7 @@ function PatientDashboard() {
     }
 
     setProfileError("");
+    setPasswordError("");
     setIsSavingUsername(true);
 
     try {
@@ -456,39 +463,97 @@ function PatientDashboard() {
     }
   };
 
-  const openProfilePopup = async () => {
-  setProfileError("");
-  setShowProfilePopup(true);
+  const handlePasswordUpdate = async () => {
+    const trimmedPassword = newPassword.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
 
-  try {
-    const {
-      data: { user },
-      error,
-    } = await supabaseClient.auth.getUser();
+    setProfileError("");
+    setPasswordError("");
 
-    if (error) throw error;
-    if (!user) return;
-
-    const { data: profile, error: profileError } = await supabaseClient
-      .from("profiles")
-      .select("user_name")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError) {
-      console.error("Failed to fetch profile username:", profileError.message);
+    if (!trimmedPassword || !trimmedConfirmPassword) {
+      setPasswordError("Please enter and confirm your new password.");
+      return;
     }
 
-    setNewUsername(profile?.user_name || "");
+    if (trimmedPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters long.");
+      return;
+    }
 
-    setTimeout(() => {
+    if (trimmedPassword !== trimmedConfirmPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    setIsSavingPassword(true);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseClient.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("No logged-in user found.");
+
+      const { error } = await supabaseClient.auth.updateUser({
+        password: trimmedPassword,
+      });
+
+      if (error) throw error;
+
+      setNewPassword("");
+      setConfirmPassword("");
+      setSuccessMessage("Password updated successfully.");
+      setShowSuccessPopup(true);
+      setShowProfilePopup(false);
+    } catch (error) {
+      console.error("Failed to update password:", error.message);
+      setPasswordError(error.message || "Failed to update password.");
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const openProfilePopup = async () => {
+    setProfileError("");
+    setPasswordError("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowProfilePopup(true);
+
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabaseClient.auth.getUser();
+
+      if (error) throw error;
+      if (!user) return;
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("user_name")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error(
+          "Failed to fetch profile username:",
+          profileError.message
+        );
+      }
+
       setNewUsername(profile?.user_name || "");
-    }, 100);
-  } catch (error) {
-    console.error(error);
-    setNewUsername("");
-  }
-};
+
+      setTimeout(() => {
+        setNewUsername(profile?.user_name || "");
+      }, 100);
+    } catch (error) {
+      console.error(error);
+      setNewUsername("");
+    }
+  };
 
   return (
     <main className="patient-dashboard">
@@ -583,15 +648,18 @@ function PatientDashboard() {
                   <strong>Clinic:</strong>{" "}
                   {appt.clinics?.facility_name || "Unknown Clinic"}
                 </p>
+
                 <p>
                   <strong>Date:</strong> {appt.appointment_date}
                 </p>
+
                 <p>
                   <strong>Time:</strong>{" "}
                   {appt.appointment_time
                     ? appt.appointment_time.slice(0, 5)
                     : ""}
                 </p>
+
                 <p>
                   <strong>Status:</strong> {appt.status}
                 </p>
@@ -649,10 +717,12 @@ function PatientDashboard() {
                 <strong>Queue hours:</strong> {QUEUE_OPEN_TIME} -{" "}
                 {QUEUE_CLOSE_TIME}
               </p>
+
               <p>
                 <strong>Average consultation time:</strong>{" "}
                 {AVERAGE_CONSULTATION_MINUTES} minutes
               </p>
+
               <p>
                 <strong>Current queue length:</strong>{" "}
                 {activeQueueEntries.length}
@@ -696,12 +766,15 @@ function PatientDashboard() {
                 <strong>Your current position:</strong>{" "}
                 {safeMyQueuePosition || "Unknown"}
               </p>
+
               <p>
                 <strong>Your estimated wait time:</strong> {myEstimatedWait}{" "}
                 minutes
               </p>
+
               <p>
-                <strong>Your status:</strong> {myQueueEntry?.status || "waiting"}
+                <strong>Your status:</strong>{" "}
+                {myQueueEntry?.status || "waiting"}
               </p>
 
               <button
@@ -792,7 +865,7 @@ function PatientDashboard() {
               className="modal-date-input"
               value={rescheduleDate}
               min={new Date().toISOString().split("T")[0]}
-              onChange={(e) => setRescheduleDate(e.target.value)}
+              onChange={(event) => setRescheduleDate(event.target.value)}
             />
 
             <section className="modal-slots-section">
@@ -805,7 +878,8 @@ function PatientDashboard() {
                   {availableSlots.map((slot) => {
                     const status = slotStatusMap[slot];
                     const isSelected = selectedSlot === slot;
-                    const isDisabled = status === "booked" || status === "past";
+                    const isDisabled =
+                      status === "booked" || status === "past";
 
                     return (
                       <button
@@ -950,12 +1024,17 @@ function PatientDashboard() {
                 name="patientNewPasswordInputNoAutofill"
                 type="password"
                 placeholder="Enter new password"
+                value={newPassword}
                 autoComplete="new-password"
                 data-lpignore="true"
                 data-1p-ignore="true"
+                onChange={(event) => setNewPassword(event.target.value)}
               />
 
-              <label className="modal-label" htmlFor="patientConfirmPasswordInput">
+              <label
+                className="modal-label"
+                htmlFor="patientConfirmPasswordInput"
+              >
                 Confirm Password
               </label>
 
@@ -965,13 +1044,22 @@ function PatientDashboard() {
                 name="patientConfirmPasswordInputNoAutofill"
                 type="password"
                 placeholder="Confirm new password"
+                value={confirmPassword}
                 autoComplete="new-password"
                 data-lpignore="true"
                 data-1p-ignore="true"
+                onChange={(event) => setConfirmPassword(event.target.value)}
               />
 
-              <button type="button" className="action-btn">
-                Update Password
+              {passwordError && <p className="modal-error">{passwordError}</p>}
+
+              <button
+                type="button"
+                className="action-btn"
+                onClick={handlePasswordUpdate}
+                disabled={isSavingPassword}
+              >
+                {isSavingPassword ? "Updating..." : "Update Password"}
               </button>
             </section>
 
@@ -988,8 +1076,6 @@ function PatientDashboard() {
         </section>
       )}
 
-
-
       {showSuccessPopup && (
         <section
           className="modal-overlay"
@@ -1000,7 +1086,9 @@ function PatientDashboard() {
             onClick={(event) => event.stopPropagation()}
           >
             <h3 className="success-popup-title">Success</h3>
+
             <p className="success-popup-text">{successMessage}</p>
+
             <button
               type="button"
               className="action-btn"

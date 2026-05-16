@@ -5,7 +5,7 @@ import logo from "../assets/images/TLogo.png";
 import { createAdminInvite, logout } from "../lib/auth";
 import { createClinicStaffInvite } from "../lib/adminService";
 import { searchClinics } from "../pages/clinicService";
-import { supabaseClient } from '../lib/supabaseClient';
+import { supabaseClient } from "../lib/supabaseClient";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -27,17 +27,16 @@ function AdminDashboard() {
   const [selectedStaffClinic, setSelectedStaffClinic] = useState(null);
   const [staffClinicLoading, setStaffClinicLoading] = useState(false);
   const [staffClinicError, setStaffClinicError] = useState("");
-  
-  const[staffCount, setStaffCount] = useState(0);
-  const[clinicCount, setClinicCount] = useState(0);
+
+  const [staffCount, setStaffCount] = useState(0);
+  const [clinicCount, setClinicCount] = useState(0);
   const [patientsWaiting, setPatientsWaiting] = useState(0);
-  const[isLoadingStats, setIsLoadingStats] = useState(true);
-  
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const [staffList, setStaffList] = useState([]);
   const [clinicList, setClinicList] = useState([]);
-  const [staffSearch, setStaffSearch] = useState('');
-  const [clinicSearch, setClinicSearch] = useState('');
+  const [staffSearch, setStaffSearch] = useState("");
+  const [clinicSearch, setClinicSearch] = useState("");
   const [showStaffList, setShowStaffList] = useState(false);
   const [showClinicList, setShowClinicList] = useState(false);
   const [loadingStaff, setLoadingStaff] = useState(false);
@@ -50,102 +49,25 @@ function AdminDashboard() {
   const [editClinicLoading, setEditClinicLoading] = useState(false);
   const [editClinicError, setEditClinicError] = useState("");
 
-  const [openingHour, setOpeningHour] = useState("00");
-  const [openingMinute, setOpeningMinute] = useState("00");
-  const [closingHour, setClosingHour] = useState("23");
-  const [closingMinute, setClosingMinute] = useState("59");
-
   const [showProfilePopup, setShowProfilePopup] = useState(false);
 
   const [newUsername, setNewUsername] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [profileError, setProfileError] = useState("");
 
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
-  
+  const [appointmentsToday, setAppointmentsToday] = useState(0);
+  const [recentActivity, setRecentActivity] = useState([]);
 
-  const hours = Array.from({ length: 24 }, (_, i) =>
-  String(i).padStart(2, "0")
-);
-
-const minutes = Array.from({ length: 60 }, (_, i) =>
-  String(i).padStart(2, "0")
-);
-
-  //new func 
-  const fetchAllStaff = async () => {
-  setLoadingStaff(true);
-  try {
-    const { data, error } = await supabaseClient
-      .from('profiles')
-      .select('email, role')
-      .eq('role', 'clinicstaff');
-    if (error) throw error;
-    setStaffList(data || []);
-  } catch (error) {
-    console.error('Error fetching staff:', error.message);
-  } finally {
-    setLoadingStaff(false);
-  }
-};
-//new func 
-const removeStaff = async (email) => {
-  try {
-    const { error } = await supabaseClient
-      .from('profiles')
-      .delete()
-      .eq('email', email);
-    if (error) throw error;
-    setStaffList((prev) => prev.filter((s) => s.email !== email));
-    setSuccessMessage(`Staff member ${email} has been removed.`);
-    await fetchDashboardCounts();
-  } catch (error) {
-    console.error('Error removing staff:', error.message);
-    setErrorMessage('Failed to remove staff member.');
-  }
-};
-
-  const fetchStaff = async () => {
-  setLoadingStaff(true);
-  try {
-    const { data, error } = await supabaseClient
-      .from('profiles')
-      .select('email, role')
-      .eq('role', 'clinicstaff');
-    if (error) throw error;
-    setStaffList(data);
-    setShowStaffList(true);
-  } catch (error) {
-    console.error('Error fetching staff:', error.message);
-  } finally {
-    setLoadingStaff(false);
-  }
-};
-
-const fetchClinics = async () => {
-  setLoadingClinics(true);
-  try {
-    const { data, error } = await supabaseClient
-      .from('clinics')
-      .select('facility_name, admin1, facility_type')
-      .limit(50);
-    if (error) throw error;
-    setClinicList(data);
-    setShowClinicList(true);
-  } catch (error) {
-    console.error('Error fetching clinics:', error.message);
-  } finally {
-    setLoadingClinics(false);
-  }
-};
-
-  const[appointmentsToday, setAppointmentsToday] = useState(0);
-
-  function getTodayDateString(){
+  function getTodayDateString() {
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2,"0");
+    const day = String(today.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
 
@@ -211,8 +133,7 @@ const fetchClinics = async () => {
     fetchAdminName();
   }, []);
 
-
-  useEffect(()=> {
+  useEffect(() => {
     fetchDashboardCounts();
     fetchRecentActivity();
 
@@ -222,98 +143,89 @@ const fetchClinics = async () => {
     }, 10000);
 
     return () => clearInterval(intervalId);
-  },[]);
+  }, []);
 
-  const handleUsernameUpdate = async () => {
-    const trimmedUsername = newUsername.trim();
-
-    if (!trimmedUsername) {
-      setProfileError("Username cannot be empty.");
-      return;
-    }
-
-    setSuccessMessage("");
-    setErrorMessage("");
-    setProfileError("");
-    setIsSavingUsername(true);
+  const fetchAllStaff = async () => {
+    setLoadingStaff(true);
 
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabaseClient.auth.getUser();
-
-      if (userError) throw userError;
-      if (!user) throw new Error("No logged-in user found.");
-
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from("profiles")
-        .update({ user_name: trimmedUsername })
-        .eq("id", user.id);
+        .select("email, role")
+        .eq("role", "clinicstaff");
 
       if (error) throw error;
 
-      setAdminName(trimmedUsername);
-      setShowProfilePopup(false);
-      setSuccessMessage("Username updated successfully.");
+      setStaffList(data || []);
     } catch (error) {
-      console.error("Failed to update username:", error.message);
-      setProfileError("Failed to update username.");
+      console.error("Error fetching staff:", error.message);
     } finally {
-      setIsSavingUsername(false);
+      setLoadingStaff(false);
     }
   };
 
+  const removeStaff = async (email) => {
+    try {
+      const { error } = await supabaseClient
+        .from("profiles")
+        .delete()
+        .eq("email", email);
+
+      if (error) throw error;
+
+      setStaffList((prev) => prev.filter((staff) => staff.email !== email));
+      setSuccessMessage(`Staff member ${email} has been removed.`);
+      await fetchDashboardCounts();
+    } catch (error) {
+      console.error("Error removing staff:", error.message);
+      setErrorMessage("Failed to remove staff member.");
+    }
+  };
 
   const fetchDashboardCounts = async () => {
     setIsLoadingStats(true);
     setErrorMessage("");
-  
-    try{
-      const {count: totalStaff, error: staffError} = await supabaseClient
-        .from("clinicStaff")
-        .select("*", { count: "exact", head: true})
-      
-      if (staffError){
-        throw staffError;
-      }
-      const {count: totalClinics, error: clinicsError} = await supabaseClient
-        .from("clinics")
-        .select("*", { count: "exact", head: true});
 
-      if (clinicsError){
-        throw clinicsError;
-      }
+    try {
+      const { count: totalStaff, error: staffError } = await supabaseClient
+        .from("clinicStaff")
+        .select("*", { count: "exact", head: true });
+
+      if (staffError) throw staffError;
+
+      const { count: totalClinics, error: clinicsError } = await supabaseClient
+        .from("clinics")
+        .select("*", { count: "exact", head: true });
+
+      if (clinicsError) throw clinicsError;
 
       const today = getTodayDateString();
 
-      const {count: totalAppointmentsToday, error: appointmentsError} = await supabaseClient
-        .from("appointments")
-        .select("*", {count: "exact", head: true})
-        .eq("appointment_date", today)
-        .eq("status", "booked");
+      const { count: totalAppointmentsToday, error: appointmentsError } =
+        await supabaseClient
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("appointment_date", today)
+          .eq("status", "booked");
 
-      if (appointmentsError){
-        throw appointmentsError;
-      }
+      if (appointmentsError) throw appointmentsError;
 
-      const{count: totalPatientsWaiting, error: waitingError} = await supabaseClient
-        .from("queue_entries")
-        .select("*", {count: "exact", head: true})
-        .eq("status", "waiting");
-      
-      if(waitingError){
-        throw waitingError;
-      }
+      const { count: totalPatientsWaiting, error: waitingError } =
+        await supabaseClient
+          .from("queue_entries")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "waiting");
+
+      if (waitingError) throw waitingError;
 
       setStaffCount(totalStaff || 0);
-      setClinicCount(totalClinics ||0);
-      setAppointmentsToday(totalAppointmentsToday ||0);
-      setPatientsWaiting(totalPatientsWaiting ||0);
-    } catch(error){
+      setClinicCount(totalClinics || 0);
+      setAppointmentsToday(totalAppointmentsToday || 0);
+      setPatientsWaiting(totalPatientsWaiting || 0);
+    } catch (error) {
       console.error("Failed to load dashboard counts:", error);
       setErrorMessage("Failed to load dashboard statistics");
-    }finally{
+    } finally {
       setIsLoadingStats(false);
     }
   };
@@ -341,13 +253,17 @@ const fetchClinics = async () => {
   ];
 
   const stats = [
-    { title: 'Total Staff', value: isLoadingStats ? '...': staffCount },
-    { title: 'Total Clinics', value: isLoadingStats ? '...': clinicCount },
-    { title: 'Appointments Today', value: isLoadingStats ? '...': appointmentsToday },
-    { title: 'Patients Waiting', value: isLoadingStats ? '...': patientsWaiting }
+    { title: "Total Staff", value: isLoadingStats ? "..." : staffCount },
+    { title: "Total Clinics", value: isLoadingStats ? "..." : clinicCount },
+    {
+      title: "Appointments Today",
+      value: isLoadingStats ? "..." : appointmentsToday,
+    },
+    {
+      title: "Patients Waiting",
+      value: isLoadingStats ? "..." : patientsWaiting,
+    },
   ];
-
-  const [recentActivity, setRecentActivity] = useState([]);
 
   const fetchRecentActivity = async () => {
     try {
@@ -367,13 +283,11 @@ const fetchClinics = async () => {
 
   const addRecentActivity = async (message) => {
     try {
-      const { error } = await supabaseClient
-        .from("recent_activity")
-        .insert([
-          {
-            message: message,
-          },
-        ]);
+      const { error } = await supabaseClient.from("recent_activity").insert([
+        {
+          message: message,
+        },
+      ]);
 
       if (error) throw error;
 
@@ -424,7 +338,6 @@ const fetchClinics = async () => {
     setStaffClinicResults([]);
     setSelectedStaffClinic(null);
     setStaffClinicError("");
-
     setStaffClinicLoading(false);
   };
 
@@ -440,43 +353,45 @@ const fetchClinics = async () => {
 
   const [isSavingStaff, setIsSavingStaff] = useState(false);
 
-const handleStaffSubmit = async (event) => {
-  event.preventDefault();
-  const formData = new FormData(event.target);
+  const handleStaffSubmit = async (event) => {
+    event.preventDefault();
 
-  if (!selectedStaffClinic) {
-    alert("Please select a clinic first.");
-    return;
-  }
+    const formData = new FormData(event.target);
 
-  const email = formData.get("staffEmail")?.toString().trim().toLowerCase();
+    if (!selectedStaffClinic) {
+      alert("Please select a clinic first.");
+      return;
+    }
 
-  setSuccessMessage("");
-  setErrorMessage("");
-  setIsSavingStaff(true);
+    const email = formData.get("staffEmail")?.toString().trim().toLowerCase();
 
-  try {
-    const result = await createClinicStaffInvite({
-      email,
-      clinicId: selectedStaffClinic.id,
-    });
+    setSuccessMessage("");
+    setErrorMessage("");
+    setIsSavingStaff(true);
 
-    setSuccessMessage(
-      `Invite sent to ${result.email}. Tell them to check their inbox and set a password.`
-    );
-    await addRecentActivity(
-      `${result.email} added as staff member to ${selectedStaffClinic.facility_name}`
-    );
+    try {
+      const result = await createClinicStaffInvite({
+        email,
+        clinicId: selectedStaffClinic.id,
+      });
 
-    event.target.reset();
-    resetStaffPopup();
-  } catch (error) {
-    console.error("Staff invite failed:", error);
-    setErrorMessage(error.message || "Failed to add staff member.");
-  } finally {
-    setIsSavingStaff(false);
-  }
-};
+      setSuccessMessage(
+        `Invite sent to ${result.email}. Tell them to check their inbox and set a password.`
+      );
+
+      await addRecentActivity(
+        `${result.email} added as staff member to ${selectedStaffClinic.facility_name}`
+      );
+
+      event.target.reset();
+      resetStaffPopup();
+    } catch (error) {
+      console.error("Staff invite failed:", error);
+      setErrorMessage(error.message || "Failed to add staff member.");
+    } finally {
+      setIsSavingStaff(false);
+    }
+  };
 
   const handleAdminSubmit = async (event) => {
     event.preventDefault();
@@ -494,6 +409,7 @@ const handleStaffSubmit = async (event) => {
       setSuccessMessage(
         `Tell ${email} to check their inbox to reset their password.`
       );
+
       await addRecentActivity("New admin added");
 
       event.target.reset();
@@ -509,23 +425,25 @@ const handleStaffSubmit = async (event) => {
   const handleClinicSubmit = async (event) => {
     event.preventDefault();
 
-    if (!selectedEditClinic){
+    if (!selectedEditClinic) {
       alert("Please select a clinic first.");
       return;
     }
+
     const formData = new FormData(event.target);
 
     const openingTime = formData.get("openingTime");
     const closingTime = formData.get("closingTime");
 
-    if (openingTime > closingTime){
-      alert("Closing time must be after opening time.")
+    if (openingTime > closingTime) {
+      alert("Closing time must be after opening time.");
       return;
     }
+
     setSuccessMessage("");
     setErrorMessage("");
 
-    try{
+    try {
       const { error } = await supabaseClient
         .from("clinics")
         .update({
@@ -533,59 +451,61 @@ const handleStaffSubmit = async (event) => {
           closed_t: closingTime,
         })
         .eq("id", selectedEditClinic.id);
-      
-      if (error){
-        throw error;
-      }
-      setSuccessMessage(`Operating hours updated for ${selectedEditClinic.facility_name}.`);
+
+      if (error) throw error;
+
+      setSuccessMessage(
+        `Operating hours updated for ${selectedEditClinic.facility_name}.`
+      );
+
       await addRecentActivity(`${selectedEditClinic.facility_name} hours updated`);
       await fetchDashboardCounts();
       resetEditClinicPopup();
-    } catch (error){
+    } catch (error) {
       console.error("Failed to update clinic hours:", error);
       setErrorMessage("Failed to update clinic operating hours.");
     }
   };
 
-useEffect(() => {
-  const runEditClinicSearch = async () => {
-    if (!showClinicPopup) return;
+  useEffect(() => {
+    const runEditClinicSearch = async () => {
+      if (!showClinicPopup) return;
 
+      setEditClinicError("");
+
+      if (!editClinicSearch.trim()) {
+        setEditClinicResults([]);
+        return;
+      }
+
+      setEditClinicLoading(true);
+
+      try {
+        const results = await searchClinics({
+          searchTerm: editClinicSearch,
+          limit: 50,
+        });
+
+        setEditClinicResults(results);
+      } catch (error) {
+        console.error("Edit clinic search failed:", error);
+        setEditClinicError("Failed to search clinics.");
+      } finally {
+        setEditClinicLoading(false);
+      }
+    };
+
+    runEditClinicSearch();
+  }, [showClinicPopup, editClinicSearch]);
+
+  const resetEditClinicPopup = () => {
+    setShowClinicPopup(false);
+    setEditClinicSearch("");
+    setEditClinicResults([]);
+    setSelectedEditClinic(null);
     setEditClinicError("");
-
-    if (!editClinicSearch.trim()) {
-      setEditClinicResults([]);
-      return;
-    }
-
-    setEditClinicLoading(true);
-
-    try {
-      const results = await searchClinics({
-        searchTerm: editClinicSearch,
-        limit: 50,
-      });
-
-      setEditClinicResults(results);
-    } catch (error) {
-      console.error("Edit clinic search failed:", error);
-      setEditClinicError("Failed to search clinics.");
-    } finally {
-      setEditClinicLoading(false);
-    }
+    setEditClinicLoading(false);
   };
-
-  runEditClinicSearch();
-}, [showClinicPopup, editClinicSearch]);
-
-const resetEditClinicPopup = () => {
-  setShowClinicPopup(false);
-  setEditClinicSearch("");
-  setEditClinicResults([]);
-  setSelectedEditClinic(null);
-  setEditClinicError("");
-  setEditClinicLoading(false);
-};
 
   const formatActivityDateTime = (dateValue) => {
     if (!dateValue) return "";
@@ -602,40 +522,133 @@ const resetEditClinicPopup = () => {
   };
 
   const openProfilePopup = async () => {
-  setProfileError("");
-  setShowProfilePopup(true);
+    setProfileError("");
+    setPasswordError("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowProfilePopup(true);
 
-  try {
-    const {
-      data: { user },
-      error,
-    } = await supabaseClient.auth.getUser();
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabaseClient.auth.getUser();
 
-    if (error) throw error;
-    if (!user) return;
+      if (error) throw error;
+      if (!user) return;
 
-    const { data: profile, error: profileError } = await supabaseClient
-      .from("profiles")
-      .select("user_name")
-      .eq("id", user.id)
-      .single();
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("user_name")
+        .eq("id", user.id)
+        .single();
 
-    if (profileError) {
-      console.error("Failed to fetch profile username:", profileError.message);
+      if (profileError) {
+        console.error("Failed to fetch profile username:", profileError.message);
+      }
+
+      setNewUsername(profile?.user_name || "");
+
+      setTimeout(() => {
+        setNewUsername(profile?.user_name || "");
+      }, 100);
+    } catch (error) {
+      console.error(error);
+      setNewUsername("");
+    }
+  };
+
+  const handleUsernameUpdate = async () => {
+    const trimmedUsername = newUsername.trim();
+
+    if (!trimmedUsername) {
+      setProfileError("Username cannot be empty.");
+      return;
     }
 
-    setNewUsername(profile?.user_name || "");
+    setSuccessMessage("");
+    setErrorMessage("");
+    setProfileError("");
+    setIsSavingUsername(true);
 
-    setTimeout(() => {
-      setNewUsername(profile?.user_name || "");
-    }, 100);
-  } catch (error) {
-    console.error(error);
-    setNewUsername("");
-  }
-};
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseClient.auth.getUser();
 
+      if (userError) throw userError;
+      if (!user) throw new Error("No logged-in user found.");
 
+      const { error } = await supabaseClient
+        .from("profiles")
+        .update({ user_name: trimmedUsername })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      setAdminName(trimmedUsername);
+      setShowProfilePopup(false);
+      setSuccessMessage("Username updated successfully.");
+    } catch (error) {
+      console.error("Failed to update username:", error.message);
+      setProfileError("Failed to update username.");
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
+    const trimmedPassword = newPassword.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
+
+    setSuccessMessage("");
+    setErrorMessage("");
+    setPasswordError("");
+
+    if (!trimmedPassword || !trimmedConfirmPassword) {
+      setPasswordError("Please enter and confirm your new password.");
+      return;
+    }
+
+    if (trimmedPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (trimmedPassword !== trimmedConfirmPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    setIsSavingPassword(true);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseClient.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("No logged-in user found.");
+
+      const { error } = await supabaseClient.auth.updateUser({
+        password: trimmedPassword,
+      });
+
+      if (error) throw error;
+
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowProfilePopup(false);
+      setSuccessMessage("Password updated successfully.");
+    } catch (error) {
+      console.error("Failed to update password:", error.message);
+      setPasswordError(error.message || "Failed to update password.");
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
   return (
     <main className="admin-page">
@@ -646,15 +659,43 @@ const resetEditClinicPopup = () => {
 
         <nav className="sidebar-nav">
           <ul>
-            <li><button type="button" onClick={() => { setShowStaffList(true); setStaffSearch(''); fetchAllStaff(); }}>Staff</button></li>
-            <li><button type="button" onClick={() => { setShowClinicList(true); setClinicList([]); setClinicSearch(''); }}>Clinics</button></li>
-            <li><button
-                  type="button"
-                  onClick={() => navigate("/analytics")}
-                >
-                  Analytics
-                </button></li>
-            <li><button type="button" onClick={openProfilePopup}>Profile</button></li>
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStaffList(true);
+                  setStaffSearch("");
+                  fetchAllStaff();
+                }}
+              >
+                Staff
+              </button>
+            </li>
+
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowClinicList(true);
+                  setClinicList([]);
+                  setClinicSearch("");
+                }}
+              >
+                Clinics
+              </button>
+            </li>
+
+            <li>
+              <button type="button" onClick={() => navigate("/analytics")}>
+                Analytics
+              </button>
+            </li>
+
+            <li>
+              <button type="button" onClick={openProfilePopup}>
+                Profile
+              </button>
+            </li>
           </ul>
         </nav>
 
@@ -675,9 +716,7 @@ const resetEditClinicPopup = () => {
           <p className="admin-success-message">{successMessage}</p>
         )}
 
-        {errorMessage && (
-          <p className="admin-error-message">{errorMessage}</p>
-        )}
+        {errorMessage && <p className="admin-error-message">{errorMessage}</p>}
 
         <section className="stats-section">
           {stats.map((stat, index) => (
@@ -704,6 +743,7 @@ const resetEditClinicPopup = () => {
                   Add Staff Member
                 </button>
               </li>
+
               <li>
                 <button
                   type="button"
@@ -713,6 +753,7 @@ const resetEditClinicPopup = () => {
                   Add Admin
                 </button>
               </li>
+
               <li>
                 <button
                   type="button"
@@ -729,6 +770,7 @@ const resetEditClinicPopup = () => {
             <header>
               <h2>Recent Activity</h2>
             </header>
+
             <ul className="activity-list">
               {recentActivity.length === 0 ? (
                 <li>No recent activity yet.</li>
@@ -736,7 +778,10 @@ const resetEditClinicPopup = () => {
                 recentActivity.map((activity, index) => (
                   <li key={index} className="activity-list-item">
                     <p className="activity-message">{activity.message}</p>
-                    <time className="activity-time" dateTime={activity.created_at}>
+                    <time
+                      className="activity-time"
+                      dateTime={activity.created_at}
+                    >
                       {formatActivityDateTime(activity.created_at)}
                     </time>
                   </li>
@@ -748,7 +793,11 @@ const resetEditClinicPopup = () => {
 
         {showStaffPopup && (
           <section className="admin-modal-overlay" onClick={resetStaffPopup}>
-            <dialog className="popup-dialog popup-dialog-wide" open onClick={(event) => event.stopPropagation()}>
+            <dialog
+              className="popup-dialog popup-dialog-wide"
+              open
+              onClick={(event) => event.stopPropagation()}
+            >
               <form className="popup-form" onSubmit={handleStaffSubmit}>
                 <header className="popup-header">
                   <h2>Add Staff Member</h2>
@@ -757,6 +806,7 @@ const resetEditClinicPopup = () => {
                 <label className="popup-label" htmlFor="staffEmail">
                   Email
                 </label>
+
                 <input
                   className="popup-input"
                   id="staffEmail"
@@ -773,12 +823,15 @@ const resetEditClinicPopup = () => {
                       <label className="popup-label" htmlFor="staffClinicSearch">
                         Search Clinic Name
                       </label>
+
                       <input
                         className="popup-input"
                         id="staffClinicSearch"
                         type="text"
                         value={staffClinicSearch}
-                        onChange={(event) => setStaffClinicSearch(event.target.value)}
+                        onChange={(event) =>
+                          setStaffClinicSearch(event.target.value)
+                        }
                         placeholder="Type clinic name"
                       />
                     </section>
@@ -787,11 +840,14 @@ const resetEditClinicPopup = () => {
                       <label className="popup-label" htmlFor="staffProvince">
                         Province
                       </label>
+
                       <select
                         className="popup-input"
                         id="staffProvince"
                         value={staffProvince}
-                        onChange={(event) => setStaffProvince(event.target.value)}
+                        onChange={(event) =>
+                          setStaffProvince(event.target.value)
+                        }
                       >
                         <option value="">Select Province</option>
                         {provinces.map((province) => (
@@ -806,11 +862,14 @@ const resetEditClinicPopup = () => {
                       <label className="popup-label" htmlFor="staffFacilityType">
                         Facility Type
                       </label>
+
                       <select
                         className="popup-input"
                         id="staffFacilityType"
                         value={staffFacilityType}
-                        onChange={(event) => setStaffFacilityType(event.target.value)}
+                        onChange={(event) =>
+                          setStaffFacilityType(event.target.value)
+                        }
                       >
                         <option value="">Select Facility Type</option>
                         {facilityTypes.map((type) => (
@@ -830,9 +889,13 @@ const resetEditClinicPopup = () => {
                     <p className="popup-error-message">{staffClinicError}</p>
                   )}
 
-                  <section className="popup-results-box" aria-label="Clinic search results">
-
-                    {staffClinicSearch.trim() !== "" || staffProvince || staffFacilityType ? (
+                  <section
+                    className="popup-results-box"
+                    aria-label="Clinic search results"
+                  >
+                    {staffClinicSearch.trim() !== "" ||
+                    staffProvince ||
+                    staffFacilityType ? (
                       staffClinicResults.length === 0 ? (
                         <p className="popup-empty-message">No clinics found.</p>
                       ) : (
@@ -846,9 +909,15 @@ const resetEditClinicPopup = () => {
                             }`}
                           >
                             <section className="popup-clinic-info">
-                              <p><strong>Name:</strong> {clinic.facility_name}</p>
-                              <p><strong>Province:</strong> {clinic.admin1}</p>
-                              <p><strong>Type:</strong> {clinic.facility_type}</p>
+                              <p>
+                                <strong>Name:</strong> {clinic.facility_name}
+                              </p>
+                              <p>
+                                <strong>Province:</strong> {clinic.admin1}
+                              </p>
+                              <p>
+                                <strong>Type:</strong> {clinic.facility_type}
+                              </p>
                             </section>
 
                             <button
@@ -857,22 +926,25 @@ const resetEditClinicPopup = () => {
                               onClick={() => {
                                 setSelectedStaffClinic(clinic);
                                 setStaffProvince(clinic.admin1 || "");
-                                setStaffFacilityType(clinic.facility_type || "");
-
+                                setStaffFacilityType(
+                                  clinic.facility_type || ""
+                                );
                               }}
                             >
-                              {selectedStaffClinic?.id === clinic.id ? "Selected" : "Select"}
+                              {selectedStaffClinic?.id === clinic.id
+                                ? "Selected"
+                                : "Select"}
                             </button>
                           </article>
                         ))
                       )
                     ) : null}
-                    </section>
-        
+                  </section>
 
                   {selectedStaffClinic && (
                     <p className="selected-clinic-note">
-                      Selected clinic: <strong>{selectedStaffClinic.facility_name}</strong>
+                      Selected clinic:{" "}
+                      <strong>{selectedStaffClinic.facility_name}</strong>
                     </p>
                   )}
                 </section>
@@ -885,13 +957,18 @@ const resetEditClinicPopup = () => {
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="save-btn" disabled={isSavingStaff}>
+
+                  <button
+                    type="submit"
+                    className="save-btn"
+                    disabled={isSavingStaff}
+                  >
                     {isSavingStaff ? "Saving..." : "Save Staff"}
-                </button>
+                  </button>
                 </footer>
               </form>
             </dialog>
-          </section> 
+          </section>
         )}
 
         {showAdminPopup && (
@@ -905,519 +982,579 @@ const resetEditClinicPopup = () => {
               onClick={(event) => event.stopPropagation()}
             >
               <form className="popup-form" onSubmit={handleAdminSubmit}>
-              <header className="popup-header">
-                <h2>Add Admin</h2>
-              </header>
+                <header className="popup-header">
+                  <h2>Add Admin</h2>
+                </header>
 
-              <label className="popup-label" htmlFor="adminEmail">
-                Email
-              </label>
-              <input
-                className="popup-input"
-                id="adminEmail"
-                name="adminEmail"
-                type="email"
-                required
-              />
+                <label className="popup-label" htmlFor="adminEmail">
+                  Email
+                </label>
 
-              <footer className="popup-footer">
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={() => setShowAdminPopup(false)}
-                  disabled={isSavingAdmin}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="save-btn"
-                  disabled={isSavingAdmin}
-                >
-                  {isSavingAdmin ? "Saving..." : "Save Admin"}
-                </button>
-              </footer>
-            </form>
-          </dialog>
-        </section>
+                <input
+                  className="popup-input"
+                  id="adminEmail"
+                  name="adminEmail"
+                  type="email"
+                  required
+                />
+
+                <footer className="popup-footer">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={() => setShowAdminPopup(false)}
+                    disabled={isSavingAdmin}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="save-btn"
+                    disabled={isSavingAdmin}
+                  >
+                    {isSavingAdmin ? "Saving..." : "Save Admin"}
+                  </button>
+                </footer>
+              </form>
+            </dialog>
+          </section>
         )}
 
-               
+        {showClinicPopup && (
+          <section className="admin-modal-overlay" onClick={resetEditClinicPopup}>
+            <dialog
+              className="popup-dialog popup-dialog-wide"
+              open
+              onClick={(event) => event.stopPropagation()}
+            >
+              <form className="popup-form" onSubmit={handleClinicSubmit}>
+                <header className="popup-header">
+                  <h2>Edit Clinic Hours</h2>
+                </header>
 
-  {showClinicPopup && (
-    <section className="admin-modal-overlay" onClick={resetEditClinicPopup}>
-      <dialog
-        className="popup-dialog popup-dialog-wide"
-        open
-        onClick={(event) => event.stopPropagation()}
-      >
-        <form className="popup-form" onSubmit={handleClinicSubmit}>
-        <header className="popup-header">
-          <h2>Edit Clinic Hours</h2>
-        </header>
+                <section className="clinic-search-section">
+                  <section className="popup-field-group">
+                    <label className="popup-label" htmlFor="editClinicSearch">
+                      Search Clinic Name
+                    </label>
 
-        <section className="clinic-search-section">
-          <section className="popup-field-group">
-            <label className="popup-label" htmlFor="editClinicSearch">
-              Search Clinic Name
-            </label>
-            <input
-              className="popup-input"
-              id="editClinicSearch"
-              type="text"
-              value={editClinicSearch}
-              onChange={(event) => setEditClinicSearch(event.target.value)}
-              placeholder="Type clinic name"
-            />
-          </section>
+                    <input
+                      className="popup-input"
+                      id="editClinicSearch"
+                      type="text"
+                      value={editClinicSearch}
+                      onChange={(event) =>
+                        setEditClinicSearch(event.target.value)
+                      }
+                      placeholder="Type clinic name"
+                    />
+                  </section>
 
-          {editClinicLoading && (
-            <p className="popup-status-message">Searching clinics...</p>
-          )}
+                  {editClinicLoading && (
+                    <p className="popup-status-message">Searching clinics...</p>
+                  )}
 
-          {editClinicError && (
-            <p className="popup-error-message">{editClinicError}</p>
-          )}
+                  {editClinicError && (
+                    <p className="popup-error-message">{editClinicError}</p>
+                  )}
 
-        <section className="popup-results-box" aria-label="Clinic search results">
-          {editClinicSearch.trim() !== "" && editClinicResults.length === 0 ? (
-            <p className="popup-empty-message">No clinics found.</p>
-          ) : (
-            editClinicResults.map((clinic) => (
-              <article
-                key={clinic.id}
-                className={`popup-clinic-card ${
-                  selectedEditClinic?.id === clinic.id
-                    ? "popup-clinic-card-selected"
-                    : ""
-                }`}
-              >
-                <section className="popup-clinic-info">
-                  <p><strong>Name:</strong> {clinic.facility_name}</p>
-                  <p><strong>Province:</strong> {clinic.admin1}</p>
-                  <p><strong>Type:</strong> {clinic.facility_type}</p>
+                  <section
+                    className="popup-results-box"
+                    aria-label="Clinic search results"
+                  >
+                    {editClinicSearch.trim() !== "" &&
+                    editClinicResults.length === 0 ? (
+                      <p className="popup-empty-message">No clinics found.</p>
+                    ) : (
+                      editClinicResults.map((clinic) => (
+                        <article
+                          key={clinic.id}
+                          className={`popup-clinic-card ${
+                            selectedEditClinic?.id === clinic.id
+                              ? "popup-clinic-card-selected"
+                              : ""
+                          }`}
+                        >
+                          <section className="popup-clinic-info">
+                            <p>
+                              <strong>Name:</strong> {clinic.facility_name}
+                            </p>
+                            <p>
+                              <strong>Province:</strong> {clinic.admin1}
+                            </p>
+                            <p>
+                              <strong>Type:</strong> {clinic.facility_type}
+                            </p>
+                          </section>
+
+                          <button
+                            type="button"
+                            className="popup-select-btn"
+                            onClick={() => setSelectedEditClinic(clinic)}
+                          >
+                            {selectedEditClinic?.id === clinic.id
+                              ? "Selected"
+                              : "Select"}
+                          </button>
+                        </article>
+                      ))
+                    )}
+                  </section>
+
+                  {selectedEditClinic && (
+                    <p className="selected-clinic-note">
+                      Selected clinic:{" "}
+                      <strong>{selectedEditClinic.facility_name}</strong>
+                    </p>
+                  )}
                 </section>
 
-                <button
-                  type="button"
-                  className="popup-select-btn"
-                  onClick={() => setSelectedEditClinic(clinic)}
-                >
-                  {selectedEditClinic?.id === clinic.id ? "Selected" : "Select"}
-                </button>
-              </article>
-            ))
-          )}
-        </section>
+                <h3 className="popup-subheading">Edit Operating Hours</h3>
 
-          {selectedEditClinic && (
-            <p className="selected-clinic-note">
-              Selected clinic: <strong>{selectedEditClinic.facility_name}</strong>
-            </p>
-          )}
-        </section>
+                <section className="clinic-time-grid">
+                  <section className="popup-field-group">
+                    <label className="popup-label" htmlFor="openingTime">
+                      Opening Time
+                    </label>
 
-        <h3 className="popup-subheading">Edit Operating Hours</h3>
+                    <input
+                      className="popup-input"
+                      id="openingTime"
+                      name="openingTime"
+                      type="time"
+                      min="00:00"
+                      max="23:59"
+                      step="60"
+                      required
+                    />
+                  </section>
 
-        <section className="clinic-time-grid">
-          <section className="popup-field-group">
-            <label className="popup-label" htmlFor="openingTime">
-              Opening Time
-            </label>
-            <input
-              className="popup-input"
-              id="openingTime"
-              name="openingTime"
-              type="time"
-              min="00:00"
-              max="23:59"
-              step="60"
-              required
-            />
+                  <section className="popup-field-group">
+                    <label className="popup-label" htmlFor="closingTime">
+                      Closing Time
+                    </label>
+
+                    <input
+                      className="popup-input"
+                      id="closingTime"
+                      name="closingTime"
+                      type="time"
+                      min="00:00"
+                      max="23:59"
+                      step="60"
+                      required
+                    />
+                  </section>
+                </section>
+
+                <footer className="popup-footer">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={resetEditClinicPopup}
+                  >
+                    Cancel
+                  </button>
+
+                  <button type="submit" className="save-btn">
+                    Save Clinic Hours
+                  </button>
+                </footer>
+              </form>
+            </dialog>
           </section>
-
-          <section className="popup-field-group">
-            <label className="popup-label" htmlFor="closingTime">
-              Closing Time
-            </label>
-            <input
-              className="popup-input"
-              id="closingTime"
-              name="closingTime"
-              type="time"
-              min="00:00"
-              max="23:59"
-              step="60"
-              required
-            />
-          </section>
-        </section>
-
-        <footer className="popup-footer">
-          <button
-            type="button"
-            className="cancel-btn"
-            onClick={resetEditClinicPopup}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="save-btn">
-            Save Clinic Hours
-          </button>
-        </footer>
-      </form>
-    </dialog>
-  </section>
-  )}
-
-  {showStaffList && (
-    <section
-      className="admin-modal-overlay"
-      onClick={() => setShowStaffList(false)}
-    >
-      <dialog
-        className="popup-dialog"
-        open
-        onClick={(event) => event.stopPropagation()}
-      >
-        <form className="popup-form">
-        <header className="popup-header">
-          <h2>Staff Members</h2>
-        </header>
-        <input
-          className="popup-input"
-          type="text"
-          placeholder="Search staff..."
-          value={staffSearch}
-          onChange={async (e) => {
-            const value = e.target.value;
-            setStaffSearch(value);
-
-            const searchTerm = value.trim();
-
-            if (searchTerm.length >= 1) {
-              setLoadingStaff(true);
-
-              
-              const { data: startsWithData } = await supabaseClient
-                .from("profiles")
-                .select("email, role")
-                .eq("role", "clinicstaff")
-                .ilike("email", `${searchTerm}%`)
-                .limit(20);
-
-              
-              const { data: containsData } = await supabaseClient
-                .from("profiles")
-                .select("email, role")
-                .eq("role", "clinicstaff")
-                .ilike("email", `%${searchTerm}%`)
-                .limit(50);
-
-              
-              const allStaff = [...(startsWithData || []), ...(containsData || [])];
-
-              const uniqueStaff = allStaff.filter(
-                (staff, index, self) =>
-                  index === self.findIndex((s) => s.email === staff.email)
-              );
-
-              setStaffList(uniqueStaff);
-              setLoadingStaff(false);
-            } else {
-              setStaffList([]);
-            }
-          }}
-        />
-        {loadingStaff ? (
-          <p>Loading...</p>
-        ) : (
-          <ul className="activity-list">
-            {staffList
-              .filter((s) => s.email.toLowerCase().includes(staffSearch.toLowerCase()))
-              .map((staff, index) => (
-    <li key={index} className="staff-list-item">
-      <span>{staff.email}</span>
-      <button
-        type="button"
-        className="remove-btn"
-      onClick={() => setStaffToRemove(staff.email)}
-      >
-        Remove
-      </button>
-    </li>
-  ))}
-          </ul>
         )}
-        <footer className="popup-footer">
-          <button
-            type="button"
-            className="cancel-btn"
+
+        {showStaffList && (
+          <section
+            className="admin-modal-overlay"
             onClick={() => setShowStaffList(false)}
           >
-            Close
-          </button>
-        </footer>
-      </form>
-    </dialog>
-  </section>
-  )}
+            <dialog
+              className="popup-dialog"
+              open
+              onClick={(event) => event.stopPropagation()}
+            >
+              <form className="popup-form">
+                <header className="popup-header">
+                  <h2>Staff Members</h2>
+                </header>
 
-{showClinicList && (
-  <section
-    className="admin-modal-overlay"
-    onClick={() => setShowClinicList(false)}
-  >
-    <dialog
-      className="popup-dialog"
-      open
-      onClick={(event) => event.stopPropagation()}
-    >
-      <form className="popup-form">
-      <header className="popup-header">
-        <h2>Clinics</h2>
-      </header>
-      <input
-        className="popup-input"
-        type="text"
-        placeholder="Search clinics..."
-        value={clinicSearch}
-       onChange={async (e) => {
-          const value = e.target.value;
-          setClinicSearch(value);
+                <input
+                  className="popup-input"
+                  type="text"
+                  placeholder="Search staff..."
+                  value={staffSearch}
+                  onChange={async (event) => {
+                    const value = event.target.value;
+                    setStaffSearch(value);
 
-          const searchTerm = value.trim();
+                    const searchTerm = value.trim();
 
-          if (searchTerm.length >= 1) {
-            setLoadingClinics(true);
+                    if (searchTerm.length >= 1) {
+                      setLoadingStaff(true);
 
-            
-            const { data: startsWithData } = await supabaseClient
-              .from("clinics")
-              .select("facility_name, admin1, facility_type")
-              .ilike("facility_name", `${searchTerm}%`)
-              .limit(20);
+                      const { data: startsWithData } = await supabaseClient
+                        .from("profiles")
+                        .select("email, role")
+                        .eq("role", "clinicstaff")
+                        .ilike("email", `${searchTerm}%`)
+                        .limit(20);
 
-            
-            const { data: containsData } = await supabaseClient
-              .from("clinics")
-              .select("facility_name, admin1, facility_type")
-              .ilike("facility_name", `%${searchTerm}%`)
-              .limit(50);
+                      const { data: containsData } = await supabaseClient
+                        .from("profiles")
+                        .select("email, role")
+                        .eq("role", "clinicstaff")
+                        .ilike("email", `%${searchTerm}%`)
+                        .limit(50);
 
-            
-            const allClinics = [...(startsWithData || []), ...(containsData || [])];
+                      const allStaff = [
+                        ...(startsWithData || []),
+                        ...(containsData || []),
+                      ];
 
-            const uniqueClinics = allClinics.filter(
-              (clinic, index, self) =>
-                index === self.findIndex(
-                  (c) => c.facility_name === clinic.facility_name
-                )
-            );
+                      const uniqueStaff = allStaff.filter(
+                        (staff, index, self) =>
+                          index ===
+                          self.findIndex((s) => s.email === staff.email)
+                      );
 
-            setClinicList(uniqueClinics);
-            setLoadingClinics(false);
-          } else {
-            setClinicList([]);
-          }
-        }}
-      />
-      {loadingClinics ? (
-        <p>Loading...</p>
-      ) : (
-        <ul className="activity-list">
-          {clinicList
-            .filter((c) => c.facility_name?.toLowerCase().includes(clinicSearch.toLowerCase()))
-            .map((clinic, index) => (
-              <li key={index}>{clinic.facility_name} — {clinic.admin1} — {clinic.facility_type}</li>
-            ))}
-        </ul>
-      )}
-      <footer className="popup-footer">
-        <button
-          type="button"
-          className="cancel-btn"
-          onClick={() => setShowClinicList(false)}
-        >
-          Close
-        </button>
-      </footer>
-      </form>
-      </dialog>
-    </section>
-    )}
+                      setStaffList(uniqueStaff);
+                      setLoadingStaff(false);
+                    } else {
+                      setStaffList([]);
+                    }
+                  }}
+                />
 
-  {staffToRemove && (
-    <section
-      className="admin-modal-overlay"
-      onClick={() => setStaffToRemove(null)}
-    >
-      <dialog
-        className="popup-dialog"
-        open
-        onClick={(event) => event.stopPropagation()}
-      >
-      <section className="popup-form">
-      <header className="popup-header">
-        <h2>Confirm Removal</h2>
-      </header>
-      <p>Are you sure you want to remove <strong>{staffToRemove}</strong>?</p>
-      <footer className="popup-footer">
-        <button
-          type="button"
-          className="cancel-btn"
-          onClick={() => setStaffToRemove(null)}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="remove-btn"
-          onClick={() => {
-            removeStaff(staffToRemove);
-            setStaffToRemove(null);
-          }}
-        >
-          Confirm Remove
-        </button>
-      </footer>
-    </section>
-  </dialog>
-</section>
-)}
+                {loadingStaff ? (
+                  <p>Loading...</p>
+                ) : (
+                  <ul className="activity-list">
+                    {staffList
+                      .filter((staff) =>
+                        staff.email
+                          .toLowerCase()
+                          .includes(staffSearch.toLowerCase())
+                      )
+                      .map((staff, index) => (
+                        <li key={index} className="staff-list-item">
+                          <p>{staff.email}</p>
 
-{showProfilePopup && (
-  <section
-    className="admin-modal-overlay"
-    onClick={() => setShowProfilePopup(false)}
-  >
-    <dialog
-      className="popup-dialog"
-      open
-      onClick={(event) => event.stopPropagation()}
-    >
-      <form className="popup-form" autoComplete="off">
-        <header className="popup-header">
-          <h2>Profile Settings</h2>
-        </header>
+                          <button
+                            type="button"
+                            className="remove-btn"
+                            onClick={() => setStaffToRemove(staff.email)}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                )}
 
-        <input
-          type="text"
-          name="hiddenAdminUsername"
-          autoComplete="username"
-          tabIndex="-1"
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            left: "-9999px",
-            width: "1px",
-            height: "1px",
-            opacity: 0,
-          }}
-        />
+                <footer className="popup-footer">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={() => setShowStaffList(false)}
+                  >
+                    Close
+                  </button>
+                </footer>
+              </form>
+            </dialog>
+          </section>
+        )}
 
-        <input
-          type="password"
-          name="hiddenAdminPassword"
-          autoComplete="current-password"
-          tabIndex="-1"
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            left: "-9999px",
-            width: "1px",
-            height: "1px",
-            opacity: 0,
-          }}
-        />
-
-        <section className="profile-option-card">
-          <h3>Change Username</h3>
-
-          <label className="popup-label" htmlFor="adminDisplayNameInput">
-            New Username
-          </label>
-
-          <input
-            className="popup-input"
-            id="adminDisplayNameInput"
-            name="adminDisplayNameInputNoAutoFill"
-            type="text"
-            placeholder="Enter new username"
-            value={newUsername}
-            autoComplete="new-password"
-            spellCheck="false"
-            data-lpignore="true"
-            data-1p-ignore="true"
-            onChange={(event) => setNewUsername(event.target.value)}
-          />
-
-          {profileError && (
-            <p className="admin-error-message">{profileError}</p>
-          )}
-
-          <button
-            type="button"
-            className="save-btn"
-            onClick={handleUsernameUpdate}
-            disabled={isSavingUsername}
+        {showClinicList && (
+          <section
+            className="admin-modal-overlay"
+            onClick={() => setShowClinicList(false)}
           >
-            {isSavingUsername ? "Updating..." : "Update Username"}
-          </button>
-        </section>
+            <dialog
+              className="popup-dialog"
+              open
+              onClick={(event) => event.stopPropagation()}
+            >
+              <form className="popup-form">
+                <header className="popup-header">
+                  <h2>Clinics</h2>
+                </header>
 
-        <section className="profile-option-card">
-          <h3>Change Password</h3>
+                <input
+                  className="popup-input"
+                  type="text"
+                  placeholder="Search clinics..."
+                  value={clinicSearch}
+                  onChange={async (event) => {
+                    const value = event.target.value;
+                    setClinicSearch(value);
 
-          <label className="popup-label" htmlFor="adminNewPasswordInput">
-            New Password
-          </label>
+                    const searchTerm = value.trim();
 
-          <input
-            className="popup-input"
-            id="adminNewPasswordInput"
-            name="adminNewPasswordInputNoAutofill"
-            type="password"
-            placeholder="Enter new password"
-            autoComplete="new-password"
-            data-lpignore="true"
-            data-1p-ignore="true"
-          />
+                    if (searchTerm.length >= 1) {
+                      setLoadingClinics(true);
 
-          <label className="popup-label" htmlFor="adminConfirmPasswordInput">
-            Confirm Password
-          </label>
+                      const { data: startsWithData } = await supabaseClient
+                        .from("clinics")
+                        .select("facility_name, admin1, facility_type")
+                        .ilike("facility_name", `${searchTerm}%`)
+                        .limit(20);
 
-          <input
-            className="popup-input"
-            id="adminConfirmPasswordInput"
-            name="adminConfirmPasswordInputNoAutofill"
-            type="password"
-            placeholder="Confirm new password"
-            autoComplete="new-password"
-            data-lpignore="true"
-            data-1p-ignore="true"
-          />
+                      const { data: containsData } = await supabaseClient
+                        .from("clinics")
+                        .select("facility_name, admin1, facility_type")
+                        .ilike("facility_name", `%${searchTerm}%`)
+                        .limit(50);
 
-          <button type="button" className="save-btn">
-            Update Password
-          </button>
-        </section>
+                      const allClinics = [
+                        ...(startsWithData || []),
+                        ...(containsData || []),
+                      ];
 
-        <footer className="popup-footer">
-          <button
-            type="button"
-            className="cancel-btn"
+                      const uniqueClinics = allClinics.filter(
+                        (clinic, index, self) =>
+                          index ===
+                          self.findIndex(
+                            (c) => c.facility_name === clinic.facility_name
+                          )
+                      );
+
+                      setClinicList(uniqueClinics);
+                      setLoadingClinics(false);
+                    } else {
+                      setClinicList([]);
+                    }
+                  }}
+                />
+
+                {loadingClinics ? (
+                  <p>Loading...</p>
+                ) : (
+                  <ul className="activity-list">
+                    {clinicList
+                      .filter((clinic) =>
+                        clinic.facility_name
+                          ?.toLowerCase()
+                          .includes(clinicSearch.toLowerCase())
+                      )
+                      .map((clinic, index) => (
+                        <li key={index}>
+                          {clinic.facility_name} — {clinic.admin1} —{" "}
+                          {clinic.facility_type}
+                        </li>
+                      ))}
+                  </ul>
+                )}
+
+                <footer className="popup-footer">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={() => setShowClinicList(false)}
+                  >
+                    Close
+                  </button>
+                </footer>
+              </form>
+            </dialog>
+          </section>
+        )}
+
+        {staffToRemove && (
+          <section
+            className="admin-modal-overlay"
+            onClick={() => setStaffToRemove(null)}
+          >
+            <dialog
+              className="popup-dialog"
+              open
+              onClick={(event) => event.stopPropagation()}
+            >
+              <section className="popup-form">
+                <header className="popup-header">
+                  <h2>Confirm Removal</h2>
+                </header>
+
+                <p>
+                  Are you sure you want to remove{" "}
+                  <strong>{staffToRemove}</strong>?
+                </p>
+
+                <footer className="popup-footer">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={() => setStaffToRemove(null)}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    className="remove-btn"
+                    onClick={() => {
+                      removeStaff(staffToRemove);
+                      setStaffToRemove(null);
+                    }}
+                  >
+                    Confirm Remove
+                  </button>
+                </footer>
+              </section>
+            </dialog>
+          </section>
+        )}
+
+        {showProfilePopup && (
+          <section
+            className="admin-modal-overlay"
             onClick={() => setShowProfilePopup(false)}
           >
-            Close
-          </button>
-        </footer>
-      </form>
-    </dialog>
-  </section>
-)}
+            <dialog
+              className="popup-dialog"
+              open
+              onClick={(event) => event.stopPropagation()}
+            >
+              <form className="popup-form" autoComplete="off">
+                <header className="popup-header">
+                  <h2>Profile Settings</h2>
+                </header>
 
+                <input
+                  type="text"
+                  name="hiddenAdminUsername"
+                  autoComplete="username"
+                  tabIndex="-1"
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: "-9999px",
+                    width: "1px",
+                    height: "1px",
+                    opacity: 0,
+                  }}
+                />
+
+                <input
+                  type="password"
+                  name="hiddenAdminPassword"
+                  autoComplete="current-password"
+                  tabIndex="-1"
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: "-9999px",
+                    width: "1px",
+                    height: "1px",
+                    opacity: 0,
+                  }}
+                />
+
+                <section className="profile-option-card">
+                  <h3>Change Username</h3>
+
+                  <label className="popup-label" htmlFor="adminDisplayNameInput">
+                    New Username
+                  </label>
+
+                  <input
+                    className="popup-input"
+                    id="adminDisplayNameInput"
+                    name="adminDisplayNameInputNoAutoFill"
+                    type="text"
+                    placeholder="Enter new username"
+                    value={newUsername}
+                    autoComplete="new-password"
+                    spellCheck="false"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    onChange={(event) => setNewUsername(event.target.value)}
+                  />
+
+                  {profileError && (
+                    <p className="admin-error-message">{profileError}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    className="save-btn"
+                    onClick={handleUsernameUpdate}
+                    disabled={isSavingUsername}
+                  >
+                    {isSavingUsername ? "Updating..." : "Update Username"}
+                  </button>
+                </section>
+
+                <section className="profile-option-card">
+                  <h3>Change Password</h3>
+
+                  <label className="popup-label" htmlFor="adminNewPasswordInput">
+                    New Password
+                  </label>
+
+                  <input
+                    className="popup-input"
+                    id="adminNewPasswordInput"
+                    name="adminNewPasswordInputNoAutofill"
+                    type="password"
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    onChange={(event) => setNewPassword(event.target.value)}
+                  />
+
+                  <label
+                    className="popup-label"
+                    htmlFor="adminConfirmPasswordInput"
+                  >
+                    Confirm Password
+                  </label>
+
+                  <input
+                    className="popup-input"
+                    id="adminConfirmPasswordInput"
+                    name="adminConfirmPasswordInputNoAutofill"
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                  />
+
+                  {passwordError && (
+                    <p className="admin-error-message">{passwordError}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    className="save-btn"
+                    onClick={handlePasswordUpdate}
+                    disabled={isSavingPassword}
+                  >
+                    {isSavingPassword ? "Updating..." : "Update Password"}
+                  </button>
+                </section>
+
+                <footer className="popup-footer">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={() => setShowProfilePopup(false)}
+                  >
+                    Close
+                  </button>
+                </footer>
+              </form>
+            </dialog>
+          </section>
+        )}
       </section>
     </main>
   );
