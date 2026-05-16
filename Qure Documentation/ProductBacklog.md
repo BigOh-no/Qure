@@ -90,16 +90,16 @@ The backlog is prioritised according to project importance, user value, and deve
 
 # Additional Planned Enhancements
 
-These items are not part of the completed sprint work, but they can be included as future backlog items.
+These items are not part of the completed sprint work, but they can be included.
 
 | Priority | Type | Task | Story Points | Status |
 |---|---|---|---:|---|
-| Medium | Enhancement | Improve form validation messages across login, sign-up, booking, and profile forms. | 3 | Planned |
-| Medium | Enhancement | Improve mobile responsiveness across patient, staff, and admin dashboards. | 5 | Planned |
-| Medium | Enhancement | Add loading indicators when fetching clinics, appointments, queues, and analytics. | 3 | Planned |
-| Low | Enhancement | Improve empty-state messages when no clinics, staff, bookings, or analytics are available. | 2 | Planned |
-| Medium | Enhancement | Add confirmation pop-ups before cancelling bookings, leaving queues, or removing staff members. | 3 | Planned |
-| Low | Enhancement | Improve dashboard styling consistency between patient, staff, and admin pages. | 3 | Planned |
+| Medium | Enhancement | Improve form validation messages across login, sign-up, booking, and profile forms. | 3 | Completed |
+| Medium | Enhancement | Improve mobile responsiveness across patient, staff, and admin dashboards. | 5 | Completed |
+| Medium | Enhancement | Add loading indicators when fetching clinics, appointments, queues, and analytics. | 3 | Completed |
+| Low | Enhancement | Improve empty-state messages when no clinics, staff, bookings, or analytics are available. | 2 | Completed |
+| Medium | Enhancement | Add confirmation pop-ups before cancelling bookings, leaving queues, or removing staff members. | 3 | Completed |
+| Low | Enhancement | Improve dashboard styling consistency between patient, staff, and admin pages. | 3 | Completed |
 
 ---
 
