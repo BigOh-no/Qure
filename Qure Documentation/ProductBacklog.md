@@ -107,12 +107,12 @@ These items are not part of the completed sprint work, but they can be included.
 
 | Priority | Type | Bug Fix / Task | Story Points | Status |
 |---|---|---|---:|---|
-| High | Bug Fix | Ensure users are redirected to the correct dashboard after login based on their role. | 3 | Planned |
-| High | Bug Fix | Prevent unauthorised users from accessing admin or staff pages directly through the URL. | 5 | Planned |
-| Medium | Bug Fix | Ensure cancelled or rescheduled appointments update correctly in the database and user interface. | 5 | Planned |
-| Medium | Bug Fix | Ensure queue positions update correctly when a patient joins or leaves a queue. | 5 | Planned |
-| Medium | Bug Fix | Ensure exported CSV and PDF analytics display correct date formats and calculated values. | 3 | Planned |
-| Low | Bug Fix | Fix minor spelling, spacing, and styling inconsistencies across the application. | 2 | Planned |
+| High | Bug Fix | Ensure users are redirected to the correct dashboard after login based on their role. | 3 | Completed |
+| High | Bug Fix | Prevent unauthorised users from accessing admin or staff pages directly through the URL. | 5 | Completed |
+| Medium | Bug Fix | Ensure cancelled or rescheduled appointments update correctly in the database and user interface. | 5 | Completed |
+| Medium | Bug Fix | Ensure queue positions update correctly when a patient joins or leaves a queue. | 5 | Completed |
+| Medium | Bug Fix | Ensure exported CSV and PDF analytics display correct date formats and calculated values. | 3 | Completed |
+| Low | Bug Fix | Fix minor spelling, spacing, and styling inconsistencies across the application. | 2 | Completed |
 
 ---
 
