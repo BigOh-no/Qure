@@ -1,4 +1,4 @@
-# Sprint 1 Retrospective
+# Individual Sprint 1 Retrospective
 
 ## Name
 Subramanian Subramanian Mahalingam (GitHub: Vikram0501)

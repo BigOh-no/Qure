@@ -1,7 +1,7 @@
-# Sprint 3 Retrospective
+# Individual Sprint 3 Retrospective
 
 ## Name
-Subramanian Subramanian Mahalingam (GitHub: Vikram0501)
+Subramanian Subramanian Mahalingam (2800630) (GitHub: Vikram0501)
 
 ## Sprint Goal
 The goal of this sprint was to:

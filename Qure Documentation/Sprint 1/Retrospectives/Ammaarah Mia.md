@@ -1,4 +1,4 @@
-# Individual Sprint Retrospective
+# Individual Sprint 1 Retrospective
 
 ## Name
 Ammaarah Mia (2807590)

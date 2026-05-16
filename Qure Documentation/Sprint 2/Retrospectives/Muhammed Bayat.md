@@ -1,4 +1,4 @@
-# Sprint 2 Retrospective
+# Individual Sprint 2 Retrospective
 
 ## Name  
 Muhammed Bayat (GitHub: Muhammed-Bayat)

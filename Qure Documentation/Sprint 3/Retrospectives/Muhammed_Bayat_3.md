@@ -1,4 +1,4 @@
-# Sprint 3 Retrospective
+# Individual Sprint 3 Retrospective
 
 ## Name
 Muhammed Bayat (GitHub: Muhammed-Bayat)

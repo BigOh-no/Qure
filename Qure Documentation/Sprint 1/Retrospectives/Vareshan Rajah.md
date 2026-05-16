@@ -1,13 +1,13 @@
-# Individual Sprint Retrospective
+# Individual Sprint 1 Retrospective
 
 ## Name
 Vareshan Rajah (2809069)
 
 ## Tasks Completed
 During Sprint 1, I as responsible for:
--Developing the fornt-end of the Landing Page
--Initial setup of the Patient Page
--Modifying the browser tab
+- Developing the front-end of the Landing Page
+- Initial setup of the Patient Page
+- Modifying the browser tab
 
 ## Work Timeline and Contributions
 
@@ -19,9 +19,9 @@ On **3 April** I started modifying the browser tab, including updating the favic
 
 
 ## Challenges Experienced
--My first difficulty I encountered was to convert our logo into a favicon since it was not looking particularly pleasing on the eye hence I had to redo it.
--I faced a challenge with the rounting of the Patient Page.
--Debugging issues related to the changes to logo's since it would not change immediately due to the cache.
+- My first difficulty I encountered was to convert our logo into a favicon since it was not looking particularly pleasing on the eye hence I had to redo it.
+- I faced a challenge with the rounting of the Patient Page.
+- Debugging issues related to the changes to logo's since it would not change immediately due to the cache.
 
 
 ## Reflection
@@ -31,7 +31,6 @@ Even though there were a few challenges, I did still manage to complete my tasks
 ## Areas for Improvement
 -Better time management
 -Github related issues
-
 
 
 ## Conclusion
