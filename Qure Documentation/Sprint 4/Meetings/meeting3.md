@@ -18,6 +18,7 @@ Aaliah said that she finished the admin analytics so it shows the average patien
 - Staff can check patients in to their appointments
 
 ## User stories completed
+- As an admin, I can view clinic analytics so that I can monitor clinic performance, patient activity, and operational trends.
 - As an admin, I can export clinic analytics as a CSV or PDF file so that I can analyse data externally, generate reports, and keep records.
 - As a staff member, I can check a patient in to their appointment so that the clinic can record that the patient has arrived and is not a no show.
 
