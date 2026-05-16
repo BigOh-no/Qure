@@ -18,5 +18,7 @@
 
 ## Total story points
 Total required story points: 21
+
 Total extra story points: 40
+
 Total story points: 61
