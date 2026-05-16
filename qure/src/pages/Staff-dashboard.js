@@ -40,6 +40,11 @@ export default function StaffDashboard() {
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [profileError, setProfileError] = useState("");
 
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+
   async function loadStaffName() {
     try {
       const {
@@ -131,20 +136,19 @@ export default function StaffDashboard() {
   async function updateStatus(id, newStatus) {
     try {
       await updateQueueStatus(id, newStatus);
-      var stat;
-      if (newStatus === "in_consultation"){
+
+      let stat;
+
+      if (newStatus === "in_consultation") {
         stat = "In Consultation";
-      }
-      else if (newStatus === "completed"){
+      } else if (newStatus === "completed") {
         stat = "Completed";
+      } else {
+        stat = "Unknown";
       }
-      else{
-        stat = "Unknown"
-      }
+
       setPatients((prev) =>
-        prev.map((p) =>
-          p.id === id ? { ...p, status: stat } : p
-        )
+        prev.map((p) => (p.id === id ? { ...p, status: stat } : p))
       );
 
       showMessage("Queue status updated successfully.");
@@ -189,71 +193,66 @@ export default function StaffDashboard() {
     }
   }
 
-    function isAppointmentCheckedIn(status) {
-      const normalizedStatus = status?.toLowerCase().trim();
+  function isAppointmentCheckedIn(status) {
+    const normalizedStatus = status?.toLowerCase().trim();
 
-      return (
-        normalizedStatus === "checked_in" ||
-        normalizedStatus === "checked in"
-      );
-    }
+    return normalizedStatus === "checked_in" || normalizedStatus === "checked in";
+  }
 
-    function hasAppointmentPassedByOneHour(appointmentDate, appointmentTime) {
-      if (!appointmentDate || !appointmentTime) return false;
+  function hasAppointmentPassedByOneHour(appointmentDate, appointmentTime) {
+    if (!appointmentDate || !appointmentTime) return false;
 
-      const appointmentDateTime = new Date(
-        `${appointmentDate}T${appointmentTime}`
-      );
+    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
 
-      const oneHourAfterAppointment = new Date(
-        appointmentDateTime.getTime() + 60 * 60 * 1000
-      );
+    const oneHourAfterAppointment = new Date(
+      appointmentDateTime.getTime() + 60 * 60 * 1000
+    );
 
-      const now = new Date();
+    const now = new Date();
 
-      return now > oneHourAfterAppointment;
-    }
+    return now > oneHourAfterAppointment;
+  }
 
-    function hasAppointmentPassedByOneMonth(appointmentDate) {
-      if (!appointmentDate) return false;
+  function hasAppointmentPassedByOneMonth(appointmentDate) {
+    if (!appointmentDate) return false;
 
-      const appointmentDateOnly = new Date(appointmentDate);
-      const oneMonthAfterAppointment = new Date(appointmentDateOnly);
-      oneMonthAfterAppointment.setMonth(oneMonthAfterAppointment.getMonth() + 1);
+    const appointmentDateOnly = new Date(appointmentDate);
+    const oneMonthAfterAppointment = new Date(appointmentDateOnly);
+    oneMonthAfterAppointment.setMonth(oneMonthAfterAppointment.getMonth() + 1);
 
-      const now = new Date();
+    const now = new Date();
 
-      return now > oneMonthAfterAppointment;
-    }
+    return now > oneMonthAfterAppointment;
+  }
 
-    async function handleCheckInAppointment(appointmentId) {
-      try {
-        const updatedAppointment = await staffCheckInAppointment(appointmentId);
+  async function handleCheckInAppointment(appointmentId) {
+    try {
+      const updatedAppointment = await staffCheckInAppointment(appointmentId);
 
-        if (!updatedAppointment) {
-          showMessage("Could not check in patient.");
-          return;
-        }
-
-        setAppointments((prev) =>
-          prev.map((appointment) =>
-            appointment.id === appointmentId
-              ? {
-                  ...appointment,
-                  ...updatedAppointment,
-                }
-              : appointment
-          )
-        );
-
-        await loadAppointments();
-
-        showMessage("Patient checked in successfully.");
-      } catch (err) {
-        console.error(err);
+      if (!updatedAppointment) {
         showMessage("Could not check in patient.");
+        return;
       }
+
+      setAppointments((prev) =>
+        prev.map((appointment) =>
+          appointment.id === appointmentId
+            ? {
+                ...appointment,
+                ...updatedAppointment,
+              }
+            : appointment
+        )
+      );
+
+      await loadAppointments();
+
+      showMessage("Patient checked in successfully.");
+    } catch (err) {
+      console.error(err);
+      showMessage("Could not check in patient.");
     }
+  }
 
   async function handleCancelAppointment(appointmentId) {
     try {
@@ -262,9 +261,7 @@ export default function StaffDashboard() {
       if (updatedAppointment) {
         setAppointments((prev) =>
           prev.map((appointment) =>
-            appointment.id === appointmentId
-              ? updatedAppointment
-              : appointment
+            appointment.id === appointmentId ? updatedAppointment : appointment
           )
         );
       }
@@ -304,9 +301,7 @@ export default function StaffDashboard() {
       if (updatedAppointment) {
         setAppointments((prev) =>
           prev.map((appointment) =>
-            appointment.id === appointmentId
-              ? updatedAppointment
-              : appointment
+            appointment.id === appointmentId ? updatedAppointment : appointment
           )
         );
       }
@@ -319,18 +314,19 @@ export default function StaffDashboard() {
       showMessage("Could not reschedule appointment.");
     }
   }
-  function getStatusName(status){
-    if (status === "waiting"){
+
+  function getStatusName(status) {
+    if (status === "waiting") {
       return "Waiting";
-    }
-    else if (status === "in_consultation"){
+    } else if (status === "in_consultation") {
       return "In Consultation";
-    }
-    else if (status === "completed"){
+    } else if (status === "completed") {
       return "Completed";
     }
+
     return status;
   }
+
   function getStatusClass(status) {
     const normalizedStatus = status?.toLowerCase();
 
@@ -343,10 +339,7 @@ export default function StaffDashboard() {
       return "status progress";
     }
 
-    if (
-      normalizedStatus === "completed" ||
-      normalizedStatus === "done"
-    ) {
+    if (normalizedStatus === "completed" || normalizedStatus === "done") {
       return "status done";
     }
 
@@ -357,14 +350,13 @@ export default function StaffDashboard() {
     if (normalizedStatus === "booked") {
       return "status progress";
     }
+
     if (normalizedStatus === "checked in" || normalizedStatus === "checked_in") {
-        return "status checked-in";
+      return "status checked-in";
     }
-    
 
     return "status";
   }
-
 
   async function handleUsernameUpdate() {
     const trimmedUsername = newUsername.trim();
@@ -375,6 +367,7 @@ export default function StaffDashboard() {
     }
 
     setProfileError("");
+    setPasswordError("");
     setIsSavingUsername(true);
 
     try {
@@ -404,8 +397,62 @@ export default function StaffDashboard() {
     }
   }
 
+  async function handlePasswordUpdate() {
+    const trimmedPassword = newPassword.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
+
+    setProfileError("");
+    setPasswordError("");
+
+    if (!trimmedPassword || !trimmedConfirmPassword) {
+      setPasswordError("Please enter and confirm your new password.");
+      return;
+    }
+
+    if (trimmedPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (trimmedPassword !== trimmedConfirmPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    setIsSavingPassword(true);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseClient.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("No logged-in user found.");
+
+      const { error } = await supabaseClient.auth.updateUser({
+        password: trimmedPassword,
+      });
+
+      if (error) throw error;
+
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowProfilePopup(false);
+      showMessage("Password updated successfully.");
+    } catch (err) {
+      console.error("Failed to update password:", err.message);
+      setPasswordError(err.message || "Failed to update password.");
+    } finally {
+      setIsSavingPassword(false);
+    }
+  }
+
   async function openProfilePopup() {
     setProfileError("");
+    setPasswordError("");
+    setNewPassword("");
+    setConfirmPassword("");
     setShowProfilePopup(true);
 
     try {
@@ -437,8 +484,6 @@ export default function StaffDashboard() {
       setNewUsername("");
     }
   }
-
-
 
   return (
     <main className="layout">
@@ -511,7 +556,7 @@ export default function StaffDashboard() {
                   <td colSpan="4">No patients in queue</td>
                 </tr>
               ) : (
-                patients.map((entry, index) => (
+                patients.map((entry) => (
                   <tr key={entry.id}>
                     <td>{entry.patient_name}</td>
 
@@ -531,10 +576,7 @@ export default function StaffDashboard() {
                       <button
                         type="button"
                         className="btn start"
-                        onClick={() =>
-                          updateStatus(entry.id, "in_consultation")
-                        }
-
+                        onClick={() => updateStatus(entry.id, "in_consultation")}
                       >
                         Start
                       </button>
@@ -542,9 +584,7 @@ export default function StaffDashboard() {
                       <button
                         type="button"
                         className="btn complete"
-                        onClick={() =>
-                          updateStatus(entry.id, "completed")
-                        }
+                        onClick={() => updateStatus(entry.id, "completed")}
                       >
                         Complete
                       </button>
@@ -561,10 +601,7 @@ export default function StaffDashboard() {
             <h2>Create Appointment</h2>
           </header>
 
-          <form
-            className="appointment-form"
-            onSubmit={handleCreateAppointment}
-          >
+          <form className="appointment-form" onSubmit={handleCreateAppointment}>
             <label>
               Patient Email
               <input
@@ -639,236 +676,260 @@ export default function StaffDashboard() {
 
                   return (
                     <tr key={appointment.id}>
-                    <td>{appointment.patient_email || "Email not found"}</td>
+                      <td>{appointment.patient_email || "Email not found"}</td>
 
-                    <td>
-                      {editingAppointmentId === appointment.id ? (
-                        <input
-                          type="date"
-                          value={rescheduleDate}
-                          onChange={(e) =>
-                            setRescheduleDate(e.target.value)
-                          }
-                        />
-                      ) : (
-                        appointment.appointment_date
-                      )}
-                    </td>
+                      <td>
+                        {editingAppointmentId === appointment.id ? (
+                          <input
+                            type="date"
+                            value={rescheduleDate}
+                            onChange={(e) => setRescheduleDate(e.target.value)}
+                          />
+                        ) : (
+                          appointment.appointment_date
+                        )}
+                      </td>
 
-                    <td>
-                      {editingAppointmentId === appointment.id ? (
-                        <input
-                          type="time"
-                          value={rescheduleTime}
-                          onChange={(e) =>
-                            setRescheduleTime(e.target.value)
-                          }
-                        />
-                      ) : (
-                        appointment.appointment_time
-                      )}
-                    </td>
+                      <td>
+                        {editingAppointmentId === appointment.id ? (
+                          <input
+                            type="time"
+                            value={rescheduleTime}
+                            onChange={(e) => setRescheduleTime(e.target.value)}
+                          />
+                        ) : (
+                          appointment.appointment_time
+                        )}
+                      </td>
 
-                    <td>
-                      <strong className={getStatusClass(appointment.status)}>
-                        {appointment.status === "checked_in" ? "checked in" : appointment.status}
-                      </strong>
-                    </td>
+                      <td>
+                        <strong className={getStatusClass(appointment.status)}>
+                          {appointment.status === "checked_in"
+                            ? "checked in"
+                            : appointment.status}
+                        </strong>
+                      </td>
 
-                    <td>
-                      <button
+                      <td>
+                        <button
                           type="button"
                           className="btn check"
-                          onClick={() => handleCheckInAppointment(appointment.id)}
+                          onClick={() =>
+                            handleCheckInAppointment(appointment.id)
+                          }
                           disabled={
                             isAppointmentCheckedIn(appointment.status) ||
-                            appointment.status?.toLowerCase().trim() === "cancelled" ||
+                            appointment.status?.toLowerCase().trim() ===
+                              "cancelled" ||
                             hasAppointmentPassedByOneHour(
                               appointment.appointment_date,
                               appointment.appointment_time
                             )
                           }
                         >
-                          {isAppointmentCheckedIn(appointment.status) ? "Checked In" : "Check In"}
+                          {isAppointmentCheckedIn(appointment.status)
+                            ? "Checked In"
+                            : "Check In"}
                         </button>
-                    </td>
+                      </td>
 
-                    <td>
-                      {editingAppointmentId === appointment.id ? (
-                        <>
-                          <button
-                            type="button"
-                            className="btn complete"
-                            onClick={() =>
-                              handleRescheduleAppointment(appointment.id)
-                            }
-                          >
-                            Save
-                          </button>
+                      <td>
+                        {editingAppointmentId === appointment.id ? (
+                          <>
+                            <button
+                              type="button"
+                              className="btn complete"
+                              onClick={() =>
+                                handleRescheduleAppointment(appointment.id)
+                              }
+                            >
+                              Save
+                            </button>
 
-                          <button
-                            type="button"
-                            className="btn logout"
-                            onClick={cancelReschedule}
-                          >
-                            Cancel Edit
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                      <button
-                        type="button"
-                        className="btn start"
-                        onClick={() => startReschedule(appointment)}
-                        disabled={isLocked}
-                      >
-                        Reschedule
-                      </button>
+                            <button
+                              type="button"
+                              className="btn logout"
+                              onClick={cancelReschedule}
+                            >
+                              Cancel Edit
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="btn start"
+                              onClick={() => startReschedule(appointment)}
+                              disabled={isLocked}
+                            >
+                              Reschedule
+                            </button>
 
-                      <button
-                        type="button"
-                        className="btn logout"
-                        onClick={() => handleCancelAppointment(appointment.id)}
-                        disabled={isLocked}
-                      >
-                        Cancel
-                      </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
+                            <button
+                              type="button"
+                              className="btn logout"
+                              onClick={() =>
+                                handleCancelAppointment(appointment.id)
+                              }
+                              disabled={isLocked}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })
               )}
             </tbody>
           </table>
         </article>
-      {showProfilePopup && (
-        <section
-          className="staff-modal-overlay"
-          onClick={() => setShowProfilePopup(false)}
-        >
+
+        {showProfilePopup && (
           <section
-            className="staff-profile-popup"
-            onClick={(event) => event.stopPropagation()}
+            className="staff-modal-overlay"
+            onClick={() => setShowProfilePopup(false)}
           >
-            <header className="popup-header">
-              <h2>Profile Settings</h2>
-            </header>
-
-            <input
-              type="text"
-              name="hiddenStaffUsername"
-              autoComplete="username"
-              tabIndex="-1"
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                left: "-9999px",
-                width: "1px",
-                height: "1px",
-                opacity: 0,
-              }}
-            />
-
-            <input
-              type="password"
-              name="hiddenStaffPassword"
-              autoComplete="current-password"
-              tabIndex="-1"
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                left: "-9999px",
-                width: "1px",
-                height: "1px",
-                opacity: 0,
-              }}
-            />
-
-            <section className="profile-option-card">
-              <h3>Change Username</h3>
-
-              <label className="popup-label" htmlFor="staffDisplayNameInput">
-                New Username
-              </label>
+            <section
+              className="staff-profile-popup"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header className="popup-header">
+                <h2>Profile Settings</h2>
+              </header>
 
               <input
-                className="popup-input"
-                id="staffDisplayNameInput"
-                name="staffDisplayNameInputNoAutoFill"
                 type="text"
-                placeholder="Enter new username"
-                value={newUsername}
-                autoComplete="new-password"
-                spellCheck="false"
-                data-lpignore="true"
-                data-1p-ignore="true"
-                onChange={(event) => setNewUsername(event.target.value)}
+                name="hiddenStaffUsername"
+                autoComplete="username"
+                tabIndex="-1"
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: "-9999px",
+                  width: "1px",
+                  height: "1px",
+                  opacity: 0,
+                }}
               />
-
-              {profileError && <p className="staff-error-message">{profileError}</p>}
-
-              <button
-                type="button"
-                className="save-btn"
-                onClick={handleUsernameUpdate}
-                disabled={isSavingUsername}
-              >
-                {isSavingUsername ? "Updating..." : "Update Username"}
-              </button>
-            </section>
-
-            <section className="profile-option-card">
-              <h3>Change Password</h3>
-
-              <label className="popup-label" htmlFor="staffNewPasswordInput">
-                New Password
-              </label>
 
               <input
-                className="popup-input"
-                id="staffNewPasswordInput"
-                name="staffNewPasswordInputNoAutofill"
                 type="password"
-                placeholder="Enter new password"
-                autoComplete="new-password"
-                data-lpignore="true"
-                data-1p-ignore="true"
+                name="hiddenStaffPassword"
+                autoComplete="current-password"
+                tabIndex="-1"
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: "-9999px",
+                  width: "1px",
+                  height: "1px",
+                  opacity: 0,
+                }}
               />
 
-              <label className="popup-label" htmlFor="staffConfirmPasswordInput">
-                Confirm Password
-              </label>
+              <section className="profile-option-card">
+                <h3>Change Username</h3>
 
-              <input
-                className="popup-input"
-                id="staffConfirmPasswordInput"
-                name="staffConfirmPasswordInputNoAutofill"
-                type="password"
-                placeholder="Confirm new password"
-                autoComplete="new-password"
-                data-lpignore="true"
-                data-1p-ignore="true"
-              />
+                <label className="popup-label" htmlFor="staffDisplayNameInput">
+                  New Username
+                </label>
 
-              <button type="button" className="save-btn">
-                Update Password
-              </button>
+                <input
+                  className="popup-input"
+                  id="staffDisplayNameInput"
+                  name="staffDisplayNameInputNoAutoFill"
+                  type="text"
+                  placeholder="Enter new username"
+                  value={newUsername}
+                  autoComplete="new-password"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  onChange={(event) => setNewUsername(event.target.value)}
+                />
+
+                {profileError && (
+                  <p className="staff-error-message">{profileError}</p>
+                )}
+
+                <button
+                  type="button"
+                  className="save-btn"
+                  onClick={handleUsernameUpdate}
+                  disabled={isSavingUsername}
+                >
+                  {isSavingUsername ? "Updating..." : "Update Username"}
+                </button>
+              </section>
+
+              <section className="profile-option-card">
+                <h3>Change Password</h3>
+
+                <label className="popup-label" htmlFor="staffNewPasswordInput">
+                  New Password
+                </label>
+
+                <input
+                  className="popup-input"
+                  id="staffNewPasswordInput"
+                  name="staffNewPasswordInputNoAutofill"
+                  type="password"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+
+                <label
+                  className="popup-label"
+                  htmlFor="staffConfirmPasswordInput"
+                >
+                  Confirm Password
+                </label>
+
+                <input
+                  className="popup-input"
+                  id="staffConfirmPasswordInput"
+                  name="staffConfirmPasswordInputNoAutofill"
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
+
+                {passwordError && (
+                  <p className="staff-error-message">{passwordError}</p>
+                )}
+
+                <button
+                  type="button"
+                  className="save-btn"
+                  onClick={handlePasswordUpdate}
+                  disabled={isSavingPassword}
+                >
+                  {isSavingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </section>
+
+              <footer className="popup-footer">
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={() => setShowProfilePopup(false)}
+                >
+                  Close
+                </button>
+              </footer>
             </section>
-
-            <footer className="popup-footer">
-              <button
-                type="button"
-                className="cancel-btn"
-                onClick={() => setShowProfilePopup(false)}
-              >
-                Close
-              </button>
-            </footer>
           </section>
-        </section>
-      )}
+        )}
       </section>
     </main>
   );
