@@ -118,7 +118,7 @@ function Login() {
 
                 <footer className="login-footer">
                     <p className="signup-txt">
-                        Don't have an account? <Link to="/Signup">Sign up</Link>
+                        Don't have an account? <Link to="/signup">Sign up</Link>
                     </p>
                 </footer>
             </section>
@@ -145,7 +145,6 @@ function Login() {
             <ForgotPassword
                 isOpen={forgotOpen}
                 onClose={() => setForgotOpen(false)}
-                email={email}
             />
         </main>
     );

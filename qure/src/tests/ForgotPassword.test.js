@@ -1,10 +1,10 @@
+// ForgotPassword.test.jsx
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
 import ForgotPassword from "../pages/ForgotPassword";
 
-import { supabaseClient } from "../lib/supabaseClient";
-
-// ---------------- MOCK SUPABASE ----------------
+// Mock supabase client
 jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
@@ -13,85 +13,149 @@ jest.mock("../lib/supabaseClient", () => ({
   },
 }));
 
-// ---------------- MOCK DIALOG METHODS ----------------
-beforeEach(() => {
-  jest.clearAllMocks();
+import { supabaseClient } from "../lib/supabaseClient";
 
-  HTMLDialogElement.prototype.showModal = jest.fn();
-  HTMLDialogElement.prototype.close = jest.fn();
-});
+describe("ForgotPassword Component", () => {
+  const mockOnClose = jest.fn();
 
-describe("ForgotPassword", () => {
-  // ---------------- RENDER OPEN ----------------
-  test("opens dialog when isOpen is true", () => {
-    render(
-      <ForgotPassword isOpen={true} onClose={jest.fn()} email="test@example.com" />
-    );
-
-    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  // ---------------- RENDER CLOSE ----------------
-  test("closes dialog when isOpen is false", () => {
-    render(
-      <ForgotPassword isOpen={false} onClose={jest.fn()} email="test@example.com" />
+  test("does not render when isOpen is false", () => {
+    const { container } = render(
+      <ForgotPassword isOpen={false} onClose={mockOnClose} />
     );
 
-    expect(HTMLDialogElement.prototype.close).toHaveBeenCalled();
+    expect(container.firstChild).toBeNull();
   });
 
-  // ---------------- SUCCESS FLOW ----------------
-  test("sends reset email successfully", async () => {
+  test("renders modal when isOpen is true", () => {
+    render(<ForgotPassword isOpen={true} onClose={mockOnClose} />);
+
+    expect(screen.getByText("Reset Password")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Enter your email")).toBeInTheDocument();
+  });
+
+  test("shows validation message when email is empty", async () => {
+    render(<ForgotPassword isOpen={true} onClose={mockOnClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    expect(
+      screen.getByText("Please enter your email address.")
+    ).toBeInTheDocument();
+  });
+
+  test("submits successfully and shows success message", async () => {
     supabaseClient.auth.resetPasswordForEmail.mockResolvedValue({
       error: null,
     });
 
-    render(
-      <ForgotPassword isOpen={true} onClose={jest.fn()} email="test@example.com" />
-    );
+    render(<ForgotPassword isOpen={true} onClose={mockOnClose} />);
 
-    fireEvent.click(screen.getByText(/send reset link/i));
+    const input = screen.getByPlaceholderText("Enter your email");
 
-    expect(
-      await screen.findByText(/check your email for the reset link/i)
-    ).toBeInTheDocument();
-
-    expect(
-      supabaseClient.auth.resetPasswordForEmail
-    ).toHaveBeenCalledWith("test@example.com", {
-      redirectTo: "http://localhost/reset-password",
+    fireEvent.change(input, {
+      target: { value: "test@example.com" },
     });
+
+    fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    await waitFor(() => {
+      expect(
+        supabaseClient.auth.resetPasswordForEmail
+      ).toHaveBeenCalledWith("test@example.com", {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Check your email for the reset link.")
+      ).toBeInTheDocument();
+    });
+
+    expect(input.value).toBe("");
   });
 
-  // ---------------- ERROR FLOW ----------------
-  test("shows error message when reset fails", async () => {
+  test("shows error message when supabase returns an error", async () => {
     supabaseClient.auth.resetPasswordForEmail.mockResolvedValue({
-      error: new Error("Reset failed"),
+      error: {
+        message: "User not found",
+      },
     });
 
-    render(
-      <ForgotPassword isOpen={true} onClose={jest.fn()} email="test@example.com" />
-    );
+    render(<ForgotPassword isOpen={true} onClose={mockOnClose} />);
 
-    fireEvent.click(screen.getByText(/send reset link/i));
+    fireEvent.change(screen.getByPlaceholderText("Enter your email"), {
+      target: { value: "wrong@example.com" },
+    });
 
-    expect(await screen.findByText(/reset failed/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("User not found")).toBeInTheDocument();
+    });
   });
 
-  // ---------------- CLOSE BUTTON ----------------
-  test("calls onClose when close button is clicked", () => {
-    const mockClose = jest.fn();
+  test("disables buttons while sending", async () => {
+    let resolvePromise;
 
-    render(
-      <ForgotPassword
-        isOpen={true}
-        onClose={mockClose}
-        email="test@example.com"
-      />
+    supabaseClient.auth.resetPasswordForEmail.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePromise = resolve;
+      })
     );
 
-    fireEvent.click(screen.getByText(/close/i));
+    render(<ForgotPassword isOpen={true} onClose={mockOnClose} />);
 
-    expect(mockClose).toHaveBeenCalled();
+    fireEvent.change(screen.getByPlaceholderText("Enter your email"), {
+      target: { value: "test@example.com" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    expect(
+      screen.getByRole("button", { name: /sending/i })
+    ).toBeDisabled();
+
+    expect(screen.getByRole("button", { name: /close/i })).toBeDisabled();
+
+    resolvePromise({ error: null });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Check your email for the reset link.")
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("calls onClose when close button is clicked", () => {
+    render(<ForgotPassword isOpen={true} onClose={mockOnClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("calls onClose when overlay is clicked", () => {
+    const { container } = render(
+      <ForgotPassword isOpen={true} onClose={mockOnClose} />
+    );
+
+    const overlay = container.querySelector(".admin-modal-overlay");
+
+    fireEvent.click(overlay);
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not close when dialog content is clicked", () => {
+    render(<ForgotPassword isOpen={true} onClose={mockOnClose} />);
+
+    fireEvent.click(screen.getByRole("dialog"));
+
+    expect(mockOnClose).not.toHaveBeenCalled();
   });
 });
