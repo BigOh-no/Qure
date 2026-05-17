@@ -1,3 +1,5 @@
+// PatientDashboard.test.jsx
+
 import React from "react";
 import {
   render,
@@ -10,12 +12,6 @@ import "@testing-library/jest-dom";
 
 import PatientDashboard from "../pages/Patient-dashboard";
 
-// ---------------- MOCKS ----------------
-
-jest.mock("../styles/Patient.css", () => ({}));
-jest.mock("../styles/Queue.css", () => ({}));
-jest.mock("../assets/images/TLogo.png", () => "logo.png");
-
 const mockNavigate = jest.fn();
 
 jest.mock("react-router-dom", () => ({
@@ -23,501 +19,622 @@ jest.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
-// ---------------- SERVICES ----------------
+jest.mock("../assets/images/TLogo.png", () => "logo-mock.png");
 
-const mockGetPatientAppointments = jest.fn();
-const mockCancelAppointment = jest.fn();
-const mockRescheduleAppointment = jest.fn();
-const mockGetBookedSlots = jest.fn();
-const mockGenerateHourlySlots = jest.fn();
-
-jest.mock("../pages/appointmentService", () => ({
-  getPatientAppointments: (...a) =>
-    mockGetPatientAppointments(...a),
-  cancelAppointment: (...a) =>
-    mockCancelAppointment(...a),
-  rescheduleAppointment: (...a) =>
-    mockRescheduleAppointment(...a),
-  getBookedSlots: (...a) =>
-    mockGetBookedSlots(...a),
-  generateHourlySlots: (...a) =>
-    mockGenerateHourlySlots(...a),
-}));
-
-// ---------------- QUEUE ----------------
-
-const mockCalculateEstimatedWait = jest.fn();
-const mockGetMyActiveQueueStatusForToday = jest.fn();
-const mockGetTodayQueueForClinic = jest.fn();
-
-jest.mock("../pages/queueService", () => ({
-  QUEUE_OPEN_TIME: "08:00",
-  QUEUE_CLOSE_TIME: "17:00",
-  AVERAGE_CONSULTATION_MINUTES: 15,
-  calculateEstimatedWait: (...a) =>
-    mockCalculateEstimatedWait(...a),
-  getMyActiveQueueStatusForToday: (...a) =>
-    mockGetMyActiveQueueStatusForToday(...a),
-  getTodayQueueForClinic: (...a) =>
-    mockGetTodayQueueForClinic(...a),
-}));
-
-// ---------------- SUPABASE ----------------
-
-const mockSingle = jest.fn();
-const mockEq = jest.fn();
-const mockUpdate = jest.fn();
-const mockSelect = jest.fn();
-const mockFrom = jest.fn();
-
-const mockAuthGetUser = jest.fn();
+const mockGetUser = jest.fn();
 const mockSignOut = jest.fn();
+const mockUpdateUser = jest.fn();
+const mockFrom = jest.fn();
 
 jest.mock("../lib/supabaseClient", () => ({
   supabaseClient: {
     auth: {
-      getUser: (...a) => mockAuthGetUser(...a),
-      signOut: (...a) => mockSignOut(...a),
+      getUser: (...args) => mockGetUser(...args),
+      signOut: (...args) => mockSignOut(...args),
+      updateUser: (...args) => mockUpdateUser(...args),
     },
     from: (...args) => mockFrom(...args),
   },
 }));
 
-// ---------------- TEST DATA ----------------
+jest.mock("../pages/appointmentService", () => ({
+  getPatientAppointments: jest.fn(),
+  cancelAppointment: jest.fn(),
+  rescheduleAppointment: jest.fn(),
+  getBookedSlots: jest.fn(),
+  generateHourlySlots: jest.fn(),
+  isSlotWithinClinicHours: jest.fn(() => true),
+  formatClinicHours: jest.fn(() => "08:00 - 17:00"),
+}));
 
-const mockAppointments = [
-  {
+jest.mock("../pages/queueService", () => ({
+  AVERAGE_CONSULTATION_MINUTES: 15,
+  calculateEstimatedWait: jest.fn(() => 30),
+  getMyActiveQueueStatusForToday: jest.fn(),
+  getTodayQueueForClinic: jest.fn(),
+}));
+
+import {
+  getPatientAppointments,
+  cancelAppointment,
+  rescheduleAppointment,
+  getBookedSlots,
+  generateHourlySlots,
+  isSlotWithinClinicHours,
+  formatClinicHours,
+} from "../pages/appointmentService";
+
+import {
+  getMyActiveQueueStatusForToday,
+  getTodayQueueForClinic,
+} from "../pages/queueService";
+
+describe("PatientDashboard", () => {
+  const mockAppointment = {
     id: 1,
-    clinic_id: 10,
-    appointment_date: "2099-12-25",
-    appointment_time: "10:00:00",
+    clinic_id: 100,
+    appointment_date: "2099-12-31",
+    appointment_time: "09:00:00",
     status: "booked",
     clinics: {
-      facility_name: "City Clinic",
+      facility_name: "Test Clinic",
+      open_t: "08:00",
+      closed_t: "17:00",
     },
-  },
-];
+  };
 
-const renderComponent = () =>
-  render(<PatientDashboard />);
+  beforeEach(() => {
+    jest.clearAllMocks();
 
-// ---------------- DEFAULT SETUP ----------------
-
-beforeEach(() => {
-  jest.clearAllMocks();
-
-  mockAuthGetUser.mockResolvedValue({
-    data: {
-      user: {
-        id: "user-1",
-        email: "patient@test.com",
-        user_metadata: {
-          full_name: "John Doe",
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-1",
+          email: "patient@test.com",
+          user_metadata: {
+            full_name: "Test Patient",
+          },
         },
       },
-    },
-    error: null,
-  });
-
-  mockFrom.mockReturnValue({
-    select: mockSelect,
-    update: mockUpdate,
-  });
-
-  mockSelect.mockReturnValue({
-    eq: mockEq,
-  });
-
-  mockEq.mockReturnValue({
-    single: mockSingle,
-  });
-
-  mockSingle.mockResolvedValue({
-    data: { user_name: "Johnny" },
-    error: null,
-  });
-
-  mockUpdate.mockReturnValue({
-    eq: jest.fn().mockResolvedValue({
       error: null,
-    }),
+    });
+
+    mockSignOut.mockResolvedValue({});
+    mockUpdateUser.mockResolvedValue({ error: null });
+
+    getPatientAppointments.mockResolvedValue([mockAppointment]);
+
+    getMyActiveQueueStatusForToday.mockResolvedValue(null);
+
+    getTodayQueueForClinic.mockResolvedValue([]);
+
+    getBookedSlots.mockResolvedValue([]);
+
+    generateHourlySlots.mockReturnValue([
+      "08:00",
+      "09:00",
+      "10:00",
+    ]);
+
+    isSlotWithinClinicHours.mockReturnValue(true);
+
+    formatClinicHours.mockReturnValue("08:00 - 17:00");
+
+    mockFrom.mockImplementation((table) => {
+      if (table === "profiles") {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn(() => ({
+              single: jest.fn().mockResolvedValue({
+                data: {
+                  user_name: "PatientUser",
+                },
+                error: null,
+              }),
+            })),
+          })),
+          update: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({
+              error: null,
+            }),
+          })),
+        };
+      }
+
+      if (table === "queue_entries") {
+        return {
+          update: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({
+              error: null,
+            }),
+          })),
+        };
+      }
+
+      return {
+        select: jest.fn(),
+      };
+    });
   });
 
-  mockGetPatientAppointments.mockResolvedValue(
-    mockAppointments
-  );
+  test("renders patient dashboard", async () => {
+    render(<PatientDashboard />);
 
-  mockGetMyActiveQueueStatusForToday.mockResolvedValue(null);
-  mockGetTodayQueueForClinic.mockResolvedValue([]);
-
-  mockGenerateHourlySlots.mockReturnValue([
-    "09:00",
-    "10:00",
-    "11:00",
-  ]);
-
-  mockGetBookedSlots.mockResolvedValue(["11:00"]);
-});
-
-// ---------------- TEST CASES ----------------
-
-test("renders dashboard with username and appointments", async () => {
-  renderComponent();
-
-  expect(
-    screen.getByText(/loading appointments/i)
-  ).toBeInTheDocument();
-
-  expect(
-    await screen.findByRole("heading", {
-      name: /hi,\s*johnny/i,
-    })
-  ).toBeInTheDocument();
-
-  expect(
-    screen.getByText(/city clinic/i)
-  ).toBeInTheDocument();
-});
-
-test("renders empty appointments state", async () => {
-  mockGetPatientAppointments.mockResolvedValue([]);
-
-  renderComponent();
-
-  expect(
-    await screen.findByText(/no current appointments/i)
-  ).toBeInTheDocument();
-});
-
-test("renders queue information when active queue exists", async () => {
-  mockGetMyActiveQueueStatusForToday.mockResolvedValue({
-    position: 1,
-    estimatedWait: 15,
-    clinic: {
-      facility_name: "Health Clinic",
-    },
-    entry: {
-      id: 55,
-      clinic_id: 10,
-      status: "waiting",
-    },
-  });
-
-  mockGetTodayQueueForClinic.mockResolvedValue([
-    { id: 55 },
-  ]);
-
-  renderComponent();
-
-  expect(
-    await screen.findByText(/health clinic queue/i)
-  ).toBeInTheDocument();
-});
-
-test("navigates to booking page", async () => {
-  renderComponent();
-
-  const button = await screen.findByRole("button", {
-    name: /book appointment/i,
-  });
-
-  userEvent.click(button);
-
-  expect(mockNavigate).toHaveBeenCalledWith(
-    "/patient/book"
-  );
-});
-
-test("navigates to queue page", async () => {
-  renderComponent();
-
-  const button = await screen.findByRole("button", {
-    name: /join queue/i,
-  });
-
-  userEvent.click(button);
-
-  expect(mockNavigate).toHaveBeenCalledWith(
-    "/patient/queue"
-  );
-});
-
-test("opens and closes cancel modal", async () => {
-  renderComponent();
-
-  const cancelButton = await screen.findByRole("button", {
-    name: /^cancel$/i,
-  });
-
-  userEvent.click(cancelButton);
-
-  expect(
-    screen.getByText(/cancel appointment/i)
-  ).toBeInTheDocument();
-
-  const closeButton = screen.getByRole("button", {
-    name: /^close$/i,
-  });
-
-  userEvent.click(closeButton);
-
-  await waitFor(() => {
     expect(
-      screen.queryByText(/cancel appointment/i)
+      screen.getByText(/Book Appointment/i)
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Current Appointments/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("loads appointments", async () => {
+    render(<PatientDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Test Clinic/i)
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/2099-12-31/i)
+    ).toBeInTheDocument();
+  });
+
+  test("shows empty appointments message", async () => {
+    getPatientAppointments.mockResolvedValue([]);
+
+    render(<PatientDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No current appointments/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("navigates to booking page", async () => {
+    render(<PatientDashboard />);
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Book Appointment/i,
+      })
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/patient/book"
+    );
+  });
+
+  test("navigates to queue page", async () => {
+    render(<PatientDashboard />);
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Join Queue/i,
+      })
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/patient/queue"
+    );
+  });
+
+  test("navigates to appointments page", async () => {
+    render(<PatientDashboard />);
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /View All Appointments/i,
+      })
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/patient/appointments"
+    );
+  });
+
+  test("opens cancel modal", async () => {
+    render(<PatientDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: /^Cancel$/i,
+        })
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /^Cancel$/i,
+      })
+    );
+
+    expect(
+      screen.getByText(/Cancel Appointment/i)
+    ).toBeInTheDocument();
+  });
+
+  test("cancels appointment successfully", async () => {
+    render(<PatientDashboard />);
+    cancelAppointment.mockResolvedValue({});
+    getPatientAppointments.mockResolvedValue([
+      {
+        id: 1,
+        appointment_date: "2099-12-31",
+        appointment_time: "10:00",
+        status: "booked",
+        clinics: { facility_name: "Test Clinic" },
+      },
+    ]);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /cancel/i })
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /confirm cancel/i })
+    );
+
+    expect(
+      await screen.findByText(/appointment cancelled successfully/i)
+    ).toBeInTheDocument();
+  });
+
+  test("opens reschedule modal", async () => {
+    render(<PatientDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: /Reschedule/i,
+        })
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Reschedule/i,
+      })
+    );
+
+    expect(
+      screen.getByText(/Reschedule Appointment/i)
+    ).toBeInTheDocument();
+  });
+
+  test("shows validation when no slot selected", async () => {
+    render(<PatientDashboard />);
+
+    getBookedSlots.mockResolvedValue([]);
+    generateHourlySlots.mockReturnValue(["09:00", "10:00"]);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /reschedule/i })
+    );
+
+    fireEvent.change(
+      await screen.findByLabelText(/choose a new date/i),
+      {
+        target: { value: "2099-12-31" },
+      }
+    );
+
+    await screen.findByText(/choose a time slot/i);
+
+    const confirmBtn = screen.getByRole("button", {
+      name: /confirm/i,
+    });
+
+    expect(confirmBtn).toBeDisabled(); 
+
+    fireEvent.click(confirmBtn);
+
+    expect(
+      screen.queryByText(/appointment rescheduled successfully/i)
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText(/please choose a valid available time slot/i)
     ).not.toBeInTheDocument();
   });
-});
 
-test("cancels appointment successfully", async () => {
-  mockCancelAppointment.mockResolvedValue({});
+  test("reschedules appointment successfully", async () => {
+    generateHourlySlots.mockReturnValue([
+      "09:00",
+      "10:00",
+    ]);
 
-  renderComponent();
+    getBookedSlots.mockResolvedValue([]);
 
-  const cancelButton = await screen.findByRole("button", {
-    name: /^cancel$/i,
-  });
+    render(<PatientDashboard />);
 
-  userEvent.click(cancelButton);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /reschedule/i,
+      })
+    );
 
-  const confirmButton = screen.getByRole("button", {
-    name: /confirm cancel/i,
-  });
+    const dateInput = await screen.findByLabelText(
+      /choose a new date/i
+    );
 
-  userEvent.click(confirmButton);
-
-  await waitFor(() => {
-    expect(mockCancelAppointment).toHaveBeenCalledWith(1);
-  });
-
-  expect(
-    await screen.findByText(
-      /appointment cancelled successfully/i
-    )
-  ).toBeInTheDocument();
-});
-
-test("opens reschedule modal and loads slots", async () => {
-  renderComponent();
-
-  const rescheduleButton = await screen.findByRole(
-    "button",
-    { name: /^reschedule$/i }
-  );
-
-  userEvent.click(rescheduleButton);
-
-  expect(
-    screen.getByText(/reschedule appointment/i)
-  ).toBeInTheDocument();
-
-  // wait for slots to actually render
-  const slotButton = await screen.findByRole("button", {
-    name: "09:00",
-  });
-
-  expect(slotButton).toBeInTheDocument();
-
-  expect(
-    screen.getByRole("button", { name: "10:00" })
-  ).toBeInTheDocument();
-});
-
-test("reschedules appointment successfully", async () => {
-  mockRescheduleAppointment.mockResolvedValue({});
-
-  renderComponent();
-
-  const button = await screen.findByRole("button", {
-    name: /^reschedule$/i,
-  });
-
-  userEvent.click(button);
-
-  const slotButton = await screen.findByRole("button", {
-    name: "10:00",
-  });
-
-  userEvent.click(slotButton);
-
-  const confirmButton = screen.getByRole("button", {
-    name: /^confirm$/i,
-  });
-
-  userEvent.click(confirmButton);
-
-  await waitFor(() => {
-    expect(mockRescheduleAppointment).toHaveBeenCalled();
-  });
-});
-
-test("shows validation error when rescheduling without slot", async () => {
-  renderComponent();
-
-  const button = await screen.findByRole("button", {
-    name: /^reschedule$/i,
-  });
-
-  userEvent.click(button);
-
-  const confirmButton = screen.getByRole("button", {
-    name: /^confirm$/i,
-  });
-
-  expect(confirmButton).toBeDisabled();
-});
-
-test("opens profile popup", async () => {
-  renderComponent();
-
-  const menuButton = await screen.findByLabelText(
-    /open menu/i
-  );
-
-  fireEvent.click(menuButton);
-
-  const editProfileButton = await screen.findByRole(
-    "button",
-    {
-      name: /edit profile/i,
-    }
-  );
-
-  userEvent.click(editProfileButton);
-
-  expect(
-    screen.getByRole("heading", {
-      name: /edit profile/i,
-    })
-  ).toBeInTheDocument();
-});
-
-test("updates username successfully", async () => {
-  const eqChain = jest.fn().mockResolvedValue({
-    error: null,
-  });
-
-  mockUpdate.mockReturnValue({
-    eq: eqChain,
-  });
-
-  renderComponent();
-
-  const menuButton = await screen.findByLabelText(
-    /open menu/i
-  );
-
-  fireEvent.click(menuButton);
-
-  const editProfileButton =
-    await screen.findByRole("button", {
-      name: /edit profile/i,
+    fireEvent.change(dateInput, {
+      target: { value: "2099-12-31" },
     });
 
-  userEvent.click(editProfileButton);
-
-  const input =
-    await screen.findByLabelText(/new username/i);
-
-  fireEvent.change(input, {
-    target: { value: "UpdatedName" },
-  });
-
-  const updateBtn = screen.getByRole("button", {
-    name: /update username/i,
-  });
-
-  fireEvent.click(updateBtn);
-
-  await waitFor(() => {
-    expect(mockUpdate).toHaveBeenCalledWith({
-      user_name: "UpdatedName",
-    });
-  });
-});
-
-test("shows password mismatch validation", async () => {
-  renderComponent();
-
-  const menuButton = await screen.findByLabelText(
-    /open menu/i
-  );
-
-  fireEvent.click(menuButton);
-
-  const editProfileButton =
-    await screen.findByRole("button", {
-      name: /edit profile/i,
+    await waitFor(() => {
+      expect(screen.getByText("09:00")).toBeInTheDocument();
     });
 
-  userEvent.click(editProfileButton);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "09:00" })[0]
+    );
 
-  const passwordField = screen.getByLabelText(
-    /^new password$/i
-  );
+    fireEvent.click(
+      screen.getByRole("button", { name: /^confirm$/i })
+    );
 
-  const confirmField = screen.getByLabelText(
-    /confirm password/i
-  );
+    await waitFor(() => {
+      expect(
+        screen.getByText(/appointment rescheduled successfully/i)
+      ).toBeInTheDocument();
+    });
 
-  fireEvent.change(passwordField, {
-    target: { value: "password123" },
+    expect(rescheduleAppointment).toHaveBeenCalled();
   });
 
-  fireEvent.change(confirmField, {
-    target: { value: "password999" },
+  test("opens profile popup", async () => {
+    render(<PatientDashboard />);
+
+    fireEvent.click(screen.getByLabelText(/open menu/i));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /edit profile/i })
+    );
+
+    expect(screen.getByLabelText(/new username/i)).toBeInTheDocument();
+    expect(screen.getByText(/change password/i)).toBeInTheDocument();
   });
 
-  const updateButton = screen.getByRole("button", {
-    name: /update password/i,
+  test("shows password mismatch validation", async () => {
+    render(<PatientDashboard />);
+
+    await userEvent.click(
+      screen.getByLabelText(/Open menu/i)
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Edit Profile/i,
+      })
+    );
+
+    await userEvent.type(
+      screen.getByPlaceholderText(/Enter new password/i),
+      "password123"
+    );
+
+    await userEvent.type(
+      screen.getByPlaceholderText(/Confirm new password/i),
+      "wrongpassword"
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Update Password/i,
+      })
+    );
+
+    expect(
+      screen.getByText(/Passwords do not match/i)
+    ).toBeInTheDocument();
   });
 
-  userEvent.click(updateButton);
+  test("shows username validation", async () => {
+    render(<PatientDashboard />);
 
-  expect(
-    await screen.findByText(/passwords do not match/i)
-  ).toBeInTheDocument();
-});
+    await userEvent.click(
+      screen.getByLabelText(/Open menu/i)
+    );
 
-test("logs out successfully", async () => {
-  renderComponent();
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Edit Profile/i,
+      })
+    );
 
-  const menuButton = await screen.findByLabelText(
-    /open menu/i
-  );
+    const input = screen.getByPlaceholderText(
+      /Enter new username/i
+    );
 
-  fireEvent.click(menuButton);
+    fireEvent.change(input, {
+      target: {
+        value: "   ",
+      },
+    });
 
-  const logoutButton = await screen.findByRole("button", {
-    name: /logout/i,
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Update Username/i,
+      })
+    );
+
+    expect(
+      screen.getByText(/Username cannot be empty/i)
+    ).toBeInTheDocument();
   });
 
-  userEvent.click(logoutButton);
+  test("logs out user", async () => {
+    render(<PatientDashboard />);
 
-  await waitFor(() => {
-    expect(mockSignOut).toHaveBeenCalled();
+    await userEvent.click(
+      screen.getByLabelText(/Open menu/i)
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /Logout/i,
+      })
+    );
+
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalled();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith("/");
   });
 
-  expect(mockNavigate).toHaveBeenCalledWith("/");
-});
+  test("shows queue empty state", async () => {
+    render(<PatientDashboard />);
 
-test("shows appointment loading error", async () => {
-  mockGetPatientAppointments.mockRejectedValue(
-    new Error("Failed")
-  );
+    await waitFor(() => {
+      expect(
+        screen.getByText(/You are not in a queue/i)
+      ).toBeInTheDocument();
+    });
+  });
 
-  renderComponent();
+  test("renders active queue information", async () => {
+    getMyActiveQueueStatusForToday.mockResolvedValue({
+      entry: {
+        id: 1,
+        clinic_id: 100,
+        status: "waiting",
+      },
+      clinic: {
+        facility_name: "Queue Clinic",
+        open_t: "08:00",
+        closed_t: "17:00",
+      },
+      position: 1,
+      estimatedWait: 15,
+    });
 
-  expect(
-    await screen.findByText(
-      /failed to load your appointments/i
-    )
-  ).toBeInTheDocument();
-});
+    getTodayQueueForClinic.mockResolvedValue([
+      {
+        id: 1,
+        status: "waiting",
+      },
+    ]);
 
-test("shows queue empty state", async () => {
-  renderComponent();
+    render(<PatientDashboard />);
 
-  expect(
-    await screen.findByText(/you are not in a queue/i)
-  ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Queue Clinic Queue/i)
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/Your current position/i)
+    ).toBeInTheDocument();
+  });
+  test("shows error when appointments fail to load", async () => {
+    getPatientAppointments.mockRejectedValue(new Error("Network error"));
+
+    render(<PatientDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/failed to load your appointments/i)
+      ).toBeInTheDocument();
+    });
+  });
+  test("shows error when queue fails to load", async () => {
+    getMyActiveQueueStatusForToday.mockRejectedValue(
+      new Error("Queue API error")
+    );
+
+    render(<PatientDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/failed to load your current queue/i)
+      ).toBeInTheDocument();
+    });
+  });
+  test("leaves queue successfully", async () => {
+    getMyActiveQueueStatusForToday.mockResolvedValue({
+      entry: { id: 99, clinic_id: 100, status: "waiting" },
+      clinic: { facility_name: "Clinic", open_t: "08:00", closed_t: "17:00" },
+      position: 1,
+    });
+
+    getTodayQueueForClinic.mockResolvedValue([{ id: 99 }]);
+
+    render(<PatientDashboard />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/leave queue/i)).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByText(/leave queue/i));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/you have left the queue successfully/i)
+      ).toBeInTheDocument();
+    });
+  });
+  test("closes cancel modal when clicking outside", async () => {
+    render(<PatientDashboard />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/cancel/i)).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByText(/cancel/i));
+
+    expect(screen.getByText(/cancel appointment/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/cancel appointment/i).closest(".modal-overlay"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/cancel appointment/i)
+      ).not.toBeInTheDocument();
+    });
+  });
+  test("shows error when selecting past date for reschedule", async () => {
+    render(<PatientDashboard />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /reschedule/i })
+    );
+
+    const dateInput = await screen.findByLabelText(/choose a new date/i);
+
+    fireEvent.change(dateInput, { target: { value: "2000-01-01" } });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/please choose today or a future date/i)
+      ).toBeInTheDocument();
+    });
+  });
+  test("updates username successfully", async () => {
+    render(<PatientDashboard />);
+
+    fireEvent.click(screen.getByLabelText(/open menu/i));
+    fireEvent.click(screen.getByText(/edit profile/i));
+
+    const input = screen.getByLabelText(/new username/i);
+
+    fireEvent.change(input, { target: { value: "NewName" } });
+
+    fireEvent.click(screen.getByText(/update username/i));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/username updated successfully/i)
+      ).toBeInTheDocument();
+    });
+  });
 });

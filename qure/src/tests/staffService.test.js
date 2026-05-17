@@ -112,7 +112,10 @@ describe("staffService", () => {
               eq: () => ({
                 single: async () => ({
                   data: {
+                    id: "clinic-123",
                     facility_name: "Test Clinic",
+                    open_t: "08:00",
+                    closed_t: "17:00",
                   },
                   error: null,
                 }),
@@ -243,6 +246,27 @@ describe("staffService", () => {
         }
 
         /*
+          clinics
+        */
+        if (table === "clinics") {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: "clinic-123",
+                    facility_name: "Test Clinic",
+                    open_t: "08:00",
+                    closed_t: "17:00",
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        /*
           profiles
         */
         if (table === "profiles") {
@@ -269,12 +293,28 @@ describe("staffService", () => {
         */
         if (table === "appointments") {
           return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    in: () => ({
+                      maybeSingle: async () => ({
+                        data: null,
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+
             insert: () => ({
               select: () => ({
                 single: async () => ({
                   data: {
                     id: 1,
                     status: "booked",
+                    patient_user_id: "patient-1",
                   },
                   error: null,
                 }),
@@ -377,6 +417,186 @@ describe("staffService", () => {
       );
 
       expect(result[0].totalAppointments).toBe(1);
+    });
+    test("getStaffClinicAndQueue returns fallback on error", async () => {
+      supabaseClient.auth.getUser.mockRejectedValue(new Error("auth fail"));
+
+      const result = await getStaffClinicAndQueue();
+
+      expect(result).toEqual({
+        clinicId: null,
+        clinicName: "",
+        open_t: null,
+        closed_t: null,
+        patients: [],
+      });
+    });
+    test("updateQueueStatus returns false on DB error", async () => {
+      const eq = jest.fn().mockResolvedValue({ error: new Error("db fail") });
+
+      const update = jest.fn(() => ({ eq }));
+
+      supabaseClient.from.mockReturnValue({ update });
+
+      const result = await updateQueueStatus(1, "in_consultation");
+
+      expect(result).toBe(false);
+    });
+    test("getClinicAppointments returns empty array on error", async () => {
+      supabaseClient.auth.getUser.mockResolvedValue({
+        data: { user: { id: "staff-1" } },
+        error: null,
+      });
+
+      const eq = jest.fn().mockReturnThis();
+      const order = jest.fn(() => ({ order: jest.fn().mockRejectedValue(new Error("fail")) }));
+
+      supabaseClient.from.mockReturnValue({
+        select: () => ({
+          eq: () => ({
+            order,
+          }),
+        }),
+      });
+
+      const result = await getClinicAppointments();
+
+      expect(result).toEqual([]);
+    });
+    test("staffCancelAppointment returns null on error", async () => {
+      supabaseClient.auth.getUser.mockResolvedValue({
+        data: { user: { id: "staff-1" } },
+        error: null,
+      });
+
+      supabaseClient.from.mockReturnValue({
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => ({
+                  error: new Error("db error"),
+                }),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await staffCancelAppointment(1);
+
+      expect(result).toBeNull();
+    });
+    test("staffRescheduleAppointment returns null on error", async () => {
+      supabaseClient.auth.getUser.mockResolvedValue({
+        data: { user: { id: "staff-1" } },
+        error: null,
+      });
+
+      supabaseClient.from.mockReturnValue({
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => ({
+                  error: new Error("db error"),
+                }),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await staffRescheduleAppointment({
+        appointmentId: 1,
+        appointmentDate: "2026-05-10",
+        appointmentTime: "09:00",
+      });
+
+      expect(result).toBeNull();
+    });
+    test("staffCreateAppointment throws when slot already exists", async () => {
+      mockLoggedInUser();
+
+      supabaseClient.from.mockImplementation((table) => {
+        if (table === "clinicStaff") {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: { clinic_id: "clinic-123" },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "clinics") {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: "clinic-123",
+                    open_t: "08:00",
+                    closed_t: "17:00",
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "profiles") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  single: async () => ({
+                    data: {
+                      id: "patient-1",
+                      email: "patient@test.com",
+                      role: "patient",
+                    },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "appointments") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    in: () => ({
+                      maybeSingle: async () => ({
+                        data: { id: 99 },
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        return {};
+      });
+
+      await expect(
+        staffCreateAppointment({
+          patientEmail: "patient@test.com",
+          appointmentDate: "2026-05-10",
+          appointmentTime: "09:00",
+        })
+      ).rejects.toThrow("already booked");
     });
   });
 });

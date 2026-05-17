@@ -45,7 +45,7 @@ describe("searchClinics", () => {
 
     expect(supabaseClient.from).toHaveBeenCalledWith("clinics");
     expect(queryMock.select).toHaveBeenCalledWith(
-      "id, admin1, facility_name, facility_type, ownership, lat, lon"
+      "id, admin1, facility_name, facility_type, ownership, lat, lon, open_t, closed_t"
     );
     expect(queryMock.limit).toHaveBeenCalledWith(50);
     expect(queryMock.order).toHaveBeenCalledWith("facility_name", {

@@ -5,9 +5,13 @@ import BookAppointment from "../pages/BookAppointment";
 
 import { searchClinics } from "../pages/clinicService";
 import { getBookedSlots, createAppointment } from "../pages/appointmentService";
-import { generateHourlySlots } from "../pages/slotUtils";
+import {
+  generateHourlySlots,
+  isSlotWithinClinicHours,
+  formatClinicHours,
+} from "../pages/slotUtils";
 
-// ---------------- MOCK ROUTER ----------------
+// ---------------- MOCK NAVIGATION ----------------
 const mockNavigate = jest.fn();
 
 jest.mock("react-router-dom", () => {
@@ -30,6 +34,8 @@ jest.mock("../pages/appointmentService", () => ({
 
 jest.mock("../pages/slotUtils", () => ({
   generateHourlySlots: jest.fn(),
+  isSlotWithinClinicHours: jest.fn(),
+  formatClinicHours: jest.fn(() => "08:00 - 17:00"),
 }));
 
 // ---------------- MOCK MAP ----------------
@@ -37,7 +43,7 @@ jest.mock("../pages/ClinicMap.js", () => () => (
   <div data-testid="clinic-map">Map</div>
 ));
 
-// ---------------- TEST HELPER ----------------
+// ---------------- HELPERS ----------------
 const renderComponent = () =>
   render(
     <MemoryRouter>
@@ -45,120 +51,106 @@ const renderComponent = () =>
     </MemoryRouter>
   );
 
+const mockClinic = {
+  id: "c1",
+  facility_name: "Test Clinic",
+  admin1: "Gauteng",
+  facility_type: "Clinic",
+  open_t: "08:00",
+  closed_t: "17:00",
+};
+
+// ---------------- TEST SETUP ----------------
+beforeEach(() => {
+  jest.clearAllMocks();
+
+  generateHourlySlots.mockReturnValue(["09:00", "10:00"]);
+  isSlotWithinClinicHours.mockReturnValue(true);
+
+  searchClinics.mockResolvedValue([mockClinic]);
+  getBookedSlots.mockResolvedValue(["10:00"]);
+});
+
 // ---------------- TESTS ----------------
+
 describe("BookAppointment", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-
-    generateHourlySlots.mockReturnValue([
-      "09:00",
-      "10:00",
-      "11:00",
-    ]);
-
-    searchClinics.mockResolvedValue([
-      {
-        id: "c1",
-        facility_name: "Test Clinic",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ]);
-
-    getBookedSlots.mockResolvedValue(["10:00"]);
-  });
-
   test("renders page title", () => {
     renderComponent();
-
-    expect(
-      screen.getByText(/book appointment/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/book appointment/i)).toBeInTheDocument();
   });
 
-  test("searches and displays clinics", async () => {
+  test("search triggers clinic results", async () => {
     renderComponent();
 
-    const input = screen.getByLabelText(/search clinic name/i);
-
-    fireEvent.change(input, { target: { value: "test" } });
+    fireEvent.change(screen.getByLabelText(/search clinic name/i), {
+      target: { value: "test" },
+    });
 
     expect(await screen.findByText(/test clinic/i)).toBeInTheDocument();
+    expect(searchClinics).toHaveBeenCalled();
   });
 
-  test("selecting a clinic shows booking section", async () => {
+  test("selecting a clinic shows selected clinic section", async () => {
     renderComponent();
 
     fireEvent.change(screen.getByLabelText(/search clinic name/i), {
       target: { value: "test" },
     });
 
-    const selectBtn = await screen.findByRole("button", {
-      name: /select clinic/i,
-    });
+    fireEvent.click(
+      await screen.findByRole("button", { name: /select clinic/i })
+    );
 
-    fireEvent.click(selectBtn);
-
-    expect(
-      await screen.findByText(/selected clinic/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/selected clinic/i)).toBeInTheDocument();
   });
 
-  test("shows slots after selecting date", async () => {
+  test("loads and displays slots after date selection", async () => {
     renderComponent();
 
     fireEvent.change(screen.getByLabelText(/search clinic name/i), {
       target: { value: "test" },
     });
 
-    const selectBtn = await screen.findByRole("button", {
-      name: /select clinic/i,
-    });
+    fireEvent.click(
+      await screen.findByRole("button", { name: /select clinic/i })
+    );
 
-    fireEvent.click(selectBtn);
-
-    const dateInput = await screen.findByLabelText(/date/i);
-
-    fireEvent.change(dateInput, {
+    fireEvent.change(await screen.findByLabelText(/date/i), {
       target: { value: "2099-01-01" },
     });
 
     await waitFor(() => {
-      expect(generateHourlySlots).toHaveBeenCalled();
+      expect(generateHourlySlots).toHaveBeenCalledWith(
+        "08:00",
+        "17:00",
+        true
+      );
     });
+
+    expect(await screen.findByText("09:00")).toBeInTheDocument();
   });
 
-  test("book appointment success flow", async () => {
+  test("successfully books an appointment", async () => {
     createAppointment.mockResolvedValueOnce({});
 
     renderComponent();
 
-    // search clinic
     fireEvent.change(screen.getByLabelText(/search clinic name/i), {
       target: { value: "test" },
     });
 
-    const selectBtn = await screen.findByRole("button", {
-      name: /select clinic/i,
-    });
+    fireEvent.click(
+      await screen.findByRole("button", { name: /select clinic/i })
+    );
 
-    fireEvent.click(selectBtn);
-
-    // set date
-    const dateInput = await screen.findByLabelText(/date/i);
-    fireEvent.change(dateInput, {
+    fireEvent.change(await screen.findByLabelText(/date/i), {
       target: { value: "2099-01-01" },
     });
 
-    // wait for slots
-    await waitFor(() => {
-      expect(screen.getByText("09:00")).toBeInTheDocument();
-    });
+    await screen.findByText("09:00");
 
-    // pick slot
     fireEvent.click(screen.getByText("09:00"));
 
-    // confirm booking
     fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
 
     await waitFor(() => {
@@ -174,15 +166,83 @@ describe("BookAppointment", () => {
     ).toBeInTheDocument();
   });
 
-  test("prevents booking without clinic selection", async () => {
-        renderComponent();
+  test("shows error when booking fails", async () => {
+    createAppointment.mockRejectedValueOnce(new Error("Server error"));
 
-        expect(
-            screen.queryByRole("button", { name: /confirm/i })
-        ).not.toBeInTheDocument();
+    renderComponent();
 
-        expect(
-            screen.queryByText(/please select a clinic first/i)
-        ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/search clinic name/i), {
+      target: { value: "test" },
     });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /select clinic/i })
+    );
+
+    fireEvent.change(await screen.findByLabelText(/date/i), {
+      target: { value: "2099-01-01" },
+    });
+
+    await screen.findByText("09:00");
+
+    fireEvent.click(screen.getByText("09:00"));
+    fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
+
+    expect(
+      await screen.findByText(/server error/i)
+    ).toBeInTheDocument();
+  });
+
+  test("prevents booking without selecting slot", async () => {
+    renderComponent();
+
+    fireEvent.change(screen.getByLabelText(/search clinic name/i), {
+      target: { value: "test" },
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /select clinic/i })
+    );
+
+    fireEvent.change(await screen.findByLabelText(/date/i), {
+      target: { value: "2099-01-01" },
+    });
+
+    await screen.findByText("09:00");
+
+    const confirmBtn = screen.getByRole("button", { name: /confirm/i });
+
+    expect(confirmBtn).toBeDisabled();
+  });
+
+  test("navigates after closing success popup", async () => {
+    createAppointment.mockResolvedValueOnce({});
+
+    renderComponent();
+
+    fireEvent.change(screen.getByLabelText(/search clinic name/i), {
+      target: { value: "test" },
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /select clinic/i })
+    );
+
+    fireEvent.change(await screen.findByLabelText(/date/i), {
+      target: { value: "2099-01-01" },
+    });
+
+    await screen.findByText("09:00");
+
+    fireEvent.click(screen.getByText("09:00"));
+    fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
+
+    const okButton = await screen.findByRole("button", { name: /ok/i });
+
+    fireEvent.click(okButton);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/patient");
+    });
+  });
 });

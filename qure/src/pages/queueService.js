@@ -46,7 +46,7 @@ export async function getTodayQueueForClinic(clinicId) {
     .in("status", ["waiting", "in_consultation"])
     .order("joined_at", { ascending: true });
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   return data || [];
 }

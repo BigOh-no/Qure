@@ -147,4 +147,266 @@ describe("appointmentService", () => {
 
     expect(result.appointment_date).toBe("2026-04-21");
   });
+  test("getBookedSlots throws error when supabase returns error", async () => {
+    supabaseClient.from.mockReturnValue(
+      createChain(null, new Error("DB error"))
+    );
+
+    await expect(
+      getBookedSlots("c1", "2026-04-20")
+    ).rejects.toThrow("DB error");
+  });
+
+  test("createAppointment throws when user is not logged in", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await expect(
+      createAppointment({
+        clinicId: "c1",
+        appointmentDate: "2026-04-20",
+        appointmentTime: "10:00",
+      })
+    ).rejects.toThrow("You must be logged in to book an appointment.");
+  });
+
+  test("createAppointment throws when auth error occurs", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error("Auth failed"),
+    });
+
+    await expect(
+      createAppointment({
+        clinicId: "c1",
+        appointmentDate: "2026-04-20",
+        appointmentTime: "10:00",
+      })
+    ).rejects.toThrow("Auth failed");
+  });
+
+  test("getPatientAppointments throws when user not logged in", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await expect(getPatientAppointments()).rejects.toThrow(
+      "You must be logged in to view appointments."
+    );
+  });
+
+  test("getPatientAppointments throws on auth error", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error("Auth broken"),
+    });
+
+    await expect(getPatientAppointments()).rejects.toThrow("Auth broken");
+  });
+
+  test("getPatientAppointments filters out cancelled appointments", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "u1" } },
+      error: null,
+    });
+
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 1);
+
+    const isoDate = futureDate.toISOString().split("T")[0];
+
+    supabaseClient.from.mockReturnValue(
+      createChain([
+        {
+          id: "1",
+          appointment_date: isoDate,
+          appointment_time: "10:00:00",
+          status: "cancelled",
+          clinics: {},
+        },
+      ])
+    );
+
+    const result = await getPatientAppointments();
+
+    expect(result).toEqual([]);
+  });
+
+  test("cancelAppointment throws when user not logged in", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await expect(cancelAppointment("1")).rejects.toThrow(
+      "You must be logged in to cancel an appointment."
+    );
+  });
+
+  test("cancelAppointment throws on auth error", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error("Auth failed"),
+    });
+
+    await expect(cancelAppointment("1")).rejects.toThrow("Auth failed");
+  });
+
+  test("rescheduleAppointment throws when user not logged in", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await expect(
+      rescheduleAppointment({
+        appointmentId: "1",
+        clinicId: "c1",
+        appointmentDate: "2026-04-21",
+        appointmentTime: "11:00",
+      })
+    ).rejects.toThrow("You must be logged in to reschedule an appointment.");
+  });
+
+  test("rescheduleAppointment throws on auth error", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error("Auth failed"),
+    });
+
+    await expect(
+      rescheduleAppointment({
+        appointmentId: "1",
+        clinicId: "c1",
+        appointmentDate: "2026-04-21",
+        appointmentTime: "11:00",
+      })
+    ).rejects.toThrow("Auth failed");
+  });
+  test("generateHourlySlots respects custom open/close time range", () => {
+    const slots = generateHourlySlots("08:00", "10:00");
+
+    // 08:00, 09:00, 10:00
+    expect(slots).toEqual(["08:00", "09:00", "10:00"]);
+  });
+
+  test("generateHourlySlots with includeClosedRange expands full default range", () => {
+    const slots = generateHourlySlots("09:00", "10:00", true);
+
+    // ensures includeClosedRange path is executed
+    expect(slots).toContain("09:00");
+    expect(slots).toContain("10:00");
+  });
+
+  test("getBookedSlots returns empty array when no data", async () => {
+    supabaseClient.from.mockReturnValue(
+      createChain([])
+    );
+
+    const result = await getBookedSlots("c1", "2026-04-20");
+
+    expect(result).toEqual([]);
+  });
+
+  test("getPatientAppointments returns empty array when no data", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "u1" } },
+      error: null,
+    });
+
+    supabaseClient.from.mockReturnValue(
+      createChain([])
+    );
+
+    const result = await getPatientAppointments();
+
+    expect(result).toEqual([]);
+  });
+
+  test("getPatientAppointments filters out past appointments", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "u1" } },
+      error: null,
+    });
+
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 2);
+
+    const isoDate = pastDate.toISOString().split("T")[0];
+
+    supabaseClient.from.mockReturnValue(
+      createChain([
+        {
+          id: "1",
+          appointment_date: isoDate,
+          appointment_time: "10:00:00",
+          status: "booked",
+          clinics: {},
+        },
+      ])
+    );
+
+    const result = await getPatientAppointments();
+
+    expect(result).toEqual([]);
+  });
+
+  test("getPatientAppointments filters out invalid appointments missing date/time", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "u1" } },
+      error: null,
+    });
+
+    supabaseClient.from.mockReturnValue(
+      createChain([
+        {
+          id: "1",
+          appointment_date: null,
+          appointment_time: null,
+          status: "booked",
+          clinics: {},
+        },
+      ])
+    );
+
+    const result = await getPatientAppointments();
+
+    expect(result).toEqual([]);
+  });
+
+  test("cancelAppointment returns error when supabase update fails", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "u1" } },
+      error: null,
+    });
+
+    supabaseClient.from.mockReturnValue(
+      createChain(null, new Error("Update failed"))
+    );
+
+    await expect(cancelAppointment("1")).rejects.toThrow("Update failed");
+  });
+
+  test("rescheduleAppointment returns error when supabase update fails", async () => {
+    supabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "u1" } },
+      error: null,
+    });
+
+    supabaseClient.from.mockReturnValue(
+      createChain(null, new Error("Update failed"))
+    );
+
+    await expect(
+      rescheduleAppointment({
+        appointmentId: "1",
+        clinicId: "c1",
+        appointmentDate: "2026-04-21",
+        appointmentTime: "11:00",
+      })
+    ).rejects.toThrow("Update failed");
+  });
 });
