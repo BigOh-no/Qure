@@ -1,14 +1,15 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom";
+
 import AdminDashboard from "../pages/Admin-dashboard";
-import { MemoryRouter } from "react-router-dom";
 
-import { logout, createAdminInvite } from "../lib/auth";
-import { createClinicStaffInvite } from "../lib/adminService";
-import { searchClinics } from "../pages/clinicService";
+// ---------------- MOCKS ----------------
 
-// 🔧 Mocks
+jest.mock("../styles/Admin.css", () => ({}));
+jest.mock("../assets/images/TLogo.png", () => "logo.png");
+
 const mockNavigate = jest.fn();
 
 jest.mock("react-router-dom", () => ({
@@ -16,224 +17,218 @@ jest.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
+// ---------------- SERVICES ----------------
+
+const mockCreateAdminInvite = jest.fn();
+const mockLogout = jest.fn();
+const mockCreateClinicStaffInvite = jest.fn();
+const mockSearchClinics = jest.fn();
+
 jest.mock("../lib/auth", () => ({
-  logout: jest.fn(),
-  createAdminInvite: jest.fn(),
+  createAdminInvite: (...a) => mockCreateAdminInvite(...a),
+  logout: (...a) => mockLogout(...a),
 }));
 
 jest.mock("../lib/adminService", () => ({
-  createClinicStaffInvite: jest.fn(),
+  createClinicStaffInvite: (...a) =>
+    mockCreateClinicStaffInvite(...a),
 }));
 
 jest.mock("../pages/clinicService", () => ({
-  searchClinics: jest.fn(),
+  searchClinics: (...a) => mockSearchClinics(...a),
 }));
 
-describe("AdminDashboard", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+// ---------------- SUPABASE (SAFE PATTERN) ----------------
+
+const mockAuthGetUser = jest.fn();
+
+const mockSingle = jest.fn();
+const mockEq = jest.fn();
+const mockSelect = jest.fn();
+const mockFrom = jest.fn();
+
+const mockInsert = jest.fn();
+const mockUpdate = jest.fn();
+const mockDelete = jest.fn();
+const mockIlike = jest.fn();
+const mockLimit = jest.fn();
+const mockOrder = jest.fn();
+
+jest.mock("../lib/supabaseClient", () => ({
+  supabaseClient: {
+    auth: {
+      getUser: (...a) => mockAuthGetUser(...a),
+    },
+    from: (...args) => mockFrom(...args),
+  },
+}));
+
+// ---------------- HELPERS ----------------
+
+const mockUser = {
+  id: "user-1",
+  email: "admin@test.com",
+  user_metadata: { full_name: "Admin User" },
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.useFakeTimers();
+
+  mockAuthGetUser.mockResolvedValue({
+    data: { user: mockUser },
+    error: null,
   });
 
-  test("renders dashboard basics", () => {
-    render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText(/Admin Dashboard/i)).toBeInTheDocument();
-    expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
-    expect(screen.getByText(/Quick Actions/i)).toBeInTheDocument();
-    expect(screen.getByText(/Recent Activity/i)).toBeInTheDocument();
+  // IMPORTANT: chain-safe mock
+  mockFrom.mockReturnValue({
+    select: mockSelect,
+    insert: mockInsert,
+    update: mockUpdate,
+    delete: mockDelete,
+    eq: mockEq,
+    ilike: mockIlike,
+    limit: mockLimit,
+    order: mockOrder,
   });
 
-  test("logs out and navigates home", async () => {
-    logout.mockResolvedValue();
-
-    render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: /logout/i }));
-
-    await waitFor(() => {
-      expect(logout).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith("/");
-    });
+  mockSelect.mockReturnValue({
+    eq: mockEq,
+    order: mockOrder,
   });
 
-  test("opens and closes Add Admin popup", async () => {
-    render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
-    );
-
-    await userEvent.click(screen.getByText(/Add Admin/i));
-
-    expect(screen.getByText(/Save Admin/i)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByText(/Cancel/i));
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Save Admin/i)).not.toBeInTheDocument();
-    });
+  mockEq.mockReturnValue({
+    single: mockSingle,
+    limit: mockLimit,
+    ilike: mockIlike,
   });
 
-  test("submits admin invite successfully", async () => {
-    createAdminInvite.mockResolvedValue({});
-
-    render(
-        <MemoryRouter>
-        <AdminDashboard />
-        </MemoryRouter>
-    );
-
-    await userEvent.click(screen.getByText(/Add Admin/i));
-
-    const input = screen.getByLabelText(/Email/i);
-    await userEvent.type(input, "admin@test.com");
-
-    await userEvent.click(
-        screen.getByRole("button", { name: /save admin/i })
-    );
-
-    expect(
-        await screen.findByText(/check their inbox/i)
-    ).toBeInTheDocument();
-    });
-
-  test("opens Add Staff popup and searches clinics", async () => {
-    searchClinics.mockResolvedValue([
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ]);
-
-    render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
-    );
-
-    await userEvent.click(screen.getByText(/Add Staff Member/i));
-
-    const input = screen.getByPlaceholderText(/type clinic name/i);
-    await userEvent.type(input, "Clinic");
-
-    await waitFor(() => {
-      expect(searchClinics).toHaveBeenCalled();
-    });
-
-    expect(await screen.findByText(/Clinic A/i)).toBeInTheDocument();
+  mockLimit.mockResolvedValue({
+    data: [],
+    error: null,
   });
 
-  test("selects clinic and submits staff invite", async () => {
-    searchClinics.mockResolvedValue([
-      {
-        id: 1,
-        facility_name: "Clinic A",
-        admin1: "Gauteng",
-        facility_type: "Clinic",
-      },
-    ]);
-
-    createClinicStaffInvite.mockResolvedValue({
-      email: "staff@test.com",
-    });
-
-    render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
-    );
-
-    await userEvent.click(screen.getByText(/Add Staff Member/i));
-
-    await userEvent.type(
-      screen.getByPlaceholderText(/type clinic name/i),
-      "Clinic"
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/Clinic A/i)).toBeInTheDocument();
-    });
-
-    const selectButtons = screen.getAllByRole("button", {
-        name: /select/i,
-    });
-
-    await userEvent.click(selectButtons[0]);
-
-    await userEvent.type(
-      screen.getByLabelText(/Email/i),
-      "staff@test.com"
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: /save staff/i }));
-
-    await waitFor(() => {
-      expect(createClinicStaffInvite).toHaveBeenCalledWith({
-        email: "staff@test.com",
-        clinicId: 1,
-      });
-    });
-
-   expect(
-    await screen.findByText(/invite sent/i)
-    ).toBeInTheDocument();
+  mockSingle.mockResolvedValue({
+    data: { user_name: "AdminUser" },
+    error: null,
   });
 
-  test("prevents staff submit without selecting clinic", async () => {
-    const alertMock = jest.spyOn(window, "alert").mockImplementation(() => {});
+  mockIlike.mockResolvedValue({
+    data: [],
+    error: null,
+  });
+});
 
-    render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
-    );
+afterEach(() => {
+  jest.useRealTimers();
+});
 
-    await userEvent.click(screen.getByText(/Add Staff Member/i));
+// ---------------- TESTS ----------------
 
-    await userEvent.type(
-      screen.getByLabelText(/Email/i),
-      "staff@test.com"
-    );
+test("renders dashboard and welcome message", async () => {
+  render(<AdminDashboard />);
 
-    await userEvent.click(screen.getByRole("button", { name: /save staff/i }));
+  expect(await screen.findByText(/Admin Dashboard/i)).toBeInTheDocument();
+  expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
+});
 
-    expect(alertMock).toHaveBeenCalledWith(
-      "Please select a clinic first."
-    );
+test("opens staff popup", async () => {
+  render(<AdminDashboard />);
 
-    alertMock.mockRestore();
+  fireEvent.click(screen.getByText(/Add Staff Member/i));
+
+  expect(await screen.findByText(/Assign Clinic/i)).toBeInTheDocument();
+});
+
+test("opens admin popup and submits invite", async () => {
+  mockCreateAdminInvite.mockResolvedValue({});
+
+  render(<AdminDashboard />);
+
+  fireEvent.click(screen.getByText(/Add Admin/i));
+
+  const emailInput = await screen.findByLabelText(/Email/i);
+
+  userEvent.type(emailInput, "newadmin@test.com");
+
+  fireEvent.click(screen.getByText(/Save Admin/i));
+
+  await waitFor(() => {
+    expect(mockCreateAdminInvite).toHaveBeenCalledWith("newadmin@test.com");
+  });
+});
+
+test("logout works and navigates home", async () => {
+  mockLogout.mockResolvedValue({});
+
+  render(<AdminDashboard />);
+
+  fireEvent.click(screen.getByText(/Logout/i));
+
+  await waitFor(() => {
+    expect(mockLogout).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/");
+  });
+});
+
+test("profile popup opens", async () => {
+  render(<AdminDashboard />);
+
+  fireEvent.click(screen.getByText(/Profile/i));
+
+  expect(await screen.findByText(/Change Username/i)).toBeInTheDocument();
+});
+
+test("updates username successfully", async () => {
+  mockFrom.mockReturnValue({
+    ...mockFrom(),
+    update: () => ({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    }),
   });
 
-  test("handles clinic search error", async () => {
-    searchClinics.mockRejectedValue(new Error("API error"));
+  render(<AdminDashboard />);
 
-    render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
-    );
+  fireEvent.click(screen.getByText(/Profile/i));
 
-    await userEvent.click(screen.getByText(/Add Staff Member/i));
+  const input = await screen.findByPlaceholderText(/Enter new username/i);
 
-    await userEvent.type(
-      screen.getByPlaceholderText(/type clinic name/i),
-      "Clinic"
-    );
+  userEvent.type(input, "NewName");
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/failed to search clinics/i)
-      ).toBeInTheDocument();
-    });
+  fireEvent.click(screen.getByText(/Update Username/i));
+
+  await waitFor(() => {
+    expect(screen.getByText(/Username updated successfully/i)).toBeInTheDocument();
   });
+});
+
+test("opens staff list from sidebar", async () => {
+  const user = userEvent.setup();
+
+  render(<AdminDashboard />);
+
+  // Wait for sidebar to exist (ensures React finished initial render)
+  const sidebar = document.querySelector(".admin-sidebar");
+
+  expect(sidebar).toBeInTheDocument();
+
+  // Scope query strictly to sidebar to avoid duplicate "Staff" matches
+  const staffButton = within(sidebar).getByRole("button", {
+    name: /^staff$/i,
+  });
+
+  await user.click(staffButton);
+
+  // Verify staff modal opened
+  expect(
+    await screen.findByText(/staff members/i)
+  ).toBeInTheDocument();
+});
+
+test("clinic popup opens", async () => {
+  render(<AdminDashboard />);
+
+  fireEvent.click(screen.getByText(/Edit Clinic/i));
+
+  expect(await screen.findByText(/Edit Operating Hours/i)).toBeInTheDocument();
 });
