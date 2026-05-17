@@ -1,7 +1,7 @@
-# Sprint 3 – Retrospective meeting
+# Sprint 4 – Retrospective meeting
 
 ## Date
-10 May 2026
+17 May 2026
 
 ## Attendees
 - Aaliah Reddy
@@ -11,32 +11,37 @@
 - Vikram Mahalingam
 
 ## What we spoke about
-We spoke about how we all felt about this sprint. 
+Muhammed managed to finish the patient and staff page reflecting the clinic operating hours.
 
-Aaliah: I think this was a good sprint. I finished most of the admin page functionality including the edit clinic functionality where an admin can change the clinic operating hours. I also implemented the recent activity tile where an admin can view their recent changes. I also fixed small bugs on the admin page.
 
-Muhammed: This sprint, I worked on implementing the *patient queue functionality*. I reused the existing clinic search function from the booking page, allowing users to search for and select a clinic. After selecting a clinic, users can view the clinic’s current queue, including an estimated wait time. From there, they can join the queue or leave the queue when needed. I also added queue visibility to the dashboard, so users can see their current queue status directly from there.
+We spoke about how our last sprint went.
 
-In addition, I worked on the *View Appointments* page, where users can see all the appointments they have made. Appointments can now be ordered by status and date, making it easier to separate past and future appointments.
 
-Overall, this work improved the patient experience by making clinic queues easier to access, manage, and track, while also improving appointment visibility and organisation.
+Aaliah: This sprint went by really quick and was a little bit stressful because it was our last sprint, however, we managed to finish our app and get most of the documentation done to hand it in. I am going to miss working with everyone but I am also glad that we are finally done and are ready to present our final app.
 
-Ammaarah: This sprint I added the scrollbar to the staff and clinic list popups by applying max-height and overflow-y: auto to the .activity-list CSS class, and styled each staff list item with a .staff-list-item class to display the email and a remove button side by side. I completed the remove staff functionality by implementing a removeStaff function that deletes a staff member from the profiles table in Supabase using their email. I also added a staffToRemove state variable and a confirmation dialog that appears before deletion, preventing accidental removals.Also during this sprint I updated the Process View UML diagrams to reflect the new Sprint 3 features.This sprint my contributions were smaller in scope than Sprint 2 but more focused on getting existing features working correctly end to end. The remove staff feature is a complete user-facing flow — from clicking remove, through a confirmation dialog, to a live database deletion and UI update. I also became more comfortable resolving merge conflicts independently.
 
-Vikram: This sprint was good. I used my time effectively. I did a lot last sprint so just finished up other major functionality. I only need to finish up minor fixes.
+Vareshan: This sprint went quite quickly compared to last, however I did manage to complete what I was supposed to and thanks to Aaliah she made it a lot easier for me to implement the change of password functionality since she already created the pop dialogue for me to work on. Overall I think the sprint went quite well.
 
-Vareshan: This sprint went really well, we all communicated really well together even though the sprint was really long, I worked with Vik which went really well on the Staff Page, he did the backend whilst I implemented it with the UI.
+
+Muhammed: It was a short sprint, mainly focused on setting clinic times so that when an admin sets the clinic time, it reflects over all patient and staff functionality, including the reschedule functionality. Enhanced the staff functionality so that it can view upcoming appointments, view the current days appointments, cancelled appointments and view passed appointments
+
+
+Ammaarah: During this sprint I fixed a bug in the removeStaff function where deleting a staff member was failing with a foreign key constraint error because the clinicStaff table still referenced the profile being deleted. I resolved this by first fetching the staff member's profile id, deleting their record from the clinicStaff table, and then deleting from the profiles table in the correct order. I also updated the Process View UML diagrams, both the activity diagram and sequence diagram.
+
+
+Vikram: Sprint was good we finished everything up an fixes all the minor issues we had, the site going down was unexpected but Mo got it up in a day or two
+
 
 ## What has been completed?
-- Admins can remove staff members
+- N/A
 
 ## User stories completed
-- As an admin, I can remove a staff member so that I can revoke their access when they no longer work at a clinic or should no longer have staff permissions.
+- N/A
 
 ## Challenges experienced
 None noted
 
 ## Proof of Meeting
 <p align="center">
-  <img src="retrospective.png" alt="Proof of Sprint 3 Retrospective Meeting" width="500">
+  <img src="retrospective.png" alt="Proof of Sprint 4 Retrospective Meeting" width="500">
 </p>
