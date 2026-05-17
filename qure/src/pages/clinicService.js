@@ -17,7 +17,9 @@ export async function searchClinics({
 }) {
   let query = supabaseClient
     .from("clinics")
-    .select("id, admin1, facility_name, facility_type, ownership, lat, lon")
+    .select(
+      "id, admin1, facility_name, facility_type, ownership, lat, lon, open_t, closed_t"
+    )
     .limit(limit);
 
   if (admin1) {
@@ -28,7 +30,6 @@ export async function searchClinics({
     query = query.ilike("facility_type", facilityType);
   }
 
-  // Prefix match: "hil" returns clinics starting with "hil"
   if (searchTerm.trim()) {
     query = query.ilike("facility_name", `${searchTerm.trim()}%`);
   }

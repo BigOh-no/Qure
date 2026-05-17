@@ -1,10 +1,32 @@
 import { supabaseClient } from "../lib/supabaseClient";
 import { getTodayQueueForClinic } from "./queueService";
 
-/*
-  Helper function:
-  Gets the logged-in staff member's clinic_id from the clinicStaff table.
-*/
+const DEFAULT_OPEN_TIME = "08:00";
+const DEFAULT_CLOSE_TIME = "17:00";
+
+function normalizeClinicTime(timeValue, fallback) {
+  if (!timeValue) return fallback;
+  return String(timeValue).slice(0, 5);
+}
+
+function timeToMinutes(timeValue) {
+  const [hours, minutes] = normalizeClinicTime(timeValue, "00:00")
+    .split(":")
+    .map(Number);
+
+  return hours * 60 + minutes;
+}
+
+function isTimeWithinClinicHours(timeValue, openTime, closeTime) {
+  const timeMinutes = timeToMinutes(timeValue);
+  const openMinutes = timeToMinutes(normalizeClinicTime(openTime, DEFAULT_OPEN_TIME));
+  const closeMinutes = timeToMinutes(
+    normalizeClinicTime(closeTime, DEFAULT_CLOSE_TIME)
+  );
+
+  return timeMinutes >= openMinutes && timeMinutes <= closeMinutes;
+}
+
 async function getLoggedInStaffClinicId() {
   const {
     data: { user },
@@ -26,11 +48,41 @@ async function getLoggedInStaffClinicId() {
   return staff.clinic_id;
 }
 
-/*
-  Helper function:
-  Gets emails from profiles using a list of user ids.
-  This is used because there is no foreign key relationship.
-*/
+async function getLoggedInStaffClinic() {
+  const clinicId = await getLoggedInStaffClinicId();
+
+  const { data: clinic, error } = await supabaseClient
+    .from("clinics")
+    .select("id, facility_name, open_t, closed_t")
+    .eq("id", clinicId)
+    .single();
+
+  if (error) throw error;
+
+  return clinic;
+}
+
+async function validateAppointmentTimeForStaffClinic(appointmentTime) {
+  const clinic = await getLoggedInStaffClinic();
+
+  if (
+    !isTimeWithinClinicHours(
+      appointmentTime,
+      clinic.open_t,
+      clinic.closed_t
+    )
+  ) {
+    throw new Error(
+      `Appointment time must be between ${normalizeClinicTime(
+        clinic.open_t,
+        DEFAULT_OPEN_TIME
+      )} and ${normalizeClinicTime(clinic.closed_t, DEFAULT_CLOSE_TIME)}.`
+    );
+  }
+
+  return clinic;
+}
+
 async function getProfilesByIds(userIds) {
   if (!userIds || userIds.length === 0) {
     return {};
@@ -54,11 +106,6 @@ async function getProfilesByIds(userIds) {
   return profileMap;
 }
 
-/*
-  Helper function:
-  Gets a patient profile by email.
-  Used when staff creates an appointment using the patient's email.
-*/
 async function getPatientProfileByEmail(email) {
   const cleanedEmail = email.trim().toLowerCase();
 
@@ -76,23 +123,13 @@ async function getPatientProfileByEmail(email) {
 
 export async function getStaffClinicAndQueue() {
   try {
-    const clinicId = await getLoggedInStaffClinicId();
+    const clinic = await getLoggedInStaffClinic();
 
-    const { data: clinic, error: clinicError } = await supabaseClient
-      .from("clinics")
-      .select("facility_name")
-      .eq("id", clinicId)
-      .single();
+    const queue = await getTodayQueueForClinic(clinic.id);
 
-    if (clinicError) throw clinicError;
-
-    const queue = await getTodayQueueForClinic(clinicId);
-
-    const patientIds = queue.map(
-      (entry) => entry.patient_id
-    );
+    const patientIds = queue.map((entry) => entry.patient_id);
     const profileMap = await getProfilesByIds(patientIds);
-    console.log(profileMap);
+
     const queueWithPatients = queue.map((entry) => {
       const profile = profileMap[entry.patient_id];
 
@@ -102,15 +139,22 @@ export async function getStaffClinicAndQueue() {
           profile?.full_name || profile?.email || "Unknown Patient",
       };
     });
+
     return {
+      clinicId: clinic.id,
       clinicName: clinic.facility_name,
+      open_t: clinic.open_t,
+      closed_t: clinic.closed_t,
       patients: queueWithPatients,
     };
   } catch (error) {
     console.error(error);
 
     return {
+      clinicId: null,
       clinicName: "",
+      open_t: null,
+      closed_t: null,
       patients: [],
     };
   }
@@ -120,33 +164,30 @@ export async function updateQueueStatus(id, newStatus) {
   try {
     const currentTime = new Date().toISOString();
 
-    if (newStatus === "in_consultation"){
+    if (newStatus === "in_consultation") {
       const { error } = await supabaseClient
-      .from("queue_entries")
-      .update({ 
-        status: newStatus,
-        started_at: currentTime,
-      })
-      .eq("id", id);
+        .from("queue_entries")
+        .update({
+          status: newStatus,
+          started_at: currentTime,
+        })
+        .eq("id", id);
 
       if (error) throw error;
-    }
-    else if (newStatus === "completed"){
+    } else if (newStatus === "completed") {
       const { error } = await supabaseClient
-      .from("queue_entries")
-      .update({ 
-        status: newStatus,
-        completed_at: currentTime,
-      })
-      .eq("id", id);
+        .from("queue_entries")
+        .update({
+          status: newStatus,
+          completed_at: currentTime,
+        })
+        .eq("id", id);
 
-    if (error) throw error;
-    }
-    else{
+      if (error) throw error;
+    } else {
       console.error("Invalid Status");
       return false;
     }
-    
 
     return true;
   } catch (err) {
@@ -204,14 +245,14 @@ export async function staffCreateAppointment({
   appointmentTime,
 }) {
   try {
-    const clinicId = await getLoggedInStaffClinicId();
+    const clinic = await validateAppointmentTimeForStaffClinic(appointmentTime);
     const patientProfile = await getPatientProfileByEmail(patientEmail);
 
     const { data: existingAppointment, error: existingError } =
       await supabaseClient
         .from("appointments")
         .select("id, status")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", clinic.id)
         .eq("appointment_date", appointmentDate)
         .eq("appointment_time", appointmentTime)
         .in("status", ["booked", "checked_in"])
@@ -230,7 +271,7 @@ export async function staffCreateAppointment({
       .insert([
         {
           patient_user_id: patientProfile.id,
-          clinic_id: clinicId,
+          clinic_id: clinic.id,
           appointment_date: appointmentDate,
           appointment_time: appointmentTime,
           status: "booked",
@@ -314,7 +355,7 @@ export async function staffRescheduleAppointment({
   appointmentTime,
 }) {
   try {
-    const clinicId = await getLoggedInStaffClinicId();
+    const clinic = await validateAppointmentTimeForStaffClinic(appointmentTime);
 
     const { data, error } = await supabaseClient
       .from("appointments")
@@ -324,7 +365,7 @@ export async function staffRescheduleAppointment({
         status: "booked",
       })
       .eq("id", appointmentId)
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", clinic.id)
       .select()
       .single();
 
@@ -343,10 +384,6 @@ export async function staffRescheduleAppointment({
   }
 }
 
-/*
-  Gets all unique patients for the staff member's clinic
-  by using appointments, then manually referencing profiles.
-*/
 export async function getPatientsForStaffClinic() {
   try {
     const clinicId = await getLoggedInStaffClinicId();

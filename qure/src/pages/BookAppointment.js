@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { searchClinics } from "../pages/clinicService";
 import { getBookedSlots, createAppointment } from "../pages/appointmentService";
-import { generateHourlySlots } from "../pages/slotUtils";
+import {
+  generateHourlySlots,
+  isSlotWithinClinicHours,
+  formatClinicHours,
+} from "../pages/slotUtils";
 import ClinicMap from "../pages/ClinicMap.js";
 import "../styles/Appointment.css";
 import { useNavigate } from "react-router-dom";
@@ -109,15 +113,27 @@ function BookAppointment() {
         }
 
         const bookedSlots = await getBookedSlots(selectedClinic.id, date);
-        const allSlots = generateHourlySlots();
-        const now = new Date();
 
+        const allSlots = generateHourlySlots(
+          selectedClinic.open_t,
+          selectedClinic.closed_t,
+          true
+        );
+
+        const now = new Date();
         const statusMap = {};
 
         allSlots.forEach((slot) => {
           const slotDateTime = new Date(`${date}T${slot}`);
+          const isClosed = !isSlotWithinClinicHours(
+            slot,
+            selectedClinic.open_t,
+            selectedClinic.closed_t
+          );
 
-          if (slotDateTime < now) {
+          if (isClosed) {
+            statusMap[slot] = "closed";
+          } else if (slotDateTime < now) {
             statusMap[slot] = "past";
           } else if (bookedSlots.includes(slot)) {
             statusMap[slot] = "booked";
@@ -158,7 +174,7 @@ function BookAppointment() {
   const handleSlotSelect = (slot) => {
     const status = slotStatusMap[slot];
 
-    if (status === "booked" || status === "past") {
+    if (status === "booked" || status === "past" || status === "closed") {
       return;
     }
 
@@ -186,7 +202,7 @@ function BookAppointment() {
 
     const slotStatus = slotStatusMap[selectedSlot];
 
-    if (slotStatus === "booked" || slotStatus === "past") {
+    if (slotStatus === "booked" || slotStatus === "past" || slotStatus === "closed") {
       setErrorMessage("Please choose a valid available time slot.");
       return;
     }
@@ -335,6 +351,10 @@ function BookAppointment() {
                       <p>
                         <strong>Type:</strong> {clinic.facility_type}
                       </p>
+                      <p>
+                        <strong>Opening Hours:</strong>{" "}
+                        {formatClinicHours(clinic.open_t, clinic.closed_t)}
+                      </p>
 
                       <button
                         className="primary-btn"
@@ -391,6 +411,10 @@ function BookAppointment() {
             <p>
               <strong>Type:</strong> {selectedClinic.facility_type}
             </p>
+            <p>
+              <strong>Opening Hours:</strong>{" "}
+              {formatClinicHours(selectedClinic.open_t, selectedClinic.closed_t)}
+            </p>
 
             <form className="booking-form" onSubmit={handleConfirmBooking}>
               <section className="form-field">
@@ -420,14 +444,18 @@ function BookAppointment() {
                         const status = slotStatusMap[slot];
                         const isSelected = selectedSlot === slot;
                         const isDisabled =
-                          status === "booked" || status === "past";
+                          status === "booked" ||
+                          status === "past" ||
+                          status === "closed";
 
                         return (
                           <button
                             key={slot}
                             type="button"
                             className={`slot-btn ${
-                              status === "booked" ? "slot-btn-booked" : ""
+                              status === "booked" || status === "closed"
+                                ? "slot-btn-booked"
+                                : ""
                             } ${status === "past" ? "slot-btn-past" : ""} ${
                               isSelected ? "slot-btn-active" : ""
                             }`}
@@ -452,7 +480,8 @@ function BookAppointment() {
                   loading ||
                   !selectedSlot ||
                   slotStatusMap[selectedSlot] === "booked" ||
-                  slotStatusMap[selectedSlot] === "past"
+                  slotStatusMap[selectedSlot] === "past" ||
+                  slotStatusMap[selectedSlot] === "closed"
                 }
               >
                 {loading ? "Saving..." : "Confirm"}

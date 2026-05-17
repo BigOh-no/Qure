@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { searchClinics } from "../pages/clinicService";
 import ClinicMap from "../pages/ClinicMap.js";
+import { formatClinicHours } from "../pages/appointmentService";
 import {
-  QUEUE_OPEN_TIME,
-  QUEUE_CLOSE_TIME,
   AVERAGE_CONSULTATION_MINUTES,
   calculateEstimatedWait,
   getMyActiveQueueStatusForToday,
@@ -42,7 +41,9 @@ function QueuePage() {
   const [showQueueBlockedPopup, setShowQueueBlockedPopup] = useState(false);
   const [showQueueJoinedPopup, setShowQueueJoinedPopup] = useState(false);
 
-  const queueOpen = isQueueOpenNow();
+  const queueOpen = selectedClinic
+    ? isQueueOpenNow(selectedClinic.open_t, selectedClinic.closed_t)
+    : false;
 
   const hasSearchParams =
     searchTerm.trim() !== "" || admin1 !== "" || facilityType !== "";
@@ -134,11 +135,11 @@ function QueuePage() {
       setMyActiveQueueStatus(activeStatus);
 
       setTimeout(() => {
-  queueSectionRef.current?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-}, 4000);
+        queueSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 4000);
     } catch (error) {
       console.error(error);
       setMessage(error.message || "Failed to load queue.");
@@ -340,6 +341,11 @@ function QueuePage() {
                         {clinic.facility_type || "N/A"}
                       </p>
 
+                      <p>
+                        <strong>Opening Hours:</strong>{" "}
+                        {formatClinicHours(clinic.open_t, clinic.closed_t)}
+                      </p>
+
                       <button
                         className="primary-btn"
                         type="button"
@@ -384,8 +390,8 @@ function QueuePage() {
 
           <section className="queue-info-card">
             <p>
-              <strong>Queue hours:</strong> {QUEUE_OPEN_TIME} -{" "}
-              {QUEUE_CLOSE_TIME}
+              <strong>Queue hours:</strong>{" "}
+              {formatClinicHours(selectedClinic.open_t, selectedClinic.closed_t)}
             </p>
 
             <p>
@@ -475,8 +481,12 @@ function QueuePage() {
 
                   {!queueOpen && (
                     <p className="queue-warning">
-                      The queue is closed. Queue joining is only available from
-                      08:00 to 17:00.
+                      The queue is closed. Queue joining is only available from{" "}
+                      {formatClinicHours(
+                        selectedClinic.open_t,
+                        selectedClinic.closed_t
+                      )}
+                      .
                     </p>
                   )}
                 </section>

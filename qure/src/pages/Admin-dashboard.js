@@ -49,6 +49,9 @@ function AdminDashboard() {
   const [editClinicLoading, setEditClinicLoading] = useState(false);
   const [editClinicError, setEditClinicError] = useState("");
 
+  const [clinicOpeningHour, setClinicOpeningHour] = useState("08:00");
+  const [clinicClosingHour, setClinicClosingHour] = useState("17:00");
+
   const [showProfilePopup, setShowProfilePopup] = useState(false);
 
   const [newUsername, setNewUsername] = useState("");
@@ -69,6 +72,26 @@ function AdminDashboard() {
     const month = String(today.getMonth() + 1).padStart(2, "0");
     const day = String(today.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+  }
+
+  const clinicHourOptions = Array.from({ length: 24 }, (_, index) => {
+    const hour = String(index).padStart(2, "0");
+    return `${hour}:00`;
+  });
+
+  function formatDisplayHour(hourValue) {
+    const hour = Number(hourValue.slice(0, 2));
+
+    if (hour === 0) return "12:00 AM";
+    if (hour < 12) return `${hour}:00 AM`;
+    if (hour === 12) return "12:00 PM";
+
+    return `${hour - 12}:00 PM`;
+  }
+
+  function normalizeClinicHour(value, fallback) {
+    if (!value) return fallback;
+    return String(value).slice(0, 2) + ":00";
   }
 
   useEffect(() => {
@@ -146,57 +169,57 @@ function AdminDashboard() {
   }, []);
 
   const fetchAllStaff = async () => {
-  setLoadingStaff(true);
-  try {
-    const { data, error } = await supabaseClient
-      .from("profiles")
-      .select("email, role, user_name")
-      .eq("role", "clinicstaff");
+    setLoadingStaff(true);
 
-    if (error) throw error;
-    setStaffList(data || []);
-  } catch (error) {
-    console.error("Error fetching staff:", error.message);
-  } finally {
-    setLoadingStaff(false);
-  }
-};
+    try {
+      const { data, error } = await supabaseClient
+        .from("profiles")
+        .select("email, role, user_name")
+        .eq("role", "clinicstaff");
+
+      if (error) throw error;
+
+      setStaffList(data || []);
+    } catch (error) {
+      console.error("Error fetching staff:", error.message);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
 
   const removeStaff = async (email) => {
-  try {
-    // First get the profile id
-    const { data: profile, error: profileError } = await supabaseClient
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .single();
+    try {
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .single();
 
-    if (profileError) throw profileError;
+      if (profileError) throw profileError;
 
-    // Delete from clinicStaff table first
-    const { error: clinicStaffError } = await supabaseClient
-      .from("clinicStaff")
-      .delete()
-      .eq("staff_id", profile.id);
+      const { error: clinicStaffError } = await supabaseClient
+        .from("clinicStaff")
+        .delete()
+        .eq("staff_id", profile.id);
 
-    if (clinicStaffError) throw clinicStaffError;
+      if (clinicStaffError) throw clinicStaffError;
 
-    // Then delete from profiles
-    const { error } = await supabaseClient
-      .from("profiles")
-      .delete()
-      .eq("email", email);
+      const { error } = await supabaseClient
+        .from("profiles")
+        .delete()
+        .eq("email", email);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setStaffList((prev) => prev.filter((staff) => staff.email !== email));
-    setSuccessMessage(`Staff member ${email} has been removed.`);
-    await fetchDashboardCounts();
-  } catch (error) {
-    console.error("Error removing staff:", error.message);
-    setErrorMessage("Failed to remove staff member.");
-  }
-};
+      setStaffList((prev) => prev.filter((staff) => staff.email !== email));
+      setSuccessMessage(`Staff member ${email} has been removed.`);
+      await fetchDashboardCounts();
+    } catch (error) {
+      console.error("Error removing staff:", error.message);
+      setErrorMessage("Failed to remove staff member.");
+    }
+  };
+
   const fetchDashboardCounts = async () => {
     setIsLoadingStats(true);
     setErrorMessage("");
@@ -445,13 +468,16 @@ function AdminDashboard() {
       return;
     }
 
-    const formData = new FormData(event.target);
+    const openingTime = clinicOpeningHour;
+    const closingTime = clinicClosingHour;
 
-    const openingTime = formData.get("openingTime");
-    const closingTime = formData.get("closingTime");
+    if (!openingTime || !closingTime) {
+      alert("Please choose both opening and closing hours.");
+      return;
+    }
 
-    if (openingTime > closingTime) {
-      alert("Closing time must be after opening time.");
+    if (openingTime >= closingTime) {
+      alert("Closing hour must be after opening hour.");
       return;
     }
 
@@ -520,6 +546,14 @@ function AdminDashboard() {
     setSelectedEditClinic(null);
     setEditClinicError("");
     setEditClinicLoading(false);
+    setClinicOpeningHour("08:00");
+    setClinicClosingHour("17:00");
+  };
+
+  const handleSelectEditClinic = (clinic) => {
+    setSelectedEditClinic(clinic);
+    setClinicOpeningHour(normalizeClinicHour(clinic.open_t, "08:00"));
+    setClinicClosingHour(normalizeClinicHour(clinic.closed_t, "17:00"));
   };
 
   const formatActivityDateTime = (dateValue) => {
@@ -1101,12 +1135,17 @@ function AdminDashboard() {
                             <p>
                               <strong>Type:</strong> {clinic.facility_type}
                             </p>
+                            <p>
+                              <strong>Current Hours:</strong>{" "}
+                              {normalizeClinicHour(clinic.open_t, "08:00")} -{" "}
+                              {normalizeClinicHour(clinic.closed_t, "17:00")}
+                            </p>
                           </section>
 
                           <button
                             type="button"
                             className="popup-select-btn"
-                            onClick={() => setSelectedEditClinic(clinic)}
+                            onClick={() => handleSelectEditClinic(clinic)}
                           >
                             {selectedEditClinic?.id === clinic.id
                               ? "Selected"
@@ -1125,41 +1164,74 @@ function AdminDashboard() {
                   )}
                 </section>
 
-                <h3 className="popup-subheading">Edit Operating Hours</h3>
+                <h3 className="popup-subheading">Set Operating Hours</h3>
 
-                <section className="clinic-time-grid">
+                <section
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                    padding: "1rem",
+                    border: "1px solid #f0d0d0",
+                    borderRadius: "14px",
+                    backgroundColor: "#fffafa",
+                  }}
+                >
                   <section className="popup-field-group">
-                    <label className="popup-label" htmlFor="openingTime">
-                      Opening Time
+                    <label className="popup-label" htmlFor="clinicOpeningHour">
+                      Opening Hour
                     </label>
 
-                    <input
+                    <select
                       className="popup-input"
-                      id="openingTime"
-                      name="openingTime"
-                      type="time"
-                      min="00:00"
-                      max="23:59"
-                      step="60"
-                      required
-                    />
+                      id="clinicOpeningHour"
+                      value={clinicOpeningHour}
+                      onChange={(event) =>
+                        setClinicOpeningHour(event.target.value)
+                      }
+                    >
+                      {clinicHourOptions.map((hour) => (
+                        <option key={hour} value={hour}>
+                          {formatDisplayHour(hour)}
+                        </option>
+                      ))}
+                    </select>
                   </section>
 
                   <section className="popup-field-group">
-                    <label className="popup-label" htmlFor="closingTime">
-                      Closing Time
+                    <label className="popup-label" htmlFor="clinicClosingHour">
+                      Closing Hour
                     </label>
 
-                    <input
+                    <select
                       className="popup-input"
-                      id="closingTime"
-                      name="closingTime"
-                      type="time"
-                      min="00:00"
-                      max="23:59"
-                      step="60"
-                      required
-                    />
+                      id="clinicClosingHour"
+                      value={clinicClosingHour}
+                      onChange={(event) =>
+                        setClinicClosingHour(event.target.value)
+                      }
+                    >
+                      {clinicHourOptions.map((hour) => (
+                        <option key={hour} value={hour}>
+                          {formatDisplayHour(hour)}
+                        </option>
+                      ))}
+                    </select>
+                  </section>
+
+                  <section
+                    style={{
+                      gridColumn: "1 / -1",
+                      padding: "0.9rem 1rem",
+                      borderRadius: "12px",
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #f0d0d0",
+                      color: "#8b0000",
+                      fontWeight: "700",
+                      textAlign: "center",
+                    }}
+                  >
+                    Selected hours: {clinicOpeningHour} - {clinicClosingHour}
                   </section>
                 </section>
 
@@ -1212,7 +1284,7 @@ function AdminDashboard() {
 
                       const { data: startsWithData } = await supabaseClient
                         .from("profiles")
-                       .select("email, role, user_name")
+                        .select("email, role, user_name")
                         .eq("role", "clinicstaff")
                         .ilike("email", `${searchTerm}%`)
                         .limit(20);

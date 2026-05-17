@@ -4,16 +4,28 @@ export const QUEUE_OPEN_TIME = "08:00";
 export const QUEUE_CLOSE_TIME = "17:00";
 export const AVERAGE_CONSULTATION_MINUTES = 15;
 
+export function normalizeClinicTime(timeValue, fallback) {
+  if (!timeValue) return fallback;
+  return String(timeValue).slice(0, 5);
+}
+
 export function getTodayDateString() {
   return new Date().toISOString().split("T")[0];
 }
 
-export function isQueueOpenNow() {
+export function isQueueOpenNow(openTime = QUEUE_OPEN_TIME, closeTime = QUEUE_CLOSE_TIME) {
   const now = new Date();
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const openMinutes = 8 * 60;
-  const closeMinutes = 17 * 60;
+
+  const safeOpenTime = normalizeClinicTime(openTime, QUEUE_OPEN_TIME);
+  const safeCloseTime = normalizeClinicTime(closeTime, QUEUE_CLOSE_TIME);
+
+  const [openHour, openMinute] = safeOpenTime.split(":").map(Number);
+  const [closeHour, closeMinute] = safeCloseTime.split(":").map(Number);
+
+  const openMinutes = openHour * 60 + openMinute;
+  const closeMinutes = closeHour * 60 + closeMinute;
 
   return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
 }
@@ -106,8 +118,21 @@ export async function getMyActiveQueueStatusForToday() {
 }
 
 export async function joinQueue(clinicId) {
-  if (!isQueueOpenNow()) {
-    throw new Error("The queue is currently closed. Queue hours are 08:00 to 17:00.");
+  const { data: clinic, error: clinicError } = await supabaseClient
+    .from("clinics")
+    .select("id, open_t, closed_t")
+    .eq("id", clinicId)
+    .single();
+
+  if (clinicError) throw clinicError;
+
+  if (!isQueueOpenNow(clinic?.open_t, clinic?.closed_t)) {
+    throw new Error(
+      `The queue is currently closed. Queue hours are ${normalizeClinicTime(
+        clinic?.open_t,
+        QUEUE_OPEN_TIME
+      )} to ${normalizeClinicTime(clinic?.closed_t, QUEUE_CLOSE_TIME)}.`
+    );
   }
 
   const today = getTodayDateString();

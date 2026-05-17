@@ -6,6 +6,8 @@ import {
   rescheduleAppointment,
   getBookedSlots,
   generateHourlySlots,
+  isSlotWithinClinicHours,
+  formatClinicHours,
 } from "./appointmentService";
 import "../styles/ViewAppointments.css";
 
@@ -220,7 +222,11 @@ function AppointmentsPage() {
         (await getBookedSlots(appointment.clinic_id, newDate)) || [];
 
       const currentTime = appointment.appointment_time?.slice(0, 5) || "";
-      const allSlots = generateHourlySlots();
+      const allSlots = generateHourlySlots(
+        appointment.clinics?.open_t,
+        appointment.clinics?.closed_t,
+        true
+      );
       const now = new Date();
 
       const statusMap = {};
@@ -230,7 +236,15 @@ function AppointmentsPage() {
         const isCurrentAppointmentSlot =
           newDate === appointment.appointment_date && slot === currentTime;
 
-        if (slotDateTime < now) {
+        const isClosed = !isSlotWithinClinicHours(
+          slot,
+          appointment.clinics?.open_t,
+          appointment.clinics?.closed_t
+        );
+
+        if (isClosed) {
+          statusMap[slot] = "closed";
+        } else if (slotDateTime < now) {
           statusMap[slot] = isCurrentAppointmentSlot ? "current" : "past";
         } else if (isCurrentAppointmentSlot) {
           statusMap[slot] = "current";
@@ -260,7 +274,7 @@ function AppointmentsPage() {
   function handleSlotSelect(slot) {
     const status = slotStatusMap[slot];
 
-    if (status === "booked" || status === "past") {
+    if (status === "booked" || status === "past" || status === "closed") {
       return;
     }
 
@@ -285,7 +299,11 @@ function AppointmentsPage() {
 
     const slotStatus = slotStatusMap[selectedSlot];
 
-    if (slotStatus === "booked" || slotStatus === "past") {
+    if (
+      slotStatus === "booked" ||
+      slotStatus === "past" ||
+      slotStatus === "closed"
+    ) {
       setRescheduleError("Please choose a valid available time slot.");
       return;
     }
@@ -545,6 +563,14 @@ function AppointmentsPage() {
               {selectedAppointment?.clinics?.facility_name || "Clinic"}
             </p>
 
+            <p className="modal-clinic-name">
+              Clinic hours:{" "}
+              {formatClinicHours(
+                selectedAppointment?.clinics?.open_t,
+                selectedAppointment?.clinics?.closed_t
+              )}
+            </p>
+
             <label className="modal-label" htmlFor="reschedule-date">
               Choose a new date
             </label>
@@ -568,14 +594,19 @@ function AppointmentsPage() {
                   {availableSlots.map((slot) => {
                     const status = slotStatusMap[slot];
                     const isSelected = selectedSlot === slot;
-                    const isDisabled = status === "booked" || status === "past";
+                    const isDisabled =
+                      status === "booked" ||
+                      status === "past" ||
+                      status === "closed";
 
                     return (
                       <button
                         key={slot}
                         type="button"
                         className={`slot-btn ${
-                          status === "booked" ? "slot-btn-booked" : ""
+                          status === "booked" || status === "closed"
+                            ? "slot-btn-booked"
+                            : ""
                         } ${status === "past" ? "slot-btn-past" : ""} ${
                           status === "current" ? "slot-btn-current" : ""
                         } ${isSelected ? "slot-btn-active" : ""}`}
@@ -614,7 +645,8 @@ function AppointmentsPage() {
                   reschedulingId === selectedAppointment?.id ||
                   !selectedSlot ||
                   slotStatusMap[selectedSlot] === "booked" ||
-                  slotStatusMap[selectedSlot] === "past"
+                  slotStatusMap[selectedSlot] === "past" ||
+                  slotStatusMap[selectedSlot] === "closed"
                 }
               >
                 {reschedulingId === selectedAppointment?.id

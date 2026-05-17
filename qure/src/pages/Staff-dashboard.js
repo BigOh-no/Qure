@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/staff.css";
 import logo from "../assets/images/TLogo.png";
 import { supabaseClient } from "../lib/supabaseClient";
+import { generateHourlySlots, formatClinicHours } from "./slotUtils";
 
 import {
   getStaffClinicAndQueue,
@@ -11,7 +12,6 @@ import {
   staffCreateAppointment,
   staffCancelAppointment,
   staffRescheduleAppointment,
-  staffCheckInAppointment,
 } from "./staffService";
 
 export default function StaffDashboard() {
@@ -19,10 +19,13 @@ export default function StaffDashboard() {
 
   const [patients, setPatients] = useState([]);
   const [clinic, setClinic] = useState("");
+  const [clinicOpenTime, setClinicOpenTime] = useState(null);
+  const [clinicCloseTime, setClinicCloseTime] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [appointments, setAppointments] = useState([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [appointmentFilter, setAppointmentFilter] = useState("upcoming");
 
   const [patientEmail, setPatientEmail] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
@@ -44,6 +47,8 @@ export default function StaffDashboard() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+
+  const clinicSlots = generateHourlySlots(clinicOpenTime, clinicCloseTime, false);
 
   async function loadStaffName() {
     try {
@@ -97,6 +102,8 @@ export default function StaffDashboard() {
 
       if (result) {
         setClinic(result.clinicName);
+        setClinicOpenTime(result.open_t);
+        setClinicCloseTime(result.closed_t);
         setPatients(result.patients || []);
       }
     } catch (err) {
@@ -193,12 +200,6 @@ export default function StaffDashboard() {
     }
   }
 
-  function isAppointmentCheckedIn(status) {
-    const normalizedStatus = status?.toLowerCase().trim();
-
-    return normalizedStatus === "checked_in" || normalizedStatus === "checked in";
-  }
-
   function hasAppointmentPassedByOneHour(appointmentDate, appointmentTime) {
     if (!appointmentDate || !appointmentTime) return false;
 
@@ -225,33 +226,102 @@ export default function StaffDashboard() {
     return now > oneMonthAfterAppointment;
   }
 
-  async function handleCheckInAppointment(appointmentId) {
-    try {
-      const updatedAppointment = await staffCheckInAppointment(appointmentId);
+  function getAppointmentDateTime(appointmentDate, appointmentTime) {
+    if (!appointmentDate || !appointmentTime) return null;
 
-      if (!updatedAppointment) {
-        showMessage("Could not check in patient.");
-        return;
-      }
+    return new Date(`${appointmentDate}T${appointmentTime}`);
+  }
 
-      setAppointments((prev) =>
-        prev.map((appointment) =>
-          appointment.id === appointmentId
-            ? {
-                ...appointment,
-                ...updatedAppointment,
-              }
-            : appointment
-        )
-      );
+  function isSameDay(dateOne, dateTwo) {
+    return (
+      dateOne.getFullYear() === dateTwo.getFullYear() &&
+      dateOne.getMonth() === dateTwo.getMonth() &&
+      dateOne.getDate() === dateTwo.getDate()
+    );
+  }
 
-      await loadAppointments();
+  function getDerivedAppointmentStatus(appointment) {
+    const normalizedStatus = appointment.status?.toLowerCase().trim();
 
-      showMessage("Patient checked in successfully.");
-    } catch (err) {
-      console.error(err);
-      showMessage("Could not check in patient.");
+    if (normalizedStatus === "cancelled") {
+      return "Cancelled";
     }
+
+    const appointmentDateTime = getAppointmentDateTime(
+      appointment.appointment_date,
+      appointment.appointment_time
+    );
+
+    if (!appointmentDateTime) {
+      return "Scheduled";
+    }
+
+    const now = new Date();
+
+    if (appointmentDateTime < now) {
+      return "Appointment Passed";
+    }
+
+    if (isSameDay(appointmentDateTime, now)) {
+      return "Waiting To Be Seen";
+    }
+
+    return "Scheduled";
+  }
+
+  function getAppointmentCategory(appointment) {
+    const status = getDerivedAppointmentStatus(appointment);
+
+    if (status === "Cancelled") {
+      return "cancelled";
+    }
+
+    if (status === "Appointment Passed") {
+      return "past";
+    }
+
+    return "upcoming";
+  }
+
+  function getFilteredAppointments() {
+    return appointments.filter((appointment) => {
+      const status = getDerivedAppointmentStatus(appointment);
+      const category = getAppointmentCategory(appointment);
+
+      if (appointmentFilter === "all") return true;
+      if (appointmentFilter === "upcoming") return category === "upcoming";
+      if (appointmentFilter === "past") return category === "past";
+      if (appointmentFilter === "waiting") return status === "Waiting To Be Seen";
+      if (appointmentFilter === "appointment-passed") {
+        return status === "Appointment Passed";
+      }
+      if (appointmentFilter === "cancelled") return status === "Cancelled";
+
+      return true;
+    });
+  }
+
+  function getAppointmentFilterCount(filterValue) {
+    return appointments.filter((appointment) => {
+      const status = getDerivedAppointmentStatus(appointment);
+      const category = getAppointmentCategory(appointment);
+
+      if (filterValue === "all") return true;
+      if (filterValue === "upcoming") return category === "upcoming";
+      if (filterValue === "past") return category === "past";
+      if (filterValue === "waiting") return status === "Waiting To Be Seen";
+      if (filterValue === "appointment-passed") {
+        return status === "Appointment Passed";
+      }
+      if (filterValue === "cancelled") return status === "Cancelled";
+
+      return true;
+    }).length;
+  }
+
+  function formatAppointmentTime(timeValue) {
+    if (!timeValue) return "N/A";
+    return String(timeValue).slice(0, 5);
   }
 
   async function handleCancelAppointment(appointmentId) {
@@ -276,7 +346,9 @@ export default function StaffDashboard() {
   function startReschedule(appointment) {
     setEditingAppointmentId(appointment.id);
     setRescheduleDate(appointment.appointment_date || "");
-    setRescheduleTime(appointment.appointment_time || "");
+    setRescheduleTime(
+      appointment.appointment_time ? appointment.appointment_time.slice(0, 5) : ""
+    );
   }
 
   function cancelReschedule() {
@@ -347,12 +419,16 @@ export default function StaffDashboard() {
       return "status cancelled";
     }
 
-    if (normalizedStatus === "booked") {
-      return "status progress";
+    if (normalizedStatus === "scheduled") {
+      return "status scheduled";
     }
 
-    if (normalizedStatus === "checked in" || normalizedStatus === "checked_in") {
-      return "status checked-in";
+    if (normalizedStatus === "appointment passed") {
+      return "status passed";
+    }
+
+    if (normalizedStatus === "waiting to be seen") {
+      return "status waiting";
     }
 
     return "status";
@@ -485,6 +561,8 @@ export default function StaffDashboard() {
     }
   }
 
+  const filteredAppointments = getFilteredAppointments();
+
   return (
     <main className="layout">
       <aside className="sidebar">
@@ -524,6 +602,9 @@ export default function StaffDashboard() {
           <h1 className="topbar-title">Staff Dashboard</h1>
           <p className="topbar-subtitle">Welcome back, {staffName}</p>
           <p className="topbar-subtitle">{clinic || "Loading..."}</p>
+          <p className="topbar-subtitle">
+            Clinic hours: {formatClinicHours(clinicOpenTime, clinicCloseTime)}
+          </p>
         </header>
 
         {message && <p className="success-message">{message}</p>}
@@ -623,11 +704,17 @@ export default function StaffDashboard() {
 
             <label>
               Appointment Time
-              <input
-                type="time"
+              <select
                 value={appointmentTime}
                 onChange={(e) => setAppointmentTime(e.target.value)}
-              />
+              >
+                <option value="">Select time</option>
+                {clinicSlots.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <button type="submit" className="btn start">
@@ -637,103 +724,171 @@ export default function StaffDashboard() {
         </article>
 
         <article className="card">
-          <header className="card-header">
-            <h2>Clinic Appointments</h2>
+          <header className="card-header appointments-header">
+            <section>
+              <h2>Clinic Appointments</h2>
+              <p className="appointments-helper-text">
+                View upcoming and past clinic appointments.
+              </p>
+            </section>
+
             <p className="patient-count">
-              <strong>{appointments.length}</strong> appointments
+              <strong>{filteredAppointments.length}</strong> appointments
             </p>
           </header>
 
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Patient Email</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
-                <th>Check in</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+          <section className="appointment-filters" aria-label="Appointment filters">
+            <button
+              type="button"
+              className={
+                appointmentFilter === "upcoming"
+                  ? "filter-btn active"
+                  : "filter-btn"
+              }
+              onClick={() => setAppointmentFilter("upcoming")}
+            >
+              Upcoming ({getAppointmentFilterCount("upcoming")})
+            </button>
 
-            <tbody>
-              {appointmentsLoading ? (
-                <tr>
-                  <td colSpan="6">Loading appointments...</td>
-                </tr>
-              ) : appointments.length === 0 ? (
-                <tr>
-                  <td colSpan="6">No appointments found</td>
-                </tr>
-              ) : (
-                appointments.map((appointment) => {
-                  const isLocked =
-                    appointment.status?.toLowerCase().trim() === "cancelled" ||
-                    hasAppointmentPassedByOneHour(
-                      appointment.appointment_date,
-                      appointment.appointment_time
-                    );
+            <button
+              type="button"
+              className={
+                appointmentFilter === "past" ? "filter-btn active" : "filter-btn"
+              }
+              onClick={() => setAppointmentFilter("past")}
+            >
+              Past ({getAppointmentFilterCount("past")})
+            </button>
 
-                  return (
-                    <tr key={appointment.id}>
-                      <td>{appointment.patient_email || "Email not found"}</td>
+            <button
+              type="button"
+              className={
+                appointmentFilter === "waiting"
+                  ? "filter-btn active"
+                  : "filter-btn"
+              }
+              onClick={() => setAppointmentFilter("waiting")}
+            >
+              Waiting To Be Seen ({getAppointmentFilterCount("waiting")})
+            </button>
 
-                      <td>
-                        {editingAppointmentId === appointment.id ? (
-                          <input
-                            type="date"
-                            value={rescheduleDate}
-                            onChange={(e) => setRescheduleDate(e.target.value)}
-                          />
-                        ) : (
-                          appointment.appointment_date
-                        )}
-                      </td>
+            <button
+              type="button"
+              className={
+                appointmentFilter === "appointment-passed"
+                  ? "filter-btn active"
+                  : "filter-btn"
+              }
+              onClick={() => setAppointmentFilter("appointment-passed")}
+            >
+              Appointment Passed (
+              {getAppointmentFilterCount("appointment-passed")})
+            </button>
 
-                      <td>
-                        {editingAppointmentId === appointment.id ? (
-                          <input
-                            type="time"
-                            value={rescheduleTime}
-                            onChange={(e) => setRescheduleTime(e.target.value)}
-                          />
-                        ) : (
-                          appointment.appointment_time
-                        )}
-                      </td>
+            <button
+              type="button"
+              className={
+                appointmentFilter === "cancelled"
+                  ? "filter-btn active"
+                  : "filter-btn"
+              }
+              onClick={() => setAppointmentFilter("cancelled")}
+            >
+              Cancelled ({getAppointmentFilterCount("cancelled")})
+            </button>
 
-                      <td>
-                        <strong className={getStatusClass(appointment.status)}>
-                          {appointment.status === "checked_in"
-                            ? "checked in"
-                            : appointment.status}
-                        </strong>
-                      </td>
+            <button
+              type="button"
+              className={
+                appointmentFilter === "all" ? "filter-btn active" : "filter-btn"
+              }
+              onClick={() => setAppointmentFilter("all")}
+            >
+              All ({getAppointmentFilterCount("all")})
+            </button>
+          </section>
 
-                      <td>
-                        <button
-                          type="button"
-                          className="btn check"
-                          onClick={() =>
-                            handleCheckInAppointment(appointment.id)
-                          }
-                          disabled={
-                            isAppointmentCheckedIn(appointment.status) ||
-                            appointment.status?.toLowerCase().trim() ===
-                              "cancelled" ||
-                            hasAppointmentPassedByOneHour(
-                              appointment.appointment_date,
-                              appointment.appointment_time
-                            )
-                          }
-                        >
-                          {isAppointmentCheckedIn(appointment.status)
-                            ? "Checked In"
-                            : "Check In"}
-                        </button>
-                      </td>
+          {appointmentsLoading ? (
+            <section className="appointments-empty-state">
+              Loading appointments...
+            </section>
+          ) : filteredAppointments.length === 0 ? (
+            <section className="appointments-empty-state">
+              No appointments found for this filter.
+            </section>
+          ) : (
+            <section className="appointments-scroll-list">
+              {filteredAppointments.map((appointment) => {
+                const derivedStatus = getDerivedAppointmentStatus(appointment);
 
-                      <td>
+                const isLocked =
+                  appointment.status?.toLowerCase().trim() === "cancelled" ||
+                  hasAppointmentPassedByOneHour(
+                    appointment.appointment_date,
+                    appointment.appointment_time
+                  );
+
+                return (
+                  <article className="appointment-list-card" key={appointment.id}>
+                    <section className="appointment-list-main">
+                      <section>
+                        <p className="appointment-label">Patient Email</p>
+                        <h3 className="appointment-patient-email">
+                          {appointment.patient_email || "Email not found"}
+                        </h3>
+                      </section>
+
+                      <section className="appointment-date-time-grid">
+                        <section>
+                          <p className="appointment-label">Date</p>
+
+                          {editingAppointmentId === appointment.id ? (
+                            <input
+                              className="appointment-edit-input"
+                              type="date"
+                              value={rescheduleDate}
+                              onChange={(e) => setRescheduleDate(e.target.value)}
+                            />
+                          ) : (
+                            <p className="appointment-value">
+                              {appointment.appointment_date}
+                            </p>
+                          )}
+                        </section>
+
+                        <section>
+                          <p className="appointment-label">Time</p>
+
+                          {editingAppointmentId === appointment.id ? (
+                            <select
+                              className="appointment-edit-input"
+                              value={rescheduleTime}
+                              onChange={(e) => setRescheduleTime(e.target.value)}
+                            >
+                              <option value="">Select time</option>
+                              {clinicSlots.map((slot) => (
+                                <option key={slot} value={slot}>
+                                  {slot}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <p className="appointment-value">
+                              {formatAppointmentTime(
+                                appointment.appointment_time
+                              )}
+                            </p>
+                          )}
+                        </section>
+                      </section>
+                    </section>
+
+                    <section className="appointment-list-side">
+                      <strong className={getStatusClass(derivedStatus)}>
+                        {derivedStatus}
+                      </strong>
+
+                      <section className="appointment-actions">
                         {editingAppointmentId === appointment.id ? (
                           <>
                             <button
@@ -777,13 +932,13 @@ export default function StaffDashboard() {
                             </button>
                           </>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      </section>
+                    </section>
+                  </article>
+                );
+              })}
+            </section>
+          )}
         </article>
 
         {showProfilePopup && (
