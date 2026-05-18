@@ -53,7 +53,7 @@ describe("AuthCallback", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/logging in/i)).toBeInTheDocument();
+    expect(screen.getByText(/logging you in/i)).toBeInTheDocument();
   });
 
   test("redirects patient user to /patient", async () => {
