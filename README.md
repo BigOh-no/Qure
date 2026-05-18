@@ -10,7 +10,7 @@ How to run locally:
 
 Admin Login:
 
-Email: qureadmin@gmail.com #13
+Email: qureadmin@gmail.com
 Password: Admin123!
 
 Once you have logged in with these admin credentials, then you will be able to create your own admin and staff accounts.
