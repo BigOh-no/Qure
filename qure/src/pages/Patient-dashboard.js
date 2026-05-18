@@ -598,10 +598,6 @@ function PatientDashboard() {
                 Edit Profile
               </button>
 
-              <button className="menu-item" type="button">
-                View Clinics
-              </button>
-
               <button
                 className="menu-item logout-btn"
                 type="button"

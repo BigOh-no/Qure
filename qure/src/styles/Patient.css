@@ -139,7 +139,7 @@
 }
 
 .action-btn {
-  background-color: rgba(163, 0, 0, 0.92);
+  background: linear-gradient(135deg, #ff4d4d, #8b0000);
   color: #ffffff;
   box-shadow: 0 4px 10px rgba(163, 0, 0, 0.15);
   flex: 1;
@@ -148,7 +148,7 @@
 }
 
 .action-btn:hover {
-  background-color: rgba(139, 0, 0, 0.95);
+  background: linear-gradient(135deg, #ff4d4d, #8b0000);
   transform: scale(1.03);
 }
 
