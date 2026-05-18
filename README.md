@@ -9,6 +9,7 @@ How to run locally:
 4. The site should deploy automatically in a browser using local host
 
 Admin Login:
+
 Email: qureadmin@gmail.com
 Password: Admin123!
 
