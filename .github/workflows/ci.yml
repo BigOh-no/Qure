@@ -29,9 +29,11 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npm test -- --coverage --watchAll=false 2>&1 | tee test-output.txt
+          npm test -- --coverage --watchAll=false --silent 2>&1 | tee test-output.txt
         env:
           CI: true
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_KEY: ${{ secrets.REACT_APP_SUPABASE_KEY }}
 
       - name: Add terminal coverage output to GitHub Actions summary
         shell: bash
