@@ -33,11 +33,24 @@ Test Coverage stayed consistently above the threshold for each Sprint (Sprint 1 
 <p align="center">
   <img src="S2Coverage.png" alt="Sprint 2 Code Coverage" width="500">
 </p>
+<p align="center">
+  <img src="Sprint2 Codecov.png" alt="Sprint 2 Code Coverage (CodeCov)" width="500">
+</p>
 
 ### Sprint 3 Coverage
 
 <p align="center">
   <img src="S3Coverage.png" alt="Sprint 3 Code Coverage" width="500">
 </p>
+<p align="center">
+  <img src="Sprint3 Codecov.png" alt="Sprint 3 Code Coverage (CodeCov)" width="500">
+</p>
 
 ### Sprint 4 Coverage
+
+<p align="center">
+  <img src="S4Coverage.png" alt="Sprint 4 Code Coverage" width="500">
+</p>
+<p align="center">
+  <img src="Sprint4 Codecov.png" alt="Sprint 4 Code Coverage (CodeCov)" width="500">
+</p>
