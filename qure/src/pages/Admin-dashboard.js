@@ -1344,7 +1344,7 @@ function AdminDashboard() {
                       <tbody>
                         {staffList.map((staff, index) => (
                           <tr key={index}>
-                            <td>{staff.user_name || "No username"}</td>
+                            <td>{staff.user_name || "-"}</td>
                             <td>{staff.email}</td>
                             <td>staff</td>
                             <td>
