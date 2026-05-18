@@ -55,3 +55,10 @@ The review went smoothly. Everyone explained their code fluently, we had proof o
 
 
 Date: 18 May 2026
+
+We presented our entire project to our client. He made sure everything worked correctly and checked that nothing broke when refreshing the page. 
+
+He said if we have time we should rather put the staff members into a table and also asked why appointments by the hour are made because he thought that was a bit long but we made our justification as to why by the hour is necessary because it opens up spots for the queue if appointments finish early.
+
+The review went smoothly, our client was very happy with what we have. Everyone explained their code fluently, we had proof of all 5 meetings, 4 user stories were completed (and a few more), our code coverage tool Codecov is integrated into Github and our code coverage was above 80%, all UML diagrams completed, we had a Github release and deployed to Azure and all tasks were assigned and statuses tracked throughout the sprint.
+
