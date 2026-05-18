@@ -175,7 +175,8 @@ function AdminDashboard() {
       const { data, error } = await supabaseClient
         .from("profiles")
         .select("email, role, user_name")
-        .eq("role", "clinicstaff");
+        .eq("role", "clinicstaff")
+        .order("user_name", { ascending: true });
 
       if (error) throw error;
 
@@ -1259,7 +1260,7 @@ function AdminDashboard() {
             onClick={() => setShowStaffList(false)}
           >
             <dialog
-              className="popup-dialog"
+              className="popup-dialog popup-dialog-wide"
               open
               onClick={(event) => event.stopPropagation()}
             >
@@ -1271,7 +1272,7 @@ function AdminDashboard() {
                 <input
                   className="popup-input"
                   type="text"
-                  placeholder="Search staff..."
+                  placeholder="Search staff by name or email..."
                   value={staffSearch}
                   onChange={async (event) => {
                     const value = event.target.value;
@@ -1279,66 +1280,87 @@ function AdminDashboard() {
 
                     const searchTerm = value.trim();
 
-                    if (searchTerm.length >= 1) {
-                      setLoadingStaff(true);
+                    setLoadingStaff(true);
 
-                      const { data: startsWithData } = await supabaseClient
-                        .from("profiles")
-                        .select("email, role, user_name")
-                        .eq("role", "clinicstaff")
-                        .ilike("email", `${searchTerm}%`)
-                        .limit(20);
+                    try {
+                      if (searchTerm.length >= 1) {
+                        const { data: emailMatches, error: emailError } = await supabaseClient
+                          .from("profiles")
+                          .select("email, role, user_name")
+                          .eq("role", "clinicstaff")
+                          .ilike("email", `%${searchTerm}%`)
+                          .limit(50);
 
-                      const { data: containsData } = await supabaseClient
-                        .from("profiles")
-                        .select("email, role, user_name")
-                        .eq("role", "clinicstaff")
-                        .ilike("email", `%${searchTerm}%`)
-                        .limit(50);
+                        if (emailError) throw emailError;
 
-                      const allStaff = [
-                        ...(startsWithData || []),
-                        ...(containsData || []),
-                      ];
+                        const { data: nameMatches, error: nameError } = await supabaseClient
+                          .from("profiles")
+                          .select("email, role, user_name")
+                          .eq("role", "clinicstaff")
+                          .ilike("user_name", `%${searchTerm}%`)
+                          .limit(50);
 
-                      const uniqueStaff = allStaff.filter(
-                        (staff, index, self) =>
-                          index ===
-                          self.findIndex((s) => s.email === staff.email)
-                      );
+                        if (nameError) throw nameError;
 
-                      setStaffList(uniqueStaff);
-                      setLoadingStaff(false);
-                    } else {
+                        const allStaff = [
+                          ...(emailMatches || []),
+                          ...(nameMatches || []),
+                        ];
+
+                        const uniqueStaff = allStaff.filter(
+                          (staff, index, self) =>
+                            index === self.findIndex((s) => s.email === staff.email)
+                        );
+
+                        setStaffList(uniqueStaff);
+                      } else {
+                        await fetchAllStaff();
+                      }
+                    } catch (error) {
+                      console.error("Error searching staff:", error.message);
                       setStaffList([]);
+                    } finally {
+                      setLoadingStaff(false);
                     }
                   }}
                 />
 
                 {loadingStaff ? (
                   <p>Loading...</p>
+                ) : staffList.length === 0 ? (
+                  <p className="popup-empty-message">No clinic staff found.</p>
                 ) : (
-                  <ul className="activity-list">
-                    {staffList
-                      .filter((staff) =>
-                        staff.email
-                          .toLowerCase()
-                          .includes(staffSearch.toLowerCase())
-                      )
-                      .map((staff, index) => (
-                        <li key={index} className="staff-list-item">
-                          <p>{staff.user_name || staff.email}</p>
+                  <section className="staff-table-wrapper">
+                    <table className="staff-table">
+                      <thead>
+                        <tr>
+                          <th>User Name</th>
+                          <th>Email</th>
+                          <th>Role</th>
+                          <th>Remove</th>
+                        </tr>
+                      </thead>
 
-                          <button
-                            type="button"
-                            className="remove-btn"
-                            onClick={() => setStaffToRemove(staff.email)}
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      ))}
-                  </ul>
+                      <tbody>
+                        {staffList.map((staff, index) => (
+                          <tr key={index}>
+                            <td>{staff.user_name || "No username"}</td>
+                            <td>{staff.email}</td>
+                            <td>staff</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="remove-btn"
+                                onClick={() => setStaffToRemove(staff.email)}
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </section>
                 )}
 
                 <footer className="popup-footer">

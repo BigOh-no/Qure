@@ -202,6 +202,7 @@ function AnalyticsPage() {
     const rows = [];
 
     const today = new Date().toLocaleDateString("en-GB");
+    const fileDate = new Date().toISOString().split("T")[0];
 
     rows.push([`Analytics Report for Qure`]);
     rows.push([`Date: ${today}`]);
@@ -254,7 +255,7 @@ function AnalyticsPage() {
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = `qure-analytics-report-${today}.csv`;
+    link.download = `qure-analytics-report-${fileDate}.csv`;
     link.click();
 
     URL.revokeObjectURL(url);
@@ -264,6 +265,7 @@ function AnalyticsPage() {
     const doc = new jsPDF();
 
     const today = new Date().toLocaleDateString("en-GB");
+    const fileDate = new Date().toISOString().split("T")[0];
 
     const darkRed = [139, 0, 0];
     const lightRed = [255, 245, 245];
@@ -365,7 +367,7 @@ function AnalyticsPage() {
       margin: { left: 14, right: 14 },
     });
 
-    doc.save(`qure-analytics-report-${today}.pdf`);
+    doc.save(`qure-analytics-report-${fileDate}.pdf`);
   };
 
   return (

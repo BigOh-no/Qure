@@ -12,6 +12,7 @@ import {
   staffCreateAppointment,
   staffCancelAppointment,
   staffRescheduleAppointment,
+  staffCheckInAppointment,
 } from "./staffService";
 
 export default function StaffDashboard() {
@@ -226,6 +227,44 @@ export default function StaffDashboard() {
     return now > oneMonthAfterAppointment;
   }
 
+  function isAppointmentCheckedIn(status) {
+    const normalizedStatus = status?.toLowerCase().trim();
+
+    return (
+      normalizedStatus === "checked_in" ||
+      normalizedStatus === "checked in"
+    );
+  }
+
+async function handleCheckInAppointment(appointmentId) {
+  try {
+    const updatedAppointment = await staffCheckInAppointment(appointmentId);
+
+    if (!updatedAppointment) {
+      showMessage("Could not check in patient.");
+      return;
+    }
+
+    setAppointments((prev) =>
+      prev.map((appointment) =>
+        appointment.id === appointmentId
+          ? {
+              ...appointment,
+              ...updatedAppointment,
+            }
+          : appointment
+      )
+    );
+
+    await loadAppointments();
+
+    showMessage("Patient checked in successfully.");
+  } catch (err) {
+    console.error(err);
+    showMessage("Could not check in patient.");
+  }
+}
+
   function getAppointmentDateTime(appointmentDate, appointmentTime) {
     if (!appointmentDate || !appointmentTime) return null;
 
@@ -245,6 +284,10 @@ export default function StaffDashboard() {
 
     if (normalizedStatus === "cancelled") {
       return "Cancelled";
+    }
+
+    if (normalizedStatus === "checked_in" || normalizedStatus === "checked in") {
+      return "Checked In";
     }
 
     const appointmentDateTime = getAppointmentDateTime(
@@ -418,6 +461,12 @@ export default function StaffDashboard() {
     if (normalizedStatus === "cancelled") {
       return "status cancelled";
     }
+
+    if (normalizedStatus === "checked in" || normalizedStatus === "checked_in") {
+      return "status checked-in";
+    }
+
+
 
     if (normalizedStatus === "scheduled") {
       return "status scheduled";
@@ -894,9 +943,7 @@ export default function StaffDashboard() {
                             <button
                               type="button"
                               className="btn complete"
-                              onClick={() =>
-                                handleRescheduleAppointment(appointment.id)
-                              }
+                              onClick={() => handleRescheduleAppointment(appointment.id)}
                             >
                               Save
                             </button>
@@ -913,6 +960,24 @@ export default function StaffDashboard() {
                           <>
                             <button
                               type="button"
+                              className="btn check"
+                              onClick={() => handleCheckInAppointment(appointment.id)}
+                              disabled={
+                                isAppointmentCheckedIn(appointment.status) ||
+                                appointment.status?.toLowerCase().trim() === "cancelled" ||
+                                hasAppointmentPassedByOneHour(
+                                  appointment.appointment_date,
+                                  appointment.appointment_time
+                                )
+                              }
+                            >
+                              {isAppointmentCheckedIn(appointment.status)
+                                ? "Checked In"
+                                : "Check In"}
+                            </button>
+
+                            <button
+                              type="button"
                               className="btn start"
                               onClick={() => startReschedule(appointment)}
                               disabled={isLocked}
@@ -923,9 +988,7 @@ export default function StaffDashboard() {
                             <button
                               type="button"
                               className="btn logout"
-                              onClick={() =>
-                                handleCancelAppointment(appointment.id)
-                              }
+                              onClick={() => handleCancelAppointment(appointment.id)}
                               disabled={isLocked}
                             >
                               Cancel
