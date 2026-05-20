@@ -26,7 +26,7 @@ export default function StaffDashboard() {
 
   const [appointments, setAppointments] = useState([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
-  const [appointmentFilter, setAppointmentFilter] = useState("upcoming");
+  const [appointmentFilter, setAppointmentFilter] = useState("today");
 
   const [patientEmail, setPatientEmail] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
@@ -201,70 +201,6 @@ export default function StaffDashboard() {
     }
   }
 
-  function hasAppointmentPassedByOneHour(appointmentDate, appointmentTime) {
-    if (!appointmentDate || !appointmentTime) return false;
-
-    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
-
-    const oneHourAfterAppointment = new Date(
-      appointmentDateTime.getTime() + 60 * 60 * 1000
-    );
-
-    const now = new Date();
-
-    return now > oneHourAfterAppointment;
-  }
-
-  function hasAppointmentPassedByOneMonth(appointmentDate) {
-    if (!appointmentDate) return false;
-
-    const appointmentDateOnly = new Date(appointmentDate);
-    const oneMonthAfterAppointment = new Date(appointmentDateOnly);
-    oneMonthAfterAppointment.setMonth(oneMonthAfterAppointment.getMonth() + 1);
-
-    const now = new Date();
-
-    return now > oneMonthAfterAppointment;
-  }
-
-  function isAppointmentCheckedIn(status) {
-    const normalizedStatus = status?.toLowerCase().trim();
-
-    return (
-      normalizedStatus === "checked_in" ||
-      normalizedStatus === "checked in"
-    );
-  }
-
-async function handleCheckInAppointment(appointmentId) {
-  try {
-    const updatedAppointment = await staffCheckInAppointment(appointmentId);
-
-    if (!updatedAppointment) {
-      showMessage("Could not check in patient.");
-      return;
-    }
-
-    setAppointments((prev) =>
-      prev.map((appointment) =>
-        appointment.id === appointmentId
-          ? {
-              ...appointment,
-              ...updatedAppointment,
-            }
-          : appointment
-      )
-    );
-
-    await loadAppointments();
-
-    showMessage("Patient checked in successfully.");
-  } catch (err) {
-    console.error(err);
-    showMessage("Could not check in patient.");
-  }
-}
-
   function getAppointmentDateTime(appointmentDate, appointmentTime) {
     if (!appointmentDate || !appointmentTime) return null;
 
@@ -279,6 +215,119 @@ async function handleCheckInAppointment(appointmentId) {
     );
   }
 
+  function isAppointmentToday(appointment) {
+    const appointmentDateTime = getAppointmentDateTime(
+      appointment.appointment_date,
+      appointment.appointment_time
+    );
+
+    if (!appointmentDateTime) return false;
+
+    return isSameDay(appointmentDateTime, new Date());
+  }
+
+  function isAppointmentInFutureDate(appointment) {
+    if (!appointment.appointment_date) return false;
+
+    const today = new Date();
+    const appointmentDate = new Date(`${appointment.appointment_date}T00:00`);
+
+    const todayDateOnly = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    return appointmentDate > todayDateOnly;
+  }
+
+  function hasAppointmentTimePassed(appointmentDate, appointmentTime) {
+    const appointmentDateTime = getAppointmentDateTime(
+      appointmentDate,
+      appointmentTime
+    );
+
+    if (!appointmentDateTime) return false;
+
+    return appointmentDateTime < new Date();
+  }
+
+  function hasAppointmentPassedByOneMonth(appointmentDate) {
+    if (!appointmentDate) return false;
+
+    const appointmentDateOnly = new Date(appointmentDate);
+    const oneMonthAfterAppointment = new Date(appointmentDateOnly);
+    oneMonthAfterAppointment.setMonth(oneMonthAfterAppointment.getMonth() + 1);
+
+    const now = new Date();
+
+    return now > oneMonthAfterAppointment;
+  }
+
+  function isAppointmentCancelled(status) {
+    return status?.toLowerCase().trim() === "cancelled";
+  }
+
+  function isAppointmentCheckedIn(status) {
+    const normalizedStatus = status?.toLowerCase().trim();
+
+    return normalizedStatus === "checked_in" || normalizedStatus === "checked in";
+  }
+
+  function isAppointmentPassed(appointment) {
+    if (isAppointmentCancelled(appointment.status)) return false;
+
+    return hasAppointmentTimePassed(
+      appointment.appointment_date,
+      appointment.appointment_time
+    );
+  }
+
+  function canCheckInAppointment(appointment) {
+    if (isAppointmentCancelled(appointment.status)) return false;
+    if (isAppointmentCheckedIn(appointment.status)) return false;
+    if (!isAppointmentToday(appointment)) return false;
+    if (isAppointmentPassed(appointment)) return false;
+
+    return true;
+  }
+
+  function canEditAppointment(appointment) {
+    if (isAppointmentCancelled(appointment.status)) return false;
+    if (isAppointmentPassed(appointment)) return false;
+
+    return true;
+  }
+
+  async function handleCheckInAppointment(appointmentId) {
+    try {
+      const updatedAppointment = await staffCheckInAppointment(appointmentId);
+
+      if (!updatedAppointment) {
+        showMessage("Could not check in patient.");
+        return;
+      }
+
+      setAppointments((prev) =>
+        prev.map((appointment) =>
+          appointment.id === appointmentId
+            ? {
+                ...appointment,
+                ...updatedAppointment,
+              }
+            : appointment
+        )
+      );
+
+      await loadAppointments();
+
+      showMessage("Patient checked in successfully.");
+    } catch (err) {
+      console.error(err);
+      showMessage("Could not check in patient.");
+    }
+  }
+
   function getDerivedAppointmentStatus(appointment) {
     const normalizedStatus = appointment.status?.toLowerCase().trim();
 
@@ -290,22 +339,11 @@ async function handleCheckInAppointment(appointmentId) {
       return "Checked In";
     }
 
-    const appointmentDateTime = getAppointmentDateTime(
-      appointment.appointment_date,
-      appointment.appointment_time
-    );
-
-    if (!appointmentDateTime) {
-      return "Scheduled";
-    }
-
-    const now = new Date();
-
-    if (appointmentDateTime < now) {
+    if (isAppointmentPassed(appointment)) {
       return "Appointment Passed";
     }
 
-    if (isSameDay(appointmentDateTime, now)) {
+    if (isAppointmentToday(appointment)) {
       return "Waiting To Be Seen";
     }
 
@@ -313,32 +351,34 @@ async function handleCheckInAppointment(appointmentId) {
   }
 
   function getAppointmentCategory(appointment) {
-    const status = getDerivedAppointmentStatus(appointment);
-
-    if (status === "Cancelled") {
+    if (isAppointmentCancelled(appointment.status)) {
       return "cancelled";
     }
 
-    if (status === "Appointment Passed") {
-      return "past";
+    if (isAppointmentPassed(appointment)) {
+      return "passed";
     }
 
-    return "upcoming";
+    if (isAppointmentToday(appointment)) {
+      return "today";
+    }
+
+    if (isAppointmentInFutureDate(appointment)) {
+      return "upcoming";
+    }
+
+    return "passed";
   }
 
   function getFilteredAppointments() {
     return appointments.filter((appointment) => {
-      const status = getDerivedAppointmentStatus(appointment);
       const category = getAppointmentCategory(appointment);
 
-      if (appointmentFilter === "all") return true;
       if (appointmentFilter === "upcoming") return category === "upcoming";
-      if (appointmentFilter === "past") return category === "past";
-      if (appointmentFilter === "waiting") return status === "Waiting To Be Seen";
-      if (appointmentFilter === "appointment-passed") {
-        return status === "Appointment Passed";
-      }
-      if (appointmentFilter === "cancelled") return status === "Cancelled";
+      if (appointmentFilter === "today") return category === "today";
+      if (appointmentFilter === "passed") return category === "passed";
+      if (appointmentFilter === "cancelled") return category === "cancelled";
+      if (appointmentFilter === "total") return true;
 
       return true;
     });
@@ -346,17 +386,13 @@ async function handleCheckInAppointment(appointmentId) {
 
   function getAppointmentFilterCount(filterValue) {
     return appointments.filter((appointment) => {
-      const status = getDerivedAppointmentStatus(appointment);
       const category = getAppointmentCategory(appointment);
 
-      if (filterValue === "all") return true;
       if (filterValue === "upcoming") return category === "upcoming";
-      if (filterValue === "past") return category === "past";
-      if (filterValue === "waiting") return status === "Waiting To Be Seen";
-      if (filterValue === "appointment-passed") {
-        return status === "Appointment Passed";
-      }
-      if (filterValue === "cancelled") return status === "Cancelled";
+      if (filterValue === "today") return category === "today";
+      if (filterValue === "passed") return category === "passed";
+      if (filterValue === "cancelled") return category === "cancelled";
+      if (filterValue === "total") return true;
 
       return true;
     }).length;
@@ -465,8 +501,6 @@ async function handleCheckInAppointment(appointmentId) {
     if (normalizedStatus === "checked in" || normalizedStatus === "checked_in") {
       return "status checked-in";
     }
-
-
 
     if (normalizedStatus === "scheduled") {
       return "status scheduled";
@@ -777,7 +811,7 @@ async function handleCheckInAppointment(appointmentId) {
             <section>
               <h2>Clinic Appointments</h2>
               <p className="appointments-helper-text">
-                View upcoming and past clinic appointments.
+                View upcoming, today's, passed, cancelled, and total appointments.
               </p>
             </section>
 
@@ -802,36 +836,21 @@ async function handleCheckInAppointment(appointmentId) {
             <button
               type="button"
               className={
-                appointmentFilter === "past" ? "filter-btn active" : "filter-btn"
+                appointmentFilter === "today" ? "filter-btn active" : "filter-btn"
               }
-              onClick={() => setAppointmentFilter("past")}
+              onClick={() => setAppointmentFilter("today")}
             >
-              Past ({getAppointmentFilterCount("past")})
+              Today's Patients ({getAppointmentFilterCount("today")})
             </button>
 
             <button
               type="button"
               className={
-                appointmentFilter === "waiting"
-                  ? "filter-btn active"
-                  : "filter-btn"
+                appointmentFilter === "passed" ? "filter-btn active" : "filter-btn"
               }
-              onClick={() => setAppointmentFilter("waiting")}
+              onClick={() => setAppointmentFilter("passed")}
             >
-              Waiting To Be Seen ({getAppointmentFilterCount("waiting")})
-            </button>
-
-            <button
-              type="button"
-              className={
-                appointmentFilter === "appointment-passed"
-                  ? "filter-btn active"
-                  : "filter-btn"
-              }
-              onClick={() => setAppointmentFilter("appointment-passed")}
-            >
-              Appointment Passed (
-              {getAppointmentFilterCount("appointment-passed")})
+              Passed ({getAppointmentFilterCount("passed")})
             </button>
 
             <button
@@ -849,11 +868,11 @@ async function handleCheckInAppointment(appointmentId) {
             <button
               type="button"
               className={
-                appointmentFilter === "all" ? "filter-btn active" : "filter-btn"
+                appointmentFilter === "total" ? "filter-btn active" : "filter-btn"
               }
-              onClick={() => setAppointmentFilter("all")}
+              onClick={() => setAppointmentFilter("total")}
             >
-              All ({getAppointmentFilterCount("all")})
+              Total ({getAppointmentFilterCount("total")})
             </button>
           </section>
 
@@ -869,13 +888,8 @@ async function handleCheckInAppointment(appointmentId) {
             <section className="appointments-scroll-list">
               {filteredAppointments.map((appointment) => {
                 const derivedStatus = getDerivedAppointmentStatus(appointment);
-
-                const isLocked =
-                  appointment.status?.toLowerCase().trim() === "cancelled" ||
-                  hasAppointmentPassedByOneHour(
-                    appointment.appointment_date,
-                    appointment.appointment_time
-                  );
+                const checkInAllowed = canCheckInAppointment(appointment);
+                const editAllowed = canEditAppointment(appointment);
 
                 return (
                   <article className="appointment-list-card" key={appointment.id}>
@@ -943,7 +957,9 @@ async function handleCheckInAppointment(appointmentId) {
                             <button
                               type="button"
                               className="btn complete"
-                              onClick={() => handleRescheduleAppointment(appointment.id)}
+                              onClick={() =>
+                                handleRescheduleAppointment(appointment.id)
+                              }
                             >
                               Save
                             </button>
@@ -961,15 +977,10 @@ async function handleCheckInAppointment(appointmentId) {
                             <button
                               type="button"
                               className="btn check"
-                              onClick={() => handleCheckInAppointment(appointment.id)}
-                              disabled={
-                                isAppointmentCheckedIn(appointment.status) ||
-                                appointment.status?.toLowerCase().trim() === "cancelled" ||
-                                hasAppointmentPassedByOneHour(
-                                  appointment.appointment_date,
-                                  appointment.appointment_time
-                                )
+                              onClick={() =>
+                                handleCheckInAppointment(appointment.id)
                               }
+                              disabled={!checkInAllowed}
                             >
                               {isAppointmentCheckedIn(appointment.status)
                                 ? "Checked In"
@@ -980,7 +991,7 @@ async function handleCheckInAppointment(appointmentId) {
                               type="button"
                               className="btn start"
                               onClick={() => startReschedule(appointment)}
-                              disabled={isLocked}
+                              disabled={!editAllowed}
                             >
                               Reschedule
                             </button>
@@ -988,8 +999,10 @@ async function handleCheckInAppointment(appointmentId) {
                             <button
                               type="button"
                               className="btn logout"
-                              onClick={() => handleCancelAppointment(appointment.id)}
-                              disabled={isLocked}
+                              onClick={() =>
+                                handleCancelAppointment(appointment.id)
+                              }
+                              disabled={!editAllowed}
                             >
                               Cancel
                             </button>

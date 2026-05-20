@@ -989,8 +989,8 @@ describe("AdminDashboard", () => {
       ).toBeInTheDocument();
 
       expect(
-        screen.getByText(/staff@test.com/i)
-      ).toBeInTheDocument();
+  screen.getAllByText(/staff@test.com/i).length
+).toBeGreaterThan(0);
     });
 
     test("shows loading state while saving admin", async () => {

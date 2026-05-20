@@ -69,6 +69,16 @@ describe("StaffDashboard", () => {
     jest.clearAllMocks();
   });
 
+  function getTodayDateString() {
+    return new Date().toISOString().split("T")[0];
+  }
+
+  function getTomorrowDateString() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
+  }
+
   const mockQueue = {
     clinicName: "Test Clinic",
     open_t: "08:00",
@@ -88,49 +98,32 @@ describe("StaffDashboard", () => {
     {
       id: 1,
       patient_email: "john@test.com",
-      appointment_date: "2099-05-10",
-      appointment_time: "10:00",
+      appointment_date: getTodayDateString(),
+      appointment_time: "23:59",
       status: "booked",
     },
   ];
 
   test("renders clinic and queue data", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Test Clinic")
-      ).toBeInTheDocument();
-
-      expect(
-        screen.getByText("John Doe")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Test Clinic")).toBeInTheDocument();
+      expect(screen.getByText("John Doe")).toBeInTheDocument();
     });
   });
 
   test("renders clinic hours", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/clinic hours/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/clinic hours/i)).toBeInTheDocument();
     });
   });
 
@@ -142,31 +135,19 @@ describe("StaffDashboard", () => {
       patients: [],
     });
 
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/no patients in queue/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/no patients in queue/i)).toBeInTheDocument();
     });
   });
 
   test("updates queue status", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
-
-    staffService.updateQueueStatus.mockResolvedValue(
-      {}
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
+    staffService.updateQueueStatus.mockResolvedValue({});
 
     render(<StaffDashboard />);
 
@@ -175,9 +156,7 @@ describe("StaffDashboard", () => {
     fireEvent.click(screen.getByText("Start"));
 
     await waitFor(() => {
-      expect(
-        staffService.updateQueueStatus
-      ).toHaveBeenCalledWith(
+      expect(staffService.updateQueueStatus).toHaveBeenCalledWith(
         1,
         "in_consultation"
       );
@@ -185,17 +164,9 @@ describe("StaffDashboard", () => {
   });
 
   test("completes queue status", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
-
-    staffService.updateQueueStatus.mockResolvedValue(
-      {}
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
+    staffService.updateQueueStatus.mockResolvedValue({});
 
     render(<StaffDashboard />);
 
@@ -204,9 +175,7 @@ describe("StaffDashboard", () => {
     fireEvent.click(screen.getByText("Complete"));
 
     await waitFor(() => {
-      expect(
-        staffService.updateQueueStatus
-      ).toHaveBeenCalledWith(
+      expect(staffService.updateQueueStatus).toHaveBeenCalledWith(
         1,
         "completed"
       );
@@ -214,13 +183,8 @@ describe("StaffDashboard", () => {
   });
 
   test("creates appointment", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     staffService.staffCreateAppointment.mockResolvedValue({
       id: 2,
@@ -232,28 +196,17 @@ describe("StaffDashboard", () => {
 
     render(<StaffDashboard />);
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        /enter patient email address/i
-      ),
-      {
-        target: { value: "new@test.com" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText(/enter patient email address/i), {
+      target: { value: "new@test.com" },
+    });
 
-    fireEvent.change(
-      screen.getByLabelText(/appointment date/i),
-      {
-        target: { value: "2099-05-12" },
-      }
-    );
+    fireEvent.change(screen.getByLabelText(/appointment date/i), {
+      target: { value: "2099-05-12" },
+    });
 
-    fireEvent.change(
-      screen.getByLabelText(/appointment time/i),
-      {
-        target: { value: "11:00" },
-      }
-    );
+    fireEvent.change(screen.getByLabelText(/appointment time/i), {
+      target: { value: "11:00" },
+    });
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -262,9 +215,7 @@ describe("StaffDashboard", () => {
     );
 
     await waitFor(() => {
-      expect(
-        staffService.staffCreateAppointment
-      ).toHaveBeenCalledWith({
+      expect(staffService.staffCreateAppointment).toHaveBeenCalledWith({
         patientEmail: "new@test.com",
         appointmentDate: "2099-05-12",
         appointmentTime: "11:00",
@@ -273,13 +224,8 @@ describe("StaffDashboard", () => {
   });
 
   test("shows validation message when appointment form is incomplete", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
@@ -291,39 +237,25 @@ describe("StaffDashboard", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /please fill in all appointment fields/i
-        )
+        screen.getByText(/please fill in all appointment fields/i)
       ).toBeInTheDocument();
     });
   });
 
   test("renders appointment list", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("john@test.com")
-      ).toBeInTheDocument();
+      expect(screen.getByText("john@test.com")).toBeInTheDocument();
     });
   });
 
   test("cancels appointment", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     staffService.staffCancelAppointment.mockResolvedValue({
       ...mockAppointments[0],
@@ -337,20 +269,13 @@ describe("StaffDashboard", () => {
     fireEvent.click(screen.getByText("Cancel"));
 
     await waitFor(() => {
-      expect(
-        staffService.staffCancelAppointment
-      ).toHaveBeenCalledWith(1);
+      expect(staffService.staffCancelAppointment).toHaveBeenCalledWith(1);
     });
   });
 
   test("starts reschedule flow", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
@@ -359,72 +284,52 @@ describe("StaffDashboard", () => {
     fireEvent.click(screen.getByText("Reschedule"));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Save")
-      ).toBeInTheDocument();
-
-      expect(
-        screen.getByText("Cancel Edit")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Save")).toBeInTheDocument();
+      expect(screen.getByText("Cancel Edit")).toBeInTheDocument();
     });
   });
 
   test("reschedules appointment", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
+  staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+  staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
-
-    staffService.staffRescheduleAppointment.mockResolvedValue({
-      ...mockAppointments[0],
-      appointment_date: "2099-06-01",
-      appointment_time: "12:00",
-    });
-
-    render(<StaffDashboard />);
-
-    await screen.findByText("john@test.com");
-
-    fireEvent.click(screen.getByText("Reschedule"));
-
-    fireEvent.change(
-      screen.getByDisplayValue("2099-05-10"),
-      {
-        target: { value: "2099-06-01" },
-      }
-    );
-
-    fireEvent.change(
-      screen.getByDisplayValue("10:00"),
-      {
-        target: { value: "12:00" },
-      }
-    );
-
-    fireEvent.click(screen.getByText("Save"));
-
-    await waitFor(() => {
-      expect(
-        staffService.staffRescheduleAppointment
-      ).toHaveBeenCalledWith({
-        appointmentId: 1,
-        appointmentDate: "2099-06-01",
-        appointmentTime: "12:00",
-      });
-    });
+  staffService.staffRescheduleAppointment.mockResolvedValue({
+    ...mockAppointments[0],
+    appointment_date: "2099-06-01",
+    appointment_time: "12:00",
   });
 
-  test("filters appointments", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
+  render(<StaffDashboard />);
 
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+  await screen.findByText("john@test.com");
+
+  fireEvent.click(screen.getByText("Reschedule"));
+
+  fireEvent.change(screen.getByDisplayValue(getTodayDateString()), {
+    target: { value: "2099-06-01" },
+  });
+
+  const timeSelects = screen.getAllByRole("combobox");
+  const rescheduleTimeSelect = timeSelects[1];
+
+  fireEvent.change(rescheduleTimeSelect, {
+    target: { value: "12:00" },
+  });
+
+  fireEvent.click(screen.getByText("Save"));
+
+  await waitFor(() => {
+    expect(staffService.staffRescheduleAppointment).toHaveBeenCalledWith({
+      appointmentId: 1,
+      appointmentDate: "2099-06-01",
+      appointmentTime: "12:00",
+    });
+  });
+});
+
+  test("filters appointments using total tab", async () => {
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
@@ -432,43 +337,29 @@ describe("StaffDashboard", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /all/i,
+        name: /total/i,
       })
     );
 
-    expect(
-      screen.getByText("john@test.com")
-    ).toBeInTheDocument();
+    expect(screen.getByText("john@test.com")).toBeInTheDocument();
   });
 
   test("opens profile popup", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
     fireEvent.click(screen.getByText("Profile"));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/profile settings/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/profile settings/i)).toBeInTheDocument();
     });
   });
 
   test("logout navigates home", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
@@ -478,169 +369,104 @@ describe("StaffDashboard", () => {
   });
 
   test("shows loading queue state initially", () => {
-    staffService.getStaffClinicAndQueue.mockReturnValue(
-      new Promise(() => {})
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockReturnValue(new Promise(() => {}));
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
-    expect(
-      screen.getByText(/loading queue/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/loading queue/i)).toBeInTheDocument();
   });
 
   test("shows loading appointments state initially", () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockReturnValue(
-      new Promise(() => {})
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockReturnValue(new Promise(() => {}));
 
     render(<StaffDashboard />);
 
-    expect(
-      screen.getByText(/loading appointments/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/loading appointments/i)).toBeInTheDocument();
   });
 
   test("shows no appointments message", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /no appointments found for this filter/i
-        )
+        screen.getByText(/no appointments found for this filter/i)
       ).toBeInTheDocument();
     });
   });
 
   test("shows patient count", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
       expect(
-        screen.getByText((content, element) =>
-          element?.textContent === "1 patients"
-        )
+        screen.getByText((content, element) => element?.textContent === "1 patients")
       ).toBeInTheDocument();
     });
   });
 
   test("shows appointment count", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
       expect(
-        screen.getByText((content, element) =>
-          element?.textContent === "1 appointments"
-        )
+        screen.getByText((content, element) => element?.textContent === "1 appointments")
       ).toBeInTheDocument();
     });
   });
 
   test("shows waiting status correctly", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Waiting")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Waiting")).toBeInTheDocument();
     });
   });
 
   test("renders appointment action buttons", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
     await screen.findByText("john@test.com");
 
-    expect(
-      screen.getByText("Reschedule")
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText("Cancel")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Reschedule")).toBeInTheDocument();
+    expect(screen.getByText("Cancel")).toBeInTheDocument();
   });
 
   test("cancel edit button exits reschedule mode", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
     await screen.findByText("john@test.com");
 
     fireEvent.click(screen.getByText("Reschedule"));
-
     fireEvent.click(screen.getByText("Cancel Edit"));
 
     await waitFor(() => {
-      expect(
-        screen.queryByText("Save")
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Save")).not.toBeInTheDocument();
     });
   });
 
   test("shows appointment filter buttons", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
@@ -654,7 +480,13 @@ describe("StaffDashboard", () => {
 
     expect(
       screen.getByRole("button", {
-        name: /past/i,
+        name: /today's patients/i,
+      })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("button", {
+        name: /passed/i,
       })
     ).toBeInTheDocument();
 
@@ -666,23 +498,15 @@ describe("StaffDashboard", () => {
 
     expect(
       screen.getByRole("button", {
-        name: /all/i,
+        name: /total/i,
       })
     ).toBeInTheDocument();
   });
 
   test("shows success message after queue update", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
-
-    staffService.updateQueueStatus.mockResolvedValue(
-      {}
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
+    staffService.updateQueueStatus.mockResolvedValue({});
 
     render(<StaffDashboard />);
 
@@ -692,24 +516,15 @@ describe("StaffDashboard", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /queue status updated successfully/i
-        )
+        screen.getByText(/queue status updated successfully/i)
       ).toBeInTheDocument();
     });
   });
+
   test("shows queue update error message", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
-
-    staffService.updateQueueStatus.mockRejectedValue(
-      new Error("Failed")
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
+    staffService.updateQueueStatus.mockRejectedValue(new Error("Failed"));
 
     render(<StaffDashboard />);
 
@@ -719,50 +534,29 @@ describe("StaffDashboard", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /could not update queue status/i
-        )
+        screen.getByText(/could not update queue status/i)
       ).toBeInTheDocument();
     });
   });
 
   test("shows create appointment service failure", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
-
-    staffService.staffCreateAppointment.mockResolvedValue(
-      null
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
+    staffService.staffCreateAppointment.mockResolvedValue(null);
 
     render(<StaffDashboard />);
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        /enter patient email address/i
-      ),
-      {
-        target: { value: "bad@test.com" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText(/enter patient email address/i), {
+      target: { value: "bad@test.com" },
+    });
 
-    fireEvent.change(
-      screen.getByLabelText(/appointment date/i),
-      {
-        target: { value: "2099-05-12" },
-      }
-    );
+    fireEvent.change(screen.getByLabelText(/appointment date/i), {
+      target: { value: "2099-05-12" },
+    });
 
-    fireEvent.change(
-      screen.getByLabelText(/appointment time/i),
-      {
-        target: { value: "11:00" },
-      }
-    );
+    fireEvent.change(screen.getByLabelText(/appointment time/i), {
+      target: { value: "11:00" },
+    });
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -771,22 +565,13 @@ describe("StaffDashboard", () => {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          /could not create appointment/i
-        )
-      ).toBeInTheDocument();
+      expect(screen.getByText(/could not create appointment/i)).toBeInTheDocument();
     });
   });
 
   test("shows create appointment thrown error", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     staffService.staffCreateAppointment.mockRejectedValue(
       new Error("Server error")
@@ -794,28 +579,17 @@ describe("StaffDashboard", () => {
 
     render(<StaffDashboard />);
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        /enter patient email address/i
-      ),
-      {
-        target: { value: "bad@test.com" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText(/enter patient email address/i), {
+      target: { value: "bad@test.com" },
+    });
 
-    fireEvent.change(
-      screen.getByLabelText(/appointment date/i),
-      {
-        target: { value: "2099-05-12" },
-      }
-    );
+    fireEvent.change(screen.getByLabelText(/appointment date/i), {
+      target: { value: "2099-05-12" },
+    });
 
-    fireEvent.change(
-      screen.getByLabelText(/appointment time/i),
-      {
-        target: { value: "11:00" },
-      }
-    );
+    fireEvent.change(screen.getByLabelText(/appointment time/i), {
+      target: { value: "11:00" },
+    });
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -824,24 +598,14 @@ describe("StaffDashboard", () => {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/server error/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/server error/i)).toBeInTheDocument();
     });
   });
 
   test("shows cancel appointment error", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
-
-    staffService.staffCancelAppointment.mockRejectedValue(
-      new Error("Failed")
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
+    staffService.staffCancelAppointment.mockRejectedValue(new Error("Failed"));
 
     render(<StaffDashboard />);
 
@@ -851,21 +615,14 @@ describe("StaffDashboard", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /could not cancel appointment/i
-        )
+        screen.getByText(/could not cancel appointment/i)
       ).toBeInTheDocument();
     });
   });
 
   test("shows reschedule validation message", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
 
     render(<StaffDashboard />);
 
@@ -873,93 +630,110 @@ describe("StaffDashboard", () => {
 
     fireEvent.click(screen.getByText("Reschedule"));
 
-    fireEvent.change(
-      screen.getByDisplayValue("2099-05-10"),
-      {
-        target: { value: "" },
-      }
-    );
+    fireEvent.change(screen.getByDisplayValue(getTodayDateString()), {
+      target: { value: "" },
+    });
 
     fireEvent.click(screen.getByText("Save"));
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /please choose a new date and time/i
-        )
+        screen.getByText(/please choose a new date and time/i)
       ).toBeInTheDocument();
     });
   });
 
   test("shows reschedule appointment failure", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      mockAppointments
-    );
-
-    staffService.staffRescheduleAppointment.mockRejectedValue(
-      new Error("Failed")
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(mockAppointments);
+    staffService.staffRescheduleAppointment.mockRejectedValue(new Error("Failed"));
 
     render(<StaffDashboard />);
 
     await screen.findByText("john@test.com");
 
     fireEvent.click(screen.getByText("Reschedule"));
-
     fireEvent.click(screen.getByText("Save"));
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /could not reschedule appointment/i
-        )
+        screen.getByText(/could not reschedule appointment/i)
       ).toBeInTheDocument();
     });
   });
 
-  test("filters past appointments correctly", async () => {
-    const pastAppointments = [
+  test("filters passed appointments correctly", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const passedAppointments = [
       {
         id: 3,
-        patient_email: "past@test.com",
-        appointment_date: "2020-01-01",
+        patient_email: "passed@test.com",
+        appointment_date: yesterday.toISOString().split("T")[0],
         appointment_time: "08:00",
         status: "booked",
       },
     ];
 
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      pastAppointments
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(passedAppointments);
 
     render(<StaffDashboard />);
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /no appointments found for this filter/i
-        )
+        screen.getByText(/no appointments found for this filter/i)
       ).toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /passed/i,
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("passed@test.com")).toBeInTheDocument();
     });
   });
 
+  test("filters upcoming appointments correctly", async () => {
+    const upcomingAppointments = [
+      {
+        id: 4,
+        patient_email: "future@test.com",
+        appointment_date: getTomorrowDateString(),
+        appointment_time: "10:00",
+        status: "booked",
+      },
+    ];
+
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue(upcomingAppointments);
+
+    render(<StaffDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/no appointments found for this filter/i)
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /upcoming/i,
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("future@test.com")).toBeInTheDocument();
+    });
+  });
 
   test("shows password mismatch validation", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
@@ -967,41 +741,22 @@ describe("StaffDashboard", () => {
 
     await screen.findByText(/profile settings/i);
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        /enter new password/i
-      ),
-      {
-        target: { value: "password123" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText(/enter new password/i), {
+      target: { value: "password123" },
+    });
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        /confirm new password/i
-      ),
-      {
-        target: { value: "wrongpassword" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText(/confirm new password/i), {
+      target: { value: "wrongpassword" },
+    });
 
-    fireEvent.click(
-      screen.getByText(/update password/i)
-    );
+    fireEvent.click(screen.getByText(/update password/i));
 
-    expect(
-      screen.getByText(/passwords do not match/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
   });
 
   test("shows password minimum length validation", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
@@ -1009,43 +764,24 @@ describe("StaffDashboard", () => {
 
     await screen.findByText(/profile settings/i);
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        /enter new password/i
-      ),
-      {
-        target: { value: "123" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText(/enter new password/i), {
+      target: { value: "123" },
+    });
 
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        /confirm new password/i
-      ),
-      {
-        target: { value: "123" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText(/confirm new password/i), {
+      target: { value: "123" },
+    });
 
-    fireEvent.click(
-      screen.getByText(/update password/i)
-    );
+    fireEvent.click(screen.getByText(/update password/i));
 
     expect(
-      screen.getByText(
-        /password must be at least 6 characters long/i
-      )
+      screen.getByText(/password must be at least 6 characters long/i)
     ).toBeInTheDocument();
   });
 
   test("closes profile popup", async () => {
-    staffService.getStaffClinicAndQueue.mockResolvedValue(
-      mockQueue
-    );
-
-    staffService.getClinicAppointments.mockResolvedValue(
-      []
-    );
+    staffService.getStaffClinicAndQueue.mockResolvedValue(mockQueue);
+    staffService.getClinicAppointments.mockResolvedValue([]);
 
     render(<StaffDashboard />);
 
@@ -1056,19 +792,16 @@ describe("StaffDashboard", () => {
     fireEvent.click(screen.getByText("Close"));
 
     await waitFor(() => {
-      expect(
-        screen.queryByText(/profile settings/i)
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/profile settings/i)).not.toBeInTheDocument();
     });
   });
-  test("shows Waiting To Be Seen for same-day appointment", async () => {
-    const today = new Date().toISOString().split("T")[0];
 
+  test("shows Waiting To Be Seen for same-day appointment", async () => {
     const sameDayAppointment = [
       {
         id: 11,
         patient_email: "today@test.com",
-        appointment_date: today,
+        appointment_date: getTodayDateString(),
         appointment_time: "23:59",
         status: "booked",
       },
@@ -1083,6 +816,7 @@ describe("StaffDashboard", () => {
 
     expect(screen.getAllByText(/waiting to be seen/i).length).toBeGreaterThan(0);
   });
+
   test("renders fallback status class when status is unknown", async () => {
     const weirdQueue = {
       ...mockQueue,
@@ -1103,9 +837,9 @@ describe("StaffDashboard", () => {
 
     await screen.findByText("Unknown Status Patient");
 
-    // ensures fallback class is applied (no crash + renders)
     expect(screen.getByText("Unknown Status Patient")).toBeInTheDocument();
   });
+
   test("handles missing user in profile popup gracefully", async () => {
     const { supabaseClient } = require("../lib/supabaseClient");
 
@@ -1125,6 +859,7 @@ describe("StaffDashboard", () => {
       expect(screen.getByText(/profile settings/i)).toBeInTheDocument();
     });
   });
+
   test("handles profile fetch error gracefully", async () => {
     const { supabaseClient } = require("../lib/supabaseClient");
 
@@ -1142,4 +877,3 @@ describe("StaffDashboard", () => {
     });
   });
 });
-
