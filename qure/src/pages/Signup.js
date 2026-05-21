@@ -29,18 +29,12 @@ function Signup(){
             return;
         }
 
-        try {
-              // Call the signup function from auth.js
-            const user = await signUp(email, password);
-            console.log('Signed up user:', user);
-        
-            if (user){
-                setMessage("Signup Successful! Check your email and click confirm");
-            }
-            
-        } catch (error) {
-              setError(error.message);
-        }
+try {
+    await signUp(email, password);
+    setMessage("Signup successful! Please check your email to confirm your account.");
+} catch (error) {
+    setError(error.message);
+}
     };
 
     const handleGoogleLogin = async () => {
